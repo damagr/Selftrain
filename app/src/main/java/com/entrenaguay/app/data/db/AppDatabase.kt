@@ -6,7 +6,7 @@ import com.entrenaguay.app.data.model.*
 
 @Database(
     entities = [Exercise::class, Routine::class, RoutineExercise::class, Workout::class, WorkoutSet::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

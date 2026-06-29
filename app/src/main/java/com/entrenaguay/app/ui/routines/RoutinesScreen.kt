@@ -6,7 +6,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
@@ -57,8 +56,7 @@ fun RoutinesScreen(
                     RoutineCard(
                         routine = routine,
                         onStart = { onStartWorkout(routine.id) },
-                        onEdit = { onEditRoutine(routine.id) },
-                        onDelete = { viewModel.deleteRoutine(routine) }
+                        onEdit = { onEditRoutine(routine.id) }
                     )
                 }
             }
@@ -80,8 +78,7 @@ fun RoutinesScreen(
 fun RoutineCard(
     routine: Routine,
     onStart: () -> Unit,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onEdit: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
@@ -102,9 +99,6 @@ fun RoutineCard(
             }
             IconButton(onClick = onEdit) {
                 Icon(Icons.Default.Edit, "Editar")
-            }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, "Eliminar", tint = MaterialTheme.colorScheme.error)
             }
         }
     }

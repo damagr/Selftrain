@@ -35,8 +35,25 @@ fun TrainScreen(
     val currentSuggestion = state.suggestions.getOrNull(currentIndex) ?: PerExerciseSuggestion()
 
     if (totalExercises == 0) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+        if (state.routine != null) {
+            // Routine loaded but has no exercises
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Esta rutina no tiene ejercicios.", style = MaterialTheme.typography.bodyLarge)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Añade ejercicios desde la pantalla de edición.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(16.dp))
+                    OutlinedButton(onClick = onFinish) {
+                        Text("Volver")
+                    }
+                }
+            }
+        } else {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
         }
         return
     }
@@ -48,7 +65,7 @@ fun TrainScreen(
             TopAppBar(
                 title = { Text(state.routine?.name ?: "Entrenando...") },
                 actions = {
-                    TextButton(onClick = { viewModel.finishWorkout(onFinish) }) {
+                    TextButton(onClick = { viewModel.finishWorkout() }) {
                         Icon(Icons.Default.Done, null)
                         Spacer(Modifier.width(4.dp))
                         Text("Finalizar")
@@ -194,6 +211,85 @@ fun TrainScreen(
             dismissButton = {
                 TextButton(onClick = { showJumpDialog = false }) { Text("Cerrar") }
             }
+        )
+    }
+
+    // Workout summary dialog
+    state.workoutSummary?.let { summary ->
+        var editDuration by remember { mutableStateOf(summary.durationMinutes.toString()) }
+
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissSummary(); onFinish() },
+            title = { Text("¡Entreno completado!") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Duration
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Duración: ")
+                        OutlinedTextField(
+                            value = editDuration,
+                            onValueChange = { v ->
+                                editDuration = v.filter { ch -> ch.isDigit() }
+                                v.toIntOrNull()?.let { viewModel.updateDuration(it) }
+                            },
+                            label = { Text("min") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.width(100.dp),
+                            singleLine = true
+                        )
+                    }
+
+                    // Volume per muscle group
+                    if (summary.volumeByMuscle.isNotEmpty()) {
+                        Text("Volumen por grupo muscular", style = MaterialTheme.typography.titleSmall)
+                        summary.volumeByMuscle.forEach { mgv: MuscleGroupVolume ->
+                            Text(
+                                "${Labels.muscleGroup(mgv.muscleGroup)}: %,.1f kg (${mgv.setCount} series)".format(
+                                    java.util.Locale.getDefault(), mgv.totalKg
+                                ),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+
+                    // Personal records
+                    if (summary.personalRecords.isNotEmpty()) {
+                        Text("¡Nuevos récords!", style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary)
+                        summary.personalRecords.forEach { pr: PersonalRecord ->
+                            Text(
+                                "${pr.exerciseName}: %,.1f → %,.1f kg (1RM)".format(
+                                    java.util.Locale.getDefault(),
+                                    pr.previousBest, pr.newRecord
+                                ),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+
+                    // Weekly comparison
+                    if (summary.weeklyComparison.isNotEmpty()) {
+                        Text("vs semana pasada", style = MaterialTheme.typography.titleSmall)
+                        summary.weeklyComparison.forEach { wc: WeeklyComparison ->
+                            val pct = if (wc.lastWeekKg > 0) {
+                                "%,.0f%%".format(java.util.Locale.getDefault(), ((wc.thisWorkoutKg - wc.lastWeekKg) / wc.lastWeekKg) * 100)
+                            } else "—"
+                            Text(
+                                "${Labels.muscleGroup(wc.muscleGroup)}: %,.1f kg → ${pct} vs semana pasada".format(
+                                    java.util.Locale.getDefault(), wc.thisWorkoutKg
+                                ),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.dismissSummary(); onFinish() }) {
+                    Text("Volver a rutinas")
+                }
+            },
+            dismissButton = null
         )
     }
 }
@@ -371,8 +467,6 @@ fun BilboSetInput(
                 val ri = rir.toIntOrNull() ?: 2
                 onLog(r, w, ri)
                 reps = ""
-                weight = ""
-                rir = "2"
             },
             modifier = Modifier.fillMaxWidth()
         ) {
@@ -436,7 +530,6 @@ fun WorkSetInput(
                 val w = weight.toFloatOrNull() ?: return@Button
                 onLog(r, w)
                 reps = ""
-                weight = ""
             },
             modifier = Modifier.fillMaxWidth()
         ) {

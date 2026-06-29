@@ -1,16 +1,25 @@
 package com.entrenaguay.app.ui.exercises
 
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccessibilityNew
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Cable
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.MonitorWeight
+import androidx.compose.material.icons.filled.PrecisionManufacturing
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.entrenaguay.app.data.model.Exercise
@@ -26,7 +35,9 @@ fun ExerciseLibraryScreen(
     val errorMessage by viewModel.errorMessage.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf<Exercise?>(null) }
+    var deleteMode by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
     LaunchedEffect(errorMessage) {
         errorMessage?.let {
@@ -38,8 +49,29 @@ fun ExerciseLibraryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Biblioteca de Ejercicios") },
+                title = {
+                    Column {
+                        Text("Biblioteca de Ejercicios")
+                        if (deleteMode) {
+                            Text("Modo borrado — selecciona un ejercicio para eliminarlo",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                },
+                colors = if (deleteMode) TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onErrorContainer
+                ) else TopAppBarDefaults.topAppBarColors(),
                 actions = {
+                    IconButton(onClick = { deleteMode = !deleteMode }) {
+                        Icon(
+                            Icons.Default.Delete,
+                            "Modo borrado",
+                            tint = if (deleteMode) MaterialTheme.colorScheme.error
+                                   else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     IconButton(onClick = onSettings) {
                         Icon(Icons.Default.Settings, "Ajustes")
                     }
@@ -74,6 +106,24 @@ fun ExerciseLibraryScreen(
                                 if (ex.isBilboEligible) append(" · Bilbo")
                             })
                         },
+                        leadingContent = {
+                            val icon = when (ex.equipment) {
+                                "barbell" -> Icons.Filled.FitnessCenter
+                                "dumbbell" -> Icons.Filled.MonitorWeight
+                                "cable" -> Icons.Filled.Cable
+                                "machine" -> Icons.Filled.PrecisionManufacturing
+                                "bodyweight" -> Icons.Filled.AccessibilityNew
+                                else -> Icons.Filled.FitnessCenter
+                            }
+                            Icon(icon, contentDescription = null)
+                        },
+                        trailingContent = {
+                            if (deleteMode) {
+                                IconButton(onClick = { showDeleteConfirm = ex }) {
+                                    Icon(Icons.Default.Delete, "Eliminar", tint = MaterialTheme.colorScheme.error)
+                                }
+                            }
+                        },
                         modifier = Modifier
                             .padding(horizontal = 8.dp)
                             .combinedClickable(
@@ -89,8 +139,8 @@ fun ExerciseLibraryScreen(
     if (showCreateDialog) {
         CreateExerciseDialog(
             onDismiss = { showCreateDialog = false },
-            onCreate = { name, muscleGroup, category, bilbo ->
-                viewModel.addExercise(name, muscleGroup, category, bilbo)
+            onCreate = { name, muscleGroup, category, bilbo, equipment ->
+                viewModel.addExercise(name, muscleGroup, category, bilbo, equipment)
                 showCreateDialog = false
             }
         )
@@ -105,6 +155,8 @@ fun ExerciseLibraryScreen(
                 TextButton(onClick = {
                     viewModel.deleteExercise(ex)
                     showDeleteConfirm = null
+                    deleteMode = false
+                    Toast.makeText(context, "Ejercicio eliminado. Puedes recuperarlo en Ajustes.", Toast.LENGTH_SHORT).show()
                 }) {
                     Text("Eliminar", color = MaterialTheme.colorScheme.error)
                 }
@@ -120,7 +172,7 @@ fun ExerciseLibraryScreen(
 @Composable
 fun CreateExerciseDialog(
     onDismiss: () -> Unit,
-    onCreate: (name: String, muscleGroup: String, category: String, isBilbo: Boolean) -> Unit
+    onCreate: (name: String, muscleGroup: String, category: String, isBilbo: Boolean, equipment: String) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     val muscleGroups = listOf("pecho", "piernas", "espalda", "hombros", "brazos", "core")
@@ -130,6 +182,9 @@ fun CreateExerciseDialog(
     var isBilbo by remember { mutableStateOf(false) }
     var muscleExpanded by remember { mutableStateOf(false) }
     var catExpanded by remember { mutableStateOf(false) }
+    val equipments = listOf("barbell", "dumbbell", "cable", "machine", "bodyweight")
+    var selectedEquipment by remember { mutableStateOf(equipments[0]) }
+    var equipExpanded by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -191,13 +246,35 @@ fun CreateExerciseDialog(
                         Switch(checked = isBilbo, onCheckedChange = { isBilbo = it })
                     }
                 }
+
+                Spacer(Modifier.height(8.dp))
+
+                // Equipment
+                ExposedDropdownMenuBox(expanded = equipExpanded, onExpandedChange = { equipExpanded = it }) {
+                    OutlinedTextField(
+                        value = Labels.equipment(selectedEquipment),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Equipamiento") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(equipExpanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(expanded = equipExpanded, onDismissRequest = { equipExpanded = false }) {
+                        equipments.forEach { eq ->
+                            DropdownMenuItem(
+                                text = { Text(Labels.equipment(eq)) },
+                                onClick = { selectedEquipment = eq; equipExpanded = false }
+                            )
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
             TextButton(
                 onClick = {
                     if (name.isNotBlank()) {
-                        onCreate(name.trim(), selectedMuscle, selectedCategory, isBilbo)
+                        onCreate(name.trim(), selectedMuscle, selectedCategory, isBilbo, selectedEquipment)
                     }
                 },
                 enabled = name.isNotBlank()

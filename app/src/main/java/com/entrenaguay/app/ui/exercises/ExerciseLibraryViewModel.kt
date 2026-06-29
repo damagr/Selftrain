@@ -23,14 +23,15 @@ class ExerciseLibraryViewModel @Inject constructor(
         viewModelScope.launch { exerciseRepo.seedIfEmpty() }
     }
 
-    fun addExercise(name: String, muscleGroup: String, category: String, isBilboEligible: Boolean) {
+    fun addExercise(name: String, muscleGroup: String, category: String, isBilboEligible: Boolean, equipment: String) {
         viewModelScope.launch {
             exerciseRepo.addExercise(
                 Exercise(
                     name = name.trim(),
                     muscleGroup = muscleGroup,
                     category = category,
-                    isBilboEligible = isBilboEligible
+                    isBilboEligible = isBilboEligible,
+                    equipment = equipment
                 )
             )
         }

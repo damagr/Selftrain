@@ -22,7 +22,16 @@ object Labels {
         "ppl" to "Push-Pull-Legs"
     )
 
+    private val equipmentEs = mapOf(
+        "barbell" to "Barra",
+        "dumbbell" to "Mancuerna",
+        "cable" to "Polea",
+        "machine" to "Máquina",
+        "bodyweight" to "Peso corporal"
+    )
+
     fun muscleGroup(key: String): String = muscleGroupEs[key] ?: key.replaceFirstChar { it.uppercase() }
     fun category(key: String): String = categoryEs[key] ?: key.replaceFirstChar { it.uppercase() }
     fun method(key: String): String = methodEs[key] ?: key.replaceFirstChar { it.uppercase() }
+    fun equipment(key: String): String = equipmentEs[key] ?: key.replaceFirstChar { it.uppercase() }
 }

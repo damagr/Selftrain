@@ -32,7 +32,7 @@ class RoutineEditViewModel @Inject constructor(
             _routine.value = r
             val reList = routineRepo.getWithExercises(routineId)
             val ids = reList.map { it.exerciseId }
-            _exercises.value = exerciseRepo.getByIds(ids)
+            _exercises.value = if (ids.isNotEmpty()) exerciseRepo.getByIds(ids) else emptyList()
         }
     }
 
@@ -68,6 +68,14 @@ class RoutineEditViewModel @Inject constructor(
                 routineRepo.addExercise(r.id, ex.id, index)
             }
             onSaved()
+        }
+    }
+
+    fun deleteRoutine(onDeleted: () -> Unit) {
+        viewModelScope.launch {
+            val r = _routine.value ?: return@launch
+            routineRepo.delete(r)
+            onDeleted()
         }
     }
 }

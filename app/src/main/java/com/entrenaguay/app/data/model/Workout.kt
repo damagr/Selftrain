@@ -15,5 +15,7 @@ data class Workout(
     val routineId: Long,
     val date: Long = System.currentTimeMillis(),
     val notes: String = "",
-    val completed: Boolean = false
+    val completed: Boolean = false,
+    val endDate: Long = 0,
+    val durationMinutes: Int = 0
 )

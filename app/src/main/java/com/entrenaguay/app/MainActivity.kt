@@ -112,7 +112,7 @@ fun EntrenaGuayMain() {
             }
             composable("routine_edit/{routineId}", arguments = listOf(navArgument("routineId") { type = NavType.LongType })) { backStackEntry ->
                 val routineId = backStackEntry.arguments?.getLong("routineId") ?: 0L
-                RoutineEditScreen(routineId = routineId, onSaved = { navController.popBackStack() })
+                RoutineEditScreen(routineId = routineId, onSaved = { navController.popBackStack() }, onDeleted = { navController.popBackStack() })
             }
             composable("train/{routineId}", arguments = listOf(navArgument("routineId") { type = NavType.LongType })) { backStackEntry ->
                 val routineId = backStackEntry.arguments?.getLong("routineId") ?: 0L

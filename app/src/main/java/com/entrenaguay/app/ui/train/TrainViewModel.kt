@@ -34,7 +34,34 @@ data class TrainState(
     val currentExerciseIndex: Int = 0,
     val workoutId: Long = 0,
     val isFinishing: Boolean = false,
-    val suggestions: List<PerExerciseSuggestion> = emptyList()
+    val suggestions: List<PerExerciseSuggestion> = emptyList(),
+    val workoutSummary: WorkoutSummary? = null
+)
+
+data class MuscleGroupVolume(
+    val muscleGroup: String,
+    val totalKg: Float,
+    val setCount: Int
+)
+
+data class PersonalRecord(
+    val exerciseName: String,
+    val muscleGroup: String,
+    val newRecord: Double,
+    val previousBest: Double
+)
+
+data class WeeklyComparison(
+    val muscleGroup: String,
+    val thisWorkoutKg: Float,
+    val lastWeekKg: Float
+)
+
+data class WorkoutSummary(
+    val durationMinutes: Int,
+    val volumeByMuscle: List<MuscleGroupVolume>,
+    val personalRecords: List<PersonalRecord>,
+    val weeklyComparison: List<WeeklyComparison>
 )
 
 @HiltViewModel
@@ -86,10 +113,14 @@ class TrainViewModel @Inject constructor(
                     } else {
                         history.filter { it.set.setType == "work" }.lastOrNull()?.set?.weightKg?.div(1.40f) ?: 0f
                     }
+                    // ponytail: pre-fill work weight with max from last session, not bilbo-derived
+                    val workWeightFromLastSession = ex.lastSessionSets
+                        .filter { it.set.setType == "work" }
+                        .maxOfOrNull { it.set.weightKg }
                     PerExerciseSuggestion(
                         bilboReps = bilboReps,
                         bilboWeight = bilboWeight,
-                        workWeight = bilboWeight * 1.40f,
+                        workWeight = workWeightFromLastSession ?: (bilboWeight * 1.40f),
                         workReps = 10,
                         hasHistory = true
                     )
@@ -147,13 +178,98 @@ class TrainViewModel @Inject constructor(
         _state.value = _state.value.copy(currentExerciseIndex = index.coerceIn(0, (_state.value.exercises.size - 1).coerceAtLeast(0)))
     }
 
-    fun finishWorkout(onFinish: () -> Unit) {
+    fun finishWorkout() {
         viewModelScope.launch {
+            val workout = workoutRepo.getById(_state.value.workoutId) ?: return@launch
+            val endDate = System.currentTimeMillis()
+            val durationMinutes = ((endDate - workout.date) / 60000).toInt().coerceAtLeast(0)
+            val updatedWorkout = workout.copy(completed = true, endDate = endDate, durationMinutes = durationMinutes)
+            workoutRepo.update(updatedWorkout)
+
+            val summary = computeWorkoutSummary(_state.value.workoutId, durationMinutes, workout.date)
+            _state.value = _state.value.copy(isFinishing = true, workoutSummary = summary)
+        }
+    }
+
+    fun updateDuration(minutes: Int) {
+        viewModelScope.launch {
+            val summary = _state.value.workoutSummary?.copy(durationMinutes = minutes)
+            _state.value = _state.value.copy(workoutSummary = summary)
             val workout = workoutRepo.getById(_state.value.workoutId)
             if (workout != null) {
-                workoutRepo.update(workout.copy(completed = true))
+                workoutRepo.update(workout.copy(durationMinutes = minutes))
             }
-            onFinish()
         }
+    }
+
+    fun dismissSummary() {
+        _state.value = _state.value.copy(isFinishing = false, workoutSummary = null)
+    }
+
+    private suspend fun computeWorkoutSummary(workoutId: Long, durationMinutes: Int, workoutDate: Long): WorkoutSummary {
+        // 1. Volume per muscle group
+        val allSets = workoutRepo.getSetsWithExercise(workoutId)
+        val volumeByMuscle = allSets
+            .groupBy { it.muscleGroup }
+            .map { (group, sets) ->
+                val totalKg = sets.sumOf { (it.set.reps * it.set.weightKg).toDouble() }.toFloat()
+                MuscleGroupVolume(muscleGroup = group, totalKg = totalKg, setCount = sets.size)
+            }
+            .sortedByDescending { it.totalKg }
+
+        // 2. Personal records
+        val exercisesInWorkout = allSets
+            .groupBy { it.set.exerciseId }
+            .map { (exId, sets) -> exId to sets }
+        val personalRecords = exercisesInWorkout.mapNotNull { (exId, sets) ->
+            val exerciseData = _state.value.exercises.find { it.exercise.id == exId } ?: return@mapNotNull null
+            val currentMax = sets.maxOfOrNull {
+                BilboProgression.estimated1RM(it.set.weightKg, it.set.reps).toDouble()
+            } ?: return@mapNotNull null
+
+            // Get history excluding the current workout
+            val previousHistory = exerciseData.previousHistory
+                .filter { it.set.workoutId != workoutId }
+            if (previousHistory.isEmpty()) return@mapNotNull null
+
+            val previousMax = previousHistory.maxOfOrNull {
+                BilboProgression.estimated1RM(it.set.weightKg, it.set.reps).toDouble()
+            } ?: return@mapNotNull null
+
+            if (currentMax > previousMax) {
+                PersonalRecord(
+                    exerciseName = exerciseData.exercise.name,
+                    muscleGroup = exerciseData.exercise.muscleGroup,
+                    newRecord = currentMax,
+                    previousBest = previousMax
+                )
+            } else null
+        }
+
+        // 3. Weekly comparison
+        val weekAgo = workoutDate - 7L * 24 * 60 * 60 * 1000
+        val pastWorkouts = workoutRepo.getCompletedWorkoutsBetween(weekAgo, workoutDate - 1)
+        val lastWeekVolumeByMuscle = mutableMapOf<String, Float>()
+        for (pw in pastWorkouts) {
+            val pwSets = workoutRepo.getSetsWithExercise(pw.id)
+            pwSets.groupBy { it.muscleGroup }.forEach { (group, sets) ->
+                val kg = sets.sumOf { (it.set.reps * it.set.weightKg).toDouble() }.toFloat()
+                lastWeekVolumeByMuscle[group] = (lastWeekVolumeByMuscle[group] ?: 0f) + kg
+            }
+        }
+        val weeklyComparison = volumeByMuscle.map { mgv ->
+            WeeklyComparison(
+                muscleGroup = mgv.muscleGroup,
+                thisWorkoutKg = mgv.totalKg,
+                lastWeekKg = lastWeekVolumeByMuscle[mgv.muscleGroup] ?: 0f
+            )
+        }
+
+        return WorkoutSummary(
+            durationMinutes = durationMinutes,
+            volumeByMuscle = volumeByMuscle,
+            personalRecords = personalRecords,
+            weeklyComparison = weeklyComparison
+        )
     }
 }

@@ -13,7 +13,8 @@ data class SeedExercise(
     val name: String,
     val muscleGroup: String,
     val category: String,
-    val isBilboEligible: Boolean
+    val isBilboEligible: Boolean,
+    val equipment: String = ""
 )
 
 @Singleton
@@ -30,7 +31,7 @@ class ExerciseRepository @Inject constructor(
             val json = context.assets.open("exercises.json").bufferedReader().readText()
             val seedData: List<SeedExercise> = Gson().fromJson(json, object : TypeToken<List<SeedExercise>>() {}.type)
             val exercises = seedData.map { seed ->
-                Exercise(name = seed.name, muscleGroup = seed.muscleGroup, category = seed.category, isBilboEligible = seed.isBilboEligible)
+                Exercise(name = seed.name, muscleGroup = seed.muscleGroup, category = seed.category, isBilboEligible = seed.isBilboEligible, equipment = seed.equipment)
             }
             dao.insertAll(exercises)
         }
@@ -43,8 +44,11 @@ class ExerciseRepository @Inject constructor(
         if (dao.countUsageInRoutines(exercise.id) > 0 || dao.countUsageInSets(exercise.id) > 0) {
             throw IllegalStateException("El ejercicio está en uso")
         }
-        dao.delete(exercise)
+        dao.softDelete(exercise.id)
     }
     suspend fun getUsageCount(exerciseId: Long): Pair<Int, Int> =
         dao.countUsageInRoutines(exerciseId) to dao.countUsageInSets(exerciseId)
+
+    suspend fun getDeletedExercises(): List<Exercise> = dao.getDeleted()
+    suspend fun restoreExercise(id: Long) = dao.restore(id)
 }

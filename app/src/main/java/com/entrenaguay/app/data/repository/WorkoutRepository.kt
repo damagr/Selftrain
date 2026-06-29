@@ -28,4 +28,5 @@ class WorkoutRepository @Inject constructor(
     suspend fun getMax1RM(exerciseId: Long) = dao.getMaxEstimated1RM(exerciseId)
     suspend fun deleteSet(set: WorkoutSet) = dao.deleteSet(set)
     suspend fun getExerciseIdsWithHistory() = dao.getExerciseIdsWithHistory()
+    suspend fun getCompletedWorkoutsBetween(from: Long, to: Long) = dao.getCompletedWorkoutsBetween(from, to)
 }

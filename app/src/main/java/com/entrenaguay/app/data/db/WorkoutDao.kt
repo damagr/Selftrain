@@ -86,4 +86,7 @@ interface WorkoutDao {
 
     @Query("SELECT * FROM workout_sets")
     suspend fun getAllSets(): List<WorkoutSet>
+
+    @Query("SELECT * FROM workouts WHERE completed = 1 AND date BETWEEN :from AND :to ORDER BY date DESC")
+    suspend fun getCompletedWorkoutsBetween(from: Long, to: Long): List<Workout>
 }

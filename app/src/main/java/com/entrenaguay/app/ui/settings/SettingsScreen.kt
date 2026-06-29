@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -18,18 +19,41 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.entrenaguay.app.data.model.Exercise
+import com.entrenaguay.app.data.repository.ExerciseRepository
 import com.entrenaguay.app.util.BackupManager
+import com.entrenaguay.app.util.Labels
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val backupManager: BackupManager
+    private val backupManager: BackupManager,
+    private val exerciseRepo: ExerciseRepository
 ) : ViewModel() {
 
     var isExporting by mutableStateOf(false)
     var isImporting by mutableStateOf(false)
+
+    private val _deletedExercises = MutableStateFlow<List<Exercise>>(emptyList())
+    val deletedExercises: StateFlow<List<Exercise>> = _deletedExercises.asStateFlow()
+
+    fun loadDeletedExercises() {
+        viewModelScope.launch {
+            _deletedExercises.value = exerciseRepo.getDeletedExercises()
+        }
+    }
+
+    fun restoreExercise(id: Long) {
+        viewModelScope.launch {
+            exerciseRepo.restoreExercise(id)
+            _deletedExercises.value = exerciseRepo.getDeletedExercises()
+        }
+    }
 
     fun exportTo(uri: Uri, onDone: () -> Unit) {
         viewModelScope.launch {
@@ -62,6 +86,8 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     var showImportConfirm by remember { mutableStateOf<Uri?>(null) }
+    var showRecoveryDialog by remember { mutableStateOf(false) }
+    val deletedExercises by viewModel.deletedExercises.collectAsState()
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -130,6 +156,30 @@ fun SettingsScreen(
                 }
             }
 
+            Spacer(Modifier.height(16.dp))
+
+            // Recover deleted exercises
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("Recuperar ejercicios borrados", style = MaterialTheme.typography.titleSmall)
+                    Spacer(Modifier.height(4.dp))
+                    Text("Restaura ejercicios que hayas eliminado por error. No se pierden tus datos.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.loadDeletedExercises()
+                            showRecoveryDialog = true
+                        }
+                    ) {
+                        Icon(Icons.Filled.Restore, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Ver ejercicios borrados")
+                    }
+                }
+            }
+
             Spacer(Modifier.weight(1f))
 
             // About
@@ -157,6 +207,40 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showImportConfirm = null }) { Text("Cancelar") }
+            }
+        )
+    }
+
+    // Recovery dialog
+    if (showRecoveryDialog) {
+        AlertDialog(
+            onDismissRequest = { showRecoveryDialog = false },
+            title = { Text("Ejercicios borrados") },
+            text = {
+                if (deletedExercises.isEmpty()) {
+                    Text("No hay ejercicios borrados.")
+                } else {
+                    Column {
+                        deletedExercises.forEach { ex ->
+                            ListItem(
+                                headlineContent = { Text(ex.name) },
+                                supportingContent = { Text(Labels.equipment(ex.equipment)) },
+                                trailingContent = {
+                                    TextButton(onClick = {
+                                        viewModel.restoreExercise(ex.id)
+                                        context.toast("${ex.name} recuperado")
+                                    }) {
+                                        Text("Recuperar")
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showRecoveryDialog = false }) { Text("Cerrar") }
             }
         )
     }

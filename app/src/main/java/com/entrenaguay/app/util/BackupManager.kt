@@ -50,7 +50,7 @@ class BackupManager @Inject constructor(
         db.workoutDao().getAllList().forEach { db.workoutDao().delete(it) }
         db.routineDao().getAllRoutineExercises().forEach { db.routineDao().removeExercise(it.id) }
         db.routineDao().getAllList().forEach { db.routineDao().delete(it) }
-        db.exerciseDao().getAllList().forEach { db.exerciseDao().delete(it) }
+        db.exerciseDao().getAllListRaw().forEach { db.exerciseDao().softDelete(it.id) }
 
         // Re-insert from backup
         db.exerciseDao().insertAll(data.exercises)
