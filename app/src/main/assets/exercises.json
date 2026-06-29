@@ -1,0 +1,48 @@
+[
+  {"name": "Press banca con barra", "muscleGroup": "pecho", "category": "compound", "isBilboEligible": true},
+  {"name": "Press banca con mancuernas", "muscleGroup": "pecho", "category": "compound", "isBilboEligible": true},
+  {"name": "Press inclinado con barra", "muscleGroup": "pecho", "category": "compound", "isBilboEligible": true},
+  {"name": "Press inclinado con mancuernas", "muscleGroup": "pecho", "category": "compound", "isBilboEligible": true},
+  {"name": "Press declinado", "muscleGroup": "pecho", "category": "compound", "isBilboEligible": true},
+  {"name": "Aperturas con mancuernas", "muscleGroup": "pecho", "category": "isolation", "isBilboEligible": false},
+  {"name": "Cruce de poleas", "muscleGroup": "pecho", "category": "isolation", "isBilboEligible": false},
+  {"name": "Fondos en paralelas", "muscleGroup": "pecho", "category": "compound", "isBilboEligible": true},
+
+  {"name": "Sentadilla con barra", "muscleGroup": "piernas", "category": "compound", "isBilboEligible": true},
+  {"name": "Prensa de piernas", "muscleGroup": "piernas", "category": "compound", "isBilboEligible": true},
+  {"name": "Peso muerto convencional", "muscleGroup": "piernas", "category": "compound", "isBilboEligible": true},
+  {"name": "Peso muerto rumano", "muscleGroup": "piernas", "category": "compound", "isBilboEligible": true},
+  {"name": "Zancadas con mancuernas", "muscleGroup": "piernas", "category": "compound", "isBilboEligible": true},
+  {"name": "Extensión de cuádriceps", "muscleGroup": "piernas", "category": "isolation", "isBilboEligible": false},
+  {"name": "Curl femoral tumbado", "muscleGroup": "piernas", "category": "isolation", "isBilboEligible": false},
+  {"name": "Curl femoral sentado", "muscleGroup": "piernas", "category": "isolation", "isBilboEligible": false},
+  {"name": "Elevación de gemelos de pie", "muscleGroup": "piernas", "category": "isolation", "isBilboEligible": false},
+  {"name": "Sentadilla búlgara", "muscleGroup": "piernas", "category": "compound", "isBilboEligible": false},
+  {"name": "Hip thrust con barra", "muscleGroup": "piernas", "category": "compound", "isBilboEligible": true},
+
+  {"name": "Remo con barra", "muscleGroup": "espalda", "category": "compound", "isBilboEligible": true},
+  {"name": "Remo con mancuerna a una mano", "muscleGroup": "espalda", "category": "compound", "isBilboEligible": true},
+  {"name": "Jalón al pecho", "muscleGroup": "espalda", "category": "compound", "isBilboEligible": true},
+  {"name": "Dominadas", "muscleGroup": "espalda", "category": "compound", "isBilboEligible": true},
+  {"name": "Remo en polea baja sentado", "muscleGroup": "espalda", "category": "compound", "isBilboEligible": true},
+  {"name": "Remo al cuello", "muscleGroup": "espalda", "category": "compound", "isBilboEligible": false},
+  {"name": "Pullover con mancuerna", "muscleGroup": "espalda", "category": "isolation", "isBilboEligible": false},
+
+  {"name": "Press militar con barra", "muscleGroup": "hombros", "category": "compound", "isBilboEligible": true},
+  {"name": "Press militar con mancuernas", "muscleGroup": "hombros", "category": "compound", "isBilboEligible": true},
+  {"name": "Elevaciones laterales", "muscleGroup": "hombros", "category": "isolation", "isBilboEligible": false},
+  {"name": "Elevaciones frontales", "muscleGroup": "hombros", "category": "isolation", "isBilboEligible": false},
+  {"name": "Pájaro en polea", "muscleGroup": "hombros", "category": "isolation", "isBilboEligible": false},
+  {"name": "Face pull", "muscleGroup": "hombros", "category": "isolation", "isBilboEligible": false},
+
+  {"name": "Curl con barra", "muscleGroup": "brazos", "category": "isolation", "isBilboEligible": false},
+  {"name": "Curl con mancuernas", "muscleGroup": "brazos", "category": "isolation", "isBilboEligible": false},
+  {"name": "Curl martillo", "muscleGroup": "brazos", "category": "isolation", "isBilboEligible": false},
+  {"name": "Extensiones de tríceps en polea", "muscleGroup": "brazos", "category": "isolation", "isBilboEligible": false},
+  {"name": "Press francés", "muscleGroup": "brazos", "category": "isolation", "isBilboEligible": false},
+  {"name": "Fondos en banco", "muscleGroup": "brazos", "category": "isolation", "isBilboEligible": false},
+
+  {"name": "Plancha abdominal", "muscleGroup": "core", "category": "isolation", "isBilboEligible": false},
+  {"name": "Crunch en polea", "muscleGroup": "core", "category": "isolation", "isBilboEligible": false},
+  {"name": "Elevación de piernas colgado", "muscleGroup": "core", "category": "isolation", "isBilboEligible": false}
+]
