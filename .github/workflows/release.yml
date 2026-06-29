@@ -32,6 +32,9 @@ jobs:
         run: |
           sed -i "s/versionName = .*/versionName = \"${{ steps.version.outputs.VERSION }}\"/" app/build.gradle.kts
 
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
       - name: Build APK
         run: ./gradlew assembleDebug --no-daemon
 
