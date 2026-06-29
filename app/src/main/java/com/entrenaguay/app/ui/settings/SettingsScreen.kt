@@ -183,7 +183,7 @@ fun SettingsScreen(
             Spacer(Modifier.weight(1f))
 
             // About
-            Text("EntrenaGuay v1.0",
+            Text("EntrenaGuay v0.0.2",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
