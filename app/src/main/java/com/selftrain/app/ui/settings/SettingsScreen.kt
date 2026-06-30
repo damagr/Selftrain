@@ -183,7 +183,7 @@ fun SettingsScreen(
             Spacer(Modifier.weight(1f))
 
             // About
-            Text("SelfTrain v0.2.3",
+            Text("SelfTrain v0.3.0",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(2.dp))
