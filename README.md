@@ -42,6 +42,18 @@ Los programas se organizan en **jerarquía padre/hijo**: cada programa es una ta
 - Historial con drill-down: resumen → lista de entrenos → detalle por ejercicio
 - 1RM estimado (fórmula Epley)
 - Exportar/importar backup en JSON
+- **Cuadro de mando web** para estudiar progresión con gráficas (1RM, peso, volumen, frecuencia) desde el navegador del PC
+
+## Cuadro de mando (dashboard)
+
+```bash
+# Exporta el backup desde la app (Ajustes → Exportar)
+# Copia el JSON al PC y ejecuta:
+python3 dashboard/dashboard.py selftrain_backup.json
+# Abre http://localhost:8080
+```
+
+Gráficas interactivas con Chart.js: 1RM estimado (Epley), peso máximo por sesión, volumen total, frecuencia semanal de entrenos. Solo necesita Python 3 (sin dependencias extra).
 
 ## Stack
 
