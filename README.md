@@ -12,10 +12,29 @@ Sistema creado por Jesús María Varela Goicochea:
 
 Solo se aplica a ejercicios compuestos (press, sentadilla, remo, peso muerto…). Los de aislamiento van directos a series de trabajo.
 
+## Rutinas predefinidas
+
+La app incluye **6 programas** listos para cargar en un toque (botón "Cargar rutinas"):
+
+| Programa | Días | Método |
+|----------|------|--------|
+| PPL 5 Días | Push / Pull / Legs / Push / Pull | PPL |
+| PPL 3 Días | Push / Pull / Legs | PPL |
+| Full Body 3 Días | Día 1 / 2 / 3 | Full Body |
+| Bilbo Upper/Lower 4 Días | Upper A / B + Lower A / B | Bilbo |
+| Bilbo Full Body 3 Días | Día 1 / 2 / 3 | Bilbo |
+| Bilbo PPL 3 Días | Push / Pull / Legs | Bilbo |
+
+Los programas se organizan en **jerarquía padre/hijo**: cada programa es una tarjeta expandible que contiene sus días. Las rutinas sueltas conviven sin interferir.
+
 ## Funcionalidades
 
 - Crear rutinas con selector de método (Bilbo / Full Body / Push-Pull-Legs)
-- Biblioteca de 40+ ejercicios pre-cargados + crear/eliminar ejercicios propios
+- **6 programas predefinidos** cargables con un toque, agrupados en jerarquía expandible
+- **Biblioteca de 54 ejercicios** pre-cargados con equipamiento (Barra, Mancuerna, Polea, Máquina, Peso corporal) + crear/eliminar ejercicios propios
+- **Buscador** en el selector de ejercicios (filtra por nombre en tiempo real)
+- **Reemplazar** ejercicios en la rutina sin necesidad de borrar y volver a añadir
+- **Reordenar** rutinas y ejercicios con ↑↓ y animación de deslizamiento
 - Entreno paso a paso con navegación lineal y salto entre ejercicios
 - Temporizador de descanso (90s configurable)
 - Sugerencias automáticas de peso/reps basadas en el historial
