@@ -2,50 +2,79 @@ name: Release APK
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+    paths:
+      - 'app/build.gradle.kts'
   workflow_dispatch:
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from build.gradle.kts
+        id: version
+        run: |
+          VERSION=$(grep 'versionName' app/build.gradle.kts | sed 's/.*"\(.*\)".*/\1/')
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Extracted version: $VERSION"
+
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          if git rev-parse "v${{ steps.version.outputs.VERSION }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Tag v${{ steps.version.outputs.VERSION }} already exists, skipping release"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Creating new release v${{ steps.version.outputs.VERSION }}"
+          fi
 
       - name: Set up JDK 17
+        if: steps.check_tag.outputs.exists == 'false'
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
       - name: Setup Android SDK
+        if: steps.check_tag.outputs.exists == 'false'
         uses: android-actions/setup-android@v3
         with:
           packages: 'platforms;android-36 build-tools;36.0.0'
 
-      - name: Extract version from tag
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
-
-      - name: Set version in build.gradle.kts
-        run: |
-          sed -i "s/versionName = .*/versionName = \"${{ steps.version.outputs.VERSION }}\"/" app/build.gradle.kts
-
       - name: Make gradlew executable
+        if: steps.check_tag.outputs.exists == 'false'
         run: chmod +x gradlew
 
       - name: Build APK
+        if: steps.check_tag.outputs.exists == 'false'
         run: ./gradlew assembleDebug --no-daemon
 
       - name: Rename APK
+        if: steps.check_tag.outputs.exists == 'false'
         run: mv app/build/outputs/apk/debug/app-debug.apk EntrenaGuay-v${{ steps.version.outputs.VERSION }}.apk
 
+      - name: Create tag
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git tag -a "v${{ steps.version.outputs.VERSION }}" -m "Release v${{ steps.version.outputs.VERSION }}"
+          git push origin "v${{ steps.version.outputs.VERSION }}"
+
       - name: Create Release
+        if: steps.check_tag.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           name: "v${{ steps.version.outputs.VERSION }}"
+          tag_name: "v${{ steps.version.outputs.VERSION }}"
           files: EntrenaGuay-v${{ steps.version.outputs.VERSION }}.apk
           generate_release_notes: true
