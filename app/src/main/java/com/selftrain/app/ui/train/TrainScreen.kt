@@ -63,6 +63,7 @@ fun TrainScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
                 title = { Text(state.routine?.name ?: "Entrenando...") },
                 actions = {
                     TextButton(onClick = { viewModel.finishWorkout() }) {

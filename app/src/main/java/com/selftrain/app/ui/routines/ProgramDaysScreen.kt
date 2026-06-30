@@ -31,6 +31,7 @@ fun ProgramDaysScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
                 title = { Text(parent?.name ?: "Programa") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

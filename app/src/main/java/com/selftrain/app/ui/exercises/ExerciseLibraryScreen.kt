@@ -4,6 +4,8 @@ import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -44,6 +46,7 @@ fun ExerciseLibraryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
                 title = {
                     Column {
                         Text("Biblioteca de Ejercicios")
@@ -176,9 +179,13 @@ fun CreateExerciseDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.fillMaxHeight(0.85f),
         title = { Text("Nuevo Ejercicio") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },

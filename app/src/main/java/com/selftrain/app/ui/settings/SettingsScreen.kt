@@ -104,6 +104,7 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
                 title = { Text("Ajustes") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

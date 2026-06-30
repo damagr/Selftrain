@@ -43,6 +43,7 @@ fun HistoryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
                 title = {
                     Text(when (view) {
                         HistoryView.SUMMARY -> if (selectedExercise != null) "Progreso: ${selectedExercise!!.name}" else "Historial"

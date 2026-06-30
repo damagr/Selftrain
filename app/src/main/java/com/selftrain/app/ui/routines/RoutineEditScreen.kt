@@ -44,6 +44,7 @@ fun RoutineEditScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
                 title = { Text(routine?.name ?: "Editar Rutina") },
                 actions = {
                     IconButton(onClick = { viewModel.save(onSaved) }) {
@@ -213,10 +214,12 @@ fun ExercisePickerDialog(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
     ) {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
+        Scaffold(modifier = Modifier.fillMaxSize(),
             topBar = {
                 TopAppBar(
                     title = { Text(if (singleSelect) "Reemplazar Ejercicio" else "Añadir Ejercicios") },
@@ -228,27 +231,13 @@ fun ExercisePickerDialog(
                     actions = {
                         if (selectedIds.isNotEmpty()) {
                             Text(
-                                "${selectedIds.size} seleccionados",
+                                "${selectedIds.size}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
+                            Spacer(Modifier.width(8.dp))
                         }
-                    }
-                )
-            },
-            bottomBar = {
-                Surface(tonalElevation = 3.dp) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = onDismiss,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Cancelar")
-                        }
-                        Button(
+                        IconButton(
                             onClick = {
                                 val selected = if (singleSelect) {
                                     exercises.filter { it.id in selectedIds }
@@ -257,13 +246,12 @@ fun ExercisePickerDialog(
                                 }
                                 if (selected.isNotEmpty()) onSelectMany(selected)
                             },
-                            enabled = selectedIds.isNotEmpty(),
-                            modifier = Modifier.weight(1f)
+                            enabled = selectedIds.isNotEmpty()
                         ) {
-                            Text(if (singleSelect) "Reemplazar" else "Añadir (${selectedIds.size})")
+                            Icon(Icons.Default.Check, "Aceptar")
                         }
                     }
-                }
+                )
             }
         ) { padding ->
             Column(Modifier.padding(padding).fillMaxSize()) {

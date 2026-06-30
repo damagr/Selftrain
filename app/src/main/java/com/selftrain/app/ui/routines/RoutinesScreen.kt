@@ -37,6 +37,7 @@ fun RoutinesScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Mis Rutinas") },
+                windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
                 actions = {
                     TextButton(onClick = { showPredefinedDialog = true }) {
                         Text("Cargar rutinas", style = MaterialTheme.typography.labelSmall)
