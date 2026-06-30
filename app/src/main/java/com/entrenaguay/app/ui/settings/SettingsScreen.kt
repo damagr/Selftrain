@@ -183,8 +183,12 @@ fun SettingsScreen(
             Spacer(Modifier.weight(1f))
 
             // About
-            Text("EntrenaGuay v0.0.2",
+            Text("SelfTrain v0.2.3",
                 style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(2.dp))
+            Text("Icono: Freepik — Flaticon",
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

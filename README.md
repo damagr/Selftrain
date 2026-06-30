@@ -1,4 +1,4 @@
-# EntrenaGuay
+# SelfTrain
 
 App Android para registrar entrenamientos de gimnasio. Soporta el **Método Bilbo** (series de activación explosiva + series de trabajo), Full Body y Push-Pull-Legs.
 
