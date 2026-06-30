@@ -266,7 +266,7 @@ fun ExercisePickerDialog(
                 }
             }
         ) { padding ->
-            Column(Modifier.padding(padding)) {
+            Column(Modifier.padding(padding).fillMaxSize()) {
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
@@ -286,7 +286,7 @@ fun ExercisePickerDialog(
                         Text("Sin resultados")
                     }
                 } else {
-                    LazyColumn {
+                    LazyColumn(Modifier.weight(1f)) {
                         val grouped = filtered.groupBy { it.muscleGroup }
                         for ((group, exs) in grouped) {
                             item {

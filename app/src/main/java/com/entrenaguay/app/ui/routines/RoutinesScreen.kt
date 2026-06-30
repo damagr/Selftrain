@@ -4,12 +4,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
@@ -28,6 +25,7 @@ import com.entrenaguay.app.util.Labels
 fun RoutinesScreen(
     onStartWorkout: (Long) -> Unit,
     onEditRoutine: (Long) -> Unit,
+    onEnterProgram: (Long) -> Unit,
     onSettings: () -> Unit,
     viewModel: RoutinesViewModel = hiltViewModel()
 ) {
@@ -55,15 +53,13 @@ fun RoutinesScreen(
             }
         }
     ) { padding ->
-        // Group routines: parents first, then standalones
         val groups = remember(routines) {
             val topLevel = routines.filter { it.parentId == null }.sortedBy { it.order }
             topLevel.map { parent ->
-                val children = routines.filter { it.parentId == parent.id }.sortedBy { it.order }
-                RoutineGroup(routine = parent, children = children)
+                val children = routines.filter { it.parentId == parent.id }
+                parent to children
             }
         }
-        val expandedState = remember { mutableStateMapOf<Long, Boolean>() }
 
         if (groups.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
@@ -71,69 +67,45 @@ fun RoutinesScreen(
             }
         } else {
             LazyColumn(Modifier.padding(padding)) {
-                itemsIndexed(groups, key = { _, g -> g.routine.id }) { index, group ->
-                    if (group.children.isEmpty()) {
-                        // Standalone routine
-                        RoutineCard(
-                            routine = group.routine,
-                            index = index,
-                            total = groups.size,
-                            onStart = { onStartWorkout(group.routine.id) },
-                            onEdit = { onEditRoutine(group.routine.id) },
-                            onMove = { direction ->
-                                viewModel.moveRoutine(index, direction,
-                                    groups.map { it.routine })
-                            },
-                            modifier = Modifier.animateItem()
-                        )
-                    } else {
-                        // Parent with children — collapsible
-                        val expanded = expandedState[group.routine.id] ?: false
+                items(groups.size) { index ->
+                    val (routine, children) = groups[index]
+                    if (children.isNotEmpty()) {
+                        // Parent — tap to navigate
                         Card(
                             Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 4.dp)
+                                .clickable { onEnterProgram(routine.id) }
                                 .animateItem()
                         ) {
-                            Column {
-                                Row(
-                                    Modifier.fillMaxWidth().clickable {
-                                        expandedState[group.routine.id] = !expanded
-                                    }.padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(Modifier.weight(1f)) {
-                                        Text(group.routine.name, style = MaterialTheme.typography.titleMedium)
-                                        Text("${group.children.size} días · ${Labels.method(group.routine.method)}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                    Icon(
-                                        if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                        "Expandir"
-                                    )
+                            Row(
+                                Modifier.fillMaxWidth().padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(routine.name, style = MaterialTheme.typography.titleMedium)
+                                    Text("${children.size} días · ${Labels.method(routine.method)}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
-                                if (expanded) {
-                                    HorizontalDivider()
-                                    group.children.forEach { child ->
-                                        Row(
-                                            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(child.name, Modifier.weight(1f),
-                                                style = MaterialTheme.typography.bodyLarge)
-                                            IconButton(onClick = { onStartWorkout(child.id) }) {
-                                                Icon(Icons.Default.PlayArrow, "Empezar",
-                                                    tint = MaterialTheme.colorScheme.primary)
-                                            }
-                                            IconButton(onClick = { onEditRoutine(child.id) }) {
-                                                Icon(Icons.Default.Edit, "Editar")
-                                            }
-                                        }
-                                    }
-                                }
+                                Icon(Icons.Default.PlayArrow, "Entrar", tint = MaterialTheme.colorScheme.primary)
                             }
                         }
+                    } else {
+                        // Standalone routine
+                        RoutineCard(
+                            routine = routine,
+                            index = index,
+                            total = groups.size,
+                            onStart = { onStartWorkout(routine.id) },
+                            onEdit = { onEditRoutine(routine.id) },
+                            onMove = { direction ->
+                                viewModel.moveRoutine(index, direction,
+                                    groups.map { it.first })
+                            },
+                            modifier = Modifier.animateItem()
+                        )
                     }
                 }
             }

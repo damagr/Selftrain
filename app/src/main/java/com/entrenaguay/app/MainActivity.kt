@@ -28,6 +28,7 @@ import androidx.navigation.navArgument
 import com.entrenaguay.app.ui.EntrenaGuayTheme
 import com.entrenaguay.app.ui.exercises.ExerciseLibraryScreen
 import com.entrenaguay.app.ui.history.HistoryScreen
+import com.entrenaguay.app.ui.routines.ProgramDaysScreen
 import com.entrenaguay.app.ui.routines.RoutineEditScreen
 import com.entrenaguay.app.ui.routines.RoutinesScreen
 import com.entrenaguay.app.ui.settings.SettingsScreen
@@ -107,7 +108,17 @@ fun EntrenaGuayMain() {
                 RoutinesScreen(
                     onStartWorkout = { routineId -> navController.navigate("train/$routineId") },
                     onEditRoutine = { routineId -> navController.navigate("routine_edit/$routineId") },
+                    onEnterProgram = { routineId -> navController.navigate("program/$routineId") },
                     onSettings = { navController.navigate("settings") }
+                )
+            }
+            composable("program/{routineId}", arguments = listOf(navArgument("routineId") { type = NavType.LongType })) { backStackEntry ->
+                val routineId = backStackEntry.arguments?.getLong("routineId") ?: 0L
+                ProgramDaysScreen(
+                    routineId = routineId,
+                    onStartWorkout = { id -> navController.navigate("train/$id") },
+                    onEditRoutine = { id -> navController.navigate("routine_edit/$id") },
+                    onBack = { navController.popBackStack() }
                 )
             }
             composable("routine_edit/{routineId}", arguments = listOf(navArgument("routineId") { type = NavType.LongType })) { backStackEntry ->

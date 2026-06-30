@@ -4,7 +4,7 @@
     "method": "ppl",
     "routines": [
       {
-        "name": "Push (Día 1)",
+        "name": "Empuje (Día 1)",
         "exercises": [
           "Press inclinado con mancuernas",
           "Press banca con barra",
@@ -15,7 +15,7 @@
         ]
       },
       {
-        "name": "Pull (Día 2)",
+        "name": "Tirón (Día 2)",
         "exercises": [
           "Jalón al pecho",
           "Remo en polea unilateral",
@@ -26,7 +26,7 @@
         ]
       },
       {
-        "name": "Legs (Día 3)",
+        "name": "Pierna (Día 3)",
         "exercises": [
           "Prensa de piernas",
           "Extensión de cuádriceps",
@@ -37,7 +37,7 @@
         ]
       },
       {
-        "name": "Push (Día 4)",
+        "name": "Empuje (Día 4)",
         "exercises": [
           "Press militar con mancuernas",
           "Press declinado en máquina",
@@ -47,7 +47,7 @@
         ]
       },
       {
-        "name": "Pull (Día 5)",
+        "name": "Tirón (Día 5)",
         "exercises": [
           "Remo en polea baja sentado",
           "Jalón cerrado en polea",
@@ -63,7 +63,7 @@
     "method": "ppl",
     "routines": [
       {
-        "name": "Push (Día 1)",
+        "name": "Empuje (Día 1)",
         "exercises": [
           "Press inclinado con mancuernas",
           "Press banca con barra",
@@ -74,7 +74,7 @@
         ]
       },
       {
-        "name": "Pull (Día 2)",
+        "name": "Tirón (Día 2)",
         "exercises": [
           "Jalón al pecho",
           "Remo en polea unilateral",
@@ -85,7 +85,7 @@
         ]
       },
       {
-        "name": "Legs (Día 3)",
+        "name": "Pierna (Día 3)",
         "exercises": [
           "Prensa de piernas",
           "Extensión de cuádriceps",
@@ -137,11 +137,11 @@
     ]
   },
   {
-    "program": "Bilbo Upper/Lower 4 Días",
+    "program": "Bilbo Tren Superior/Inferior 4 Días",
     "method": "bilbo",
     "routines": [
       {
-        "name": "Upper A",
+        "name": "Tren superior A",
         "exercises": [
           "Press banca con barra",
           "Jalón al pecho",
@@ -151,7 +151,7 @@
         ]
       },
       {
-        "name": "Lower A",
+        "name": "Tren inferior A",
         "exercises": [
           "Sentadilla con barra",
           "Peso muerto rumano",
@@ -161,7 +161,7 @@
         ]
       },
       {
-        "name": "Upper B",
+        "name": "Tren superior B",
         "exercises": [
           "Press militar con mancuernas",
           "Remo con barra",
@@ -171,7 +171,7 @@
         ]
       },
       {
-        "name": "Lower B",
+        "name": "Tren inferior B",
         "exercises": [
           "Hip thrust con barra",
           "Prensa de piernas",
@@ -223,7 +223,7 @@
     "method": "bilbo",
     "routines": [
       {
-        "name": "Push (Día 1)",
+        "name": "Empuje (Día 1)",
         "exercises": [
           "Press banca con barra",
           "Press inclinado con mancuernas",
@@ -233,7 +233,7 @@
         ]
       },
       {
-        "name": "Pull (Día 2)",
+        "name": "Tirón (Día 2)",
         "exercises": [
           "Jalón al pecho",
           "Remo con barra",
@@ -243,7 +243,7 @@
         ]
       },
       {
-        "name": "Legs (Día 3)",
+        "name": "Pierna (Día 3)",
         "exercises": [
           "Sentadilla con barra",
           "Peso muerto rumano",

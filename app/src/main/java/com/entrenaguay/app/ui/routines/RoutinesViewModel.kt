@@ -24,12 +24,6 @@ data class PredefinedRoutineData(
     val exercises: List<String>
 )
 
-data class RoutineGroup(
-    val routine: Routine,           // parent (or standalone if no children)
-    val children: List<Routine>,     // empty = standalone
-    val expanded: Boolean = false
-)
-
 @HiltViewModel
 class RoutinesViewModel @Inject constructor(
     app: Application,
