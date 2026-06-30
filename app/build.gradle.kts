@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.entrenaguay.app"
+    namespace = "com.selftrain.app"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.entrenaguay.app"
+        applicationId = "com.selftrain.app"
         minSdk = 26
         targetSdk = 36
         versionCode = 6

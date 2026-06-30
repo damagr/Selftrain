@@ -15,5 +15,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "EntrenaGuay"
+rootProject.name = "SelfTrain"
 include(":app")
