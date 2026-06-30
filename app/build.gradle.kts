@@ -66,9 +66,6 @@ dependencies {
     ksp("com.google.dagger:hilt-android-compiler:2.53.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
-    // Charts
-    implementation("com.patrykandpatrick.vico:compose-m3:2.1.0")
-
     // JSON parsing for seed data
     implementation("com.google.code.gson:gson:2.11.0")
 }

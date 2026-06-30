@@ -10,8 +10,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 data class BackupData(
-    val version: Int = 1,
-    val exportedAt: String = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date()),
     val exercises: List<Exercise> = emptyList(),
     val routines: List<Routine> = emptyList(),
     val routineExercises: List<RoutineExercise> = emptyList(),

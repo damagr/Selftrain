@@ -38,9 +38,6 @@ interface RoutineDao {
     @Query("SELECT * FROM routine_exercises WHERE routineId = :routineId ORDER BY `order`")
     suspend fun getRoutineExercises(routineId: Long): List<RoutineExercise>
 
-    @Query("SELECT * FROM routine_exercises WHERE routineId = :routineId AND exerciseId = :exerciseId")
-    suspend fun getRoutineExercise(routineId: Long, exerciseId: Long): RoutineExercise?
-
     @Insert
     suspend fun addExercise(routineExercise: RoutineExercise)
 

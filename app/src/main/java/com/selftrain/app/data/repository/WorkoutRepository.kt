@@ -15,7 +15,6 @@ class WorkoutRepository @Inject constructor(
     val workouts: Flow<List<Workout>> = dao.getAll()
 
     suspend fun getById(id: Long) = dao.getById(id)
-    suspend fun getByRoutine(routineId: Long) = dao.getByRoutine(routineId)
     suspend fun getLastCompleted(routineId: Long) = dao.getLastCompleted(routineId)
     suspend fun insert(workout: Workout) = dao.insert(workout)
     suspend fun update(workout: Workout) = dao.update(workout)

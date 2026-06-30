@@ -20,9 +20,6 @@ interface WorkoutDao {
     @Query("SELECT * FROM workouts WHERE id = :id")
     suspend fun getById(id: Long): Workout?
 
-    @Query("SELECT * FROM workouts WHERE routineId = :routineId ORDER BY date DESC")
-    fun getByRoutine(routineId: Long): Flow<List<Workout>>
-
     @Query("SELECT * FROM workouts WHERE routineId = :routineId AND completed = 1 ORDER BY date DESC LIMIT 1")
     suspend fun getLastCompleted(routineId: Long): Workout?
 
