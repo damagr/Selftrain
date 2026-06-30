@@ -51,4 +51,5 @@ class ExerciseRepository @Inject constructor(
 
     suspend fun getDeletedExercises(): List<Exercise> = dao.getDeleted()
     suspend fun restoreExercise(id: Long) = dao.restore(id)
+    suspend fun getAllList() = dao.getAllList()
 }

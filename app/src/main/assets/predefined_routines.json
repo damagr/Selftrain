@@ -1,0 +1,257 @@
+[
+  {
+    "program": "PPL 5 Días",
+    "method": "ppl",
+    "routines": [
+      {
+        "name": "Push (Día 1)",
+        "exercises": [
+          "Press inclinado con mancuernas",
+          "Press banca con barra",
+          "Aperturas en máquina",
+          "Elevación lateral en polea",
+          "Extensiones de tríceps en polea",
+          "Rotación externa en polea"
+        ]
+      },
+      {
+        "name": "Pull (Día 2)",
+        "exercises": [
+          "Jalón al pecho",
+          "Remo en polea unilateral",
+          "Pullover en polea",
+          "Face pull",
+          "Curl bíceps banco scott",
+          "Curl martillo"
+        ]
+      },
+      {
+        "name": "Legs (Día 3)",
+        "exercises": [
+          "Prensa de piernas",
+          "Extensión de cuádriceps",
+          "Curl femoral tumbado",
+          "Hip thrust con barra",
+          "Abducción en máquina",
+          "Elevación de gemelos de pie"
+        ]
+      },
+      {
+        "name": "Push (Día 4)",
+        "exercises": [
+          "Press militar con mancuernas",
+          "Press declinado en máquina",
+          "Cruce polea baja-arriba",
+          "Cruce polea alta-abajo",
+          "Press tríceps en cuerda"
+        ]
+      },
+      {
+        "name": "Pull (Día 5)",
+        "exercises": [
+          "Remo en polea baja sentado",
+          "Jalón cerrado en polea",
+          "Pájaro en polea",
+          "Face pull",
+          "Curl bíceps en polea baja"
+        ]
+      }
+    ]
+  },
+  {
+    "program": "PPL 3 Días",
+    "method": "ppl",
+    "routines": [
+      {
+        "name": "Push (Día 1)",
+        "exercises": [
+          "Press inclinado con mancuernas",
+          "Press banca con barra",
+          "Aperturas en máquina",
+          "Elevación lateral en polea",
+          "Press militar con mancuernas",
+          "Extensiones de tríceps en polea"
+        ]
+      },
+      {
+        "name": "Pull (Día 2)",
+        "exercises": [
+          "Jalón al pecho",
+          "Remo en polea unilateral",
+          "Pullover en polea",
+          "Face pull",
+          "Curl bíceps banco scott",
+          "Curl martillo"
+        ]
+      },
+      {
+        "name": "Legs (Día 3)",
+        "exercises": [
+          "Prensa de piernas",
+          "Extensión de cuádriceps",
+          "Curl femoral tumbado",
+          "Hip thrust con barra",
+          "Abducción en máquina",
+          "Elevación de gemelos de pie"
+        ]
+      }
+    ]
+  },
+  {
+    "program": "Full Body 3 Días",
+    "method": "full_body",
+    "routines": [
+      {
+        "name": "Día 1",
+        "exercises": [
+          "Press inclinado con mancuernas",
+          "Jalón al pecho",
+          "Prensa de piernas",
+          "Curl femoral tumbado",
+          "Elevación lateral en polea",
+          "Curl bíceps en polea baja"
+        ]
+      },
+      {
+        "name": "Día 2",
+        "exercises": [
+          "Press banca con barra",
+          "Remo en polea unilateral",
+          "Hip thrust con barra",
+          "Extensión de cuádriceps",
+          "Face pull",
+          "Extensiones de tríceps en polea"
+        ]
+      },
+      {
+        "name": "Día 3",
+        "exercises": [
+          "Press militar con mancuernas",
+          "Jalón cerrado en polea",
+          "Prensa de piernas",
+          "Elevación de gemelos de pie",
+          "Pájaro en polea",
+          "Curl martillo"
+        ]
+      }
+    ]
+  },
+  {
+    "program": "Bilbo Upper/Lower 4 Días",
+    "method": "bilbo",
+    "routines": [
+      {
+        "name": "Upper A",
+        "exercises": [
+          "Press banca con barra",
+          "Jalón al pecho",
+          "Elevaciones laterales",
+          "Extensiones de tríceps en polea",
+          "Curl con barra"
+        ]
+      },
+      {
+        "name": "Lower A",
+        "exercises": [
+          "Sentadilla con barra",
+          "Peso muerto rumano",
+          "Extensión de cuádriceps",
+          "Curl femoral tumbado",
+          "Elevación de gemelos de pie"
+        ]
+      },
+      {
+        "name": "Upper B",
+        "exercises": [
+          "Press militar con mancuernas",
+          "Remo con barra",
+          "Face pull",
+          "Press francés",
+          "Curl martillo"
+        ]
+      },
+      {
+        "name": "Lower B",
+        "exercises": [
+          "Hip thrust con barra",
+          "Prensa de piernas",
+          "Curl femoral tumbado",
+          "Zancadas con mancuernas",
+          "Elevación de gemelos de pie"
+        ]
+      }
+    ]
+  },
+  {
+    "program": "Bilbo Full Body 3 Días",
+    "method": "bilbo",
+    "routines": [
+      {
+        "name": "Día 1",
+        "exercises": [
+          "Press banca con barra",
+          "Remo con barra",
+          "Sentadilla con barra",
+          "Extensiones de tríceps en polea",
+          "Curl con barra"
+        ]
+      },
+      {
+        "name": "Día 2",
+        "exercises": [
+          "Press militar con mancuernas",
+          "Peso muerto convencional",
+          "Jalón al pecho",
+          "Face pull",
+          "Elevación de gemelos de pie"
+        ]
+      },
+      {
+        "name": "Día 3",
+        "exercises": [
+          "Press inclinado con mancuernas",
+          "Hip thrust con barra",
+          "Remo en polea baja sentado",
+          "Elevaciones laterales",
+          "Curl martillo"
+        ]
+      }
+    ]
+  },
+  {
+    "program": "Bilbo PPL 3 Días",
+    "method": "bilbo",
+    "routines": [
+      {
+        "name": "Push (Día 1)",
+        "exercises": [
+          "Press banca con barra",
+          "Press inclinado con mancuernas",
+          "Press militar con mancuernas",
+          "Extensiones de tríceps en polea",
+          "Elevaciones laterales"
+        ]
+      },
+      {
+        "name": "Pull (Día 2)",
+        "exercises": [
+          "Jalón al pecho",
+          "Remo con barra",
+          "Remo en polea baja sentado",
+          "Face pull",
+          "Curl con barra"
+        ]
+      },
+      {
+        "name": "Legs (Día 3)",
+        "exercises": [
+          "Sentadilla con barra",
+          "Peso muerto rumano",
+          "Prensa de piernas",
+          "Extensión de cuádriceps",
+          "Elevación de gemelos de pie"
+        ]
+      }
+    ]
+  }
+]

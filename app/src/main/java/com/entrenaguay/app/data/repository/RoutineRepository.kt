@@ -25,4 +25,6 @@ class RoutineRepository @Inject constructor(
 
     suspend fun clearExercises(routineId: Long) = dao.clearExercises(routineId)
     suspend fun removeExercise(id: Long) = dao.removeExercise(id)
+    suspend fun updateOrder(id: Long, order: Int) = dao.updateOrder(id, order)
+    suspend fun getAllList() = dao.getAllList()
 }

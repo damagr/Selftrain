@@ -20,7 +20,7 @@ data class RoutineExerciseWithName(
 
 @Dao
 interface RoutineDao {
-    @Query("SELECT * FROM routines ORDER BY id DESC")
+    @Query("SELECT * FROM routines ORDER BY `order`, id DESC")
     fun getAll(): Flow<List<Routine>>
 
     @Query("SELECT * FROM routines WHERE id = :id")
@@ -55,4 +55,7 @@ interface RoutineDao {
 
     @Query("SELECT * FROM routine_exercises")
     suspend fun getAllRoutineExercises(): List<RoutineExercise>
+
+    @Query("UPDATE routines SET `order` = :order WHERE id = :id")
+    suspend fun updateOrder(id: Long, order: Int)
 }

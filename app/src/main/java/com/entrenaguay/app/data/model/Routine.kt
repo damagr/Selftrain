@@ -8,5 +8,7 @@ data class Routine(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
     val method: String = "bilbo",   // "bilbo" for now, extensible later
-    val notes: String = ""
+    val notes: String = "",
+    val order: Int = 0,             // ponytail: reorder via index swap, no drag-drop
+    val parentId: Long? = null      // ponytail: null=sueltas/programa, valor=hijo de programa
 )

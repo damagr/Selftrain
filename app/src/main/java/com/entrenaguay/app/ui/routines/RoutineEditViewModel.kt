@@ -52,6 +52,12 @@ class RoutineEditViewModel @Inject constructor(
         _exercises.value = _exercises.value.filter { it.id != exercise.id }
     }
 
+    fun replaceExercise(index: Int, newExercise: Exercise) {
+        val list = _exercises.value.toMutableList()
+        list[index] = newExercise
+        _exercises.value = list
+    }
+
     fun moveExercise(fromIndex: Int, toIndex: Int) {
         val list = _exercises.value.toMutableList()
         val item = list.removeAt(fromIndex)

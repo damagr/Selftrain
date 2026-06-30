@@ -4,9 +4,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -28,12 +33,16 @@ fun RoutinesScreen(
 ) {
     val routines by viewModel.routines.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
+    var showPredefinedDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Mis Rutinas") },
                 actions = {
+                    TextButton(onClick = { showPredefinedDialog = true }) {
+                        Text("Cargar rutinas", style = MaterialTheme.typography.labelSmall)
+                    }
                     IconButton(onClick = onSettings) {
                         Icon(Icons.Default.Settings, "Ajustes")
                     }
@@ -46,18 +55,86 @@ fun RoutinesScreen(
             }
         }
     ) { padding ->
-        if (routines.isEmpty()) {
+        // Group routines: parents first, then standalones
+        val groups = remember(routines) {
+            val topLevel = routines.filter { it.parentId == null }.sortedBy { it.order }
+            topLevel.map { parent ->
+                val children = routines.filter { it.parentId == parent.id }.sortedBy { it.order }
+                RoutineGroup(routine = parent, children = children)
+            }
+        }
+        val expandedState = remember { mutableStateMapOf<Long, Boolean>() }
+
+        if (groups.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text("No hay rutinas aún.\nToca + para crear una.", style = MaterialTheme.typography.bodyLarge)
             }
         } else {
             LazyColumn(Modifier.padding(padding)) {
-                items(routines) { routine ->
-                    RoutineCard(
-                        routine = routine,
-                        onStart = { onStartWorkout(routine.id) },
-                        onEdit = { onEditRoutine(routine.id) }
-                    )
+                itemsIndexed(groups, key = { _, g -> g.routine.id }) { index, group ->
+                    if (group.children.isEmpty()) {
+                        // Standalone routine
+                        RoutineCard(
+                            routine = group.routine,
+                            index = index,
+                            total = groups.size,
+                            onStart = { onStartWorkout(group.routine.id) },
+                            onEdit = { onEditRoutine(group.routine.id) },
+                            onMove = { direction ->
+                                viewModel.moveRoutine(index, direction,
+                                    groups.map { it.routine })
+                            },
+                            modifier = Modifier.animateItem()
+                        )
+                    } else {
+                        // Parent with children — collapsible
+                        val expanded = expandedState[group.routine.id] ?: false
+                        Card(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                                .animateItem()
+                        ) {
+                            Column {
+                                Row(
+                                    Modifier.fillMaxWidth().clickable {
+                                        expandedState[group.routine.id] = !expanded
+                                    }.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(group.routine.name, style = MaterialTheme.typography.titleMedium)
+                                        Text("${group.children.size} días · ${Labels.method(group.routine.method)}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    Icon(
+                                        if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                        "Expandir"
+                                    )
+                                }
+                                if (expanded) {
+                                    HorizontalDivider()
+                                    group.children.forEach { child ->
+                                        Row(
+                                            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(child.name, Modifier.weight(1f),
+                                                style = MaterialTheme.typography.bodyLarge)
+                                            IconButton(onClick = { onStartWorkout(child.id) }) {
+                                                Icon(Icons.Default.PlayArrow, "Empezar",
+                                                    tint = MaterialTheme.colorScheme.primary)
+                                            }
+                                            IconButton(onClick = { onEditRoutine(child.id) }) {
+                                                Icon(Icons.Default.Edit, "Editar")
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -72,23 +149,46 @@ fun RoutinesScreen(
             }
         )
     }
+
+    if (showPredefinedDialog) {
+        PredefinedRoutinesDialog(
+            viewModel = viewModel,
+            onDismiss = { showPredefinedDialog = false }
+        )
+    }
 }
 
 @Composable
 fun RoutineCard(
     routine: Routine,
+    index: Int,
+    total: Int,
     onStart: () -> Unit,
-    onEdit: () -> Unit
+    onEdit: () -> Unit,
+    onMove: (Int) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
+        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(Modifier.weight(1f)) {
+            // Reorder buttons
+            Column {
+                if (index > 0) {
+                    IconButton(onClick = { onMove(-1) }, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.KeyboardArrowUp, "Subir", Modifier.size(18.dp))
+                    }
+                }
+                if (index < total - 1) {
+                    IconButton(onClick = { onMove(1) }, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.KeyboardArrowDown, "Bajar", Modifier.size(18.dp))
+                    }
+                }
+            }
+            Column(Modifier.weight(1f).padding(start = 8.dp)) {
                 Text(routine.name, style = MaterialTheme.typography.titleMedium)
                 Text("Método: ${Labels.method(routine.method)}",
                     style = MaterialTheme.typography.bodySmall,
@@ -168,4 +268,67 @@ fun CreateRoutineDialog(
             TextButton(onClick = onDismiss) { Text("Cancelar") }
         }
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PredefinedRoutinesDialog(
+    viewModel: RoutinesViewModel,
+    onDismiss: () -> Unit
+) {
+    val programs = remember { viewModel.loadPredefinedPrograms() }
+    var showConfirm by remember { mutableStateOf<PredefinedProgram?>(null) }
+
+    if (showConfirm != null) {
+        val program = showConfirm!!
+        AlertDialog(
+            onDismissRequest = { showConfirm = null },
+            title = { Text(program.program) },
+            text = {
+                Column {
+                    Text("Se crearán ${program.routines.size} rutinas:", style = MaterialTheme.typography.bodyMedium)
+                    Spacer(Modifier.height(8.dp))
+                    program.routines.forEach { r ->
+                        Text("• ${r.name} (${r.exercises.size} ejercicios)",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.createRoutinesFromProgram(program) {
+                        showConfirm = null
+                        onDismiss()
+                    }
+                }) {
+                    Text("Crear")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirm = null }) { Text("Cancelar") }
+            }
+        )
+    } else {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Cargar rutinas predefinidas") },
+            text = {
+                LazyColumn(Modifier.height(400.dp)) {
+                    items(programs) { program ->
+                        ListItem(
+                            headlineContent = { Text(program.program) },
+                            supportingContent = {
+                                Text("${program.routines.size} días · ${Labels.method(program.method)}",
+                                    style = MaterialTheme.typography.bodySmall)
+                            },
+                            modifier = Modifier.clickable { showConfirm = program }
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = onDismiss) { Text("Cancelar") }
+            }
+        )
+    }
 }

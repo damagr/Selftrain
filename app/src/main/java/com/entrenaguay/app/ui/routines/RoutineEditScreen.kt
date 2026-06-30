@@ -4,23 +4,22 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccessibilityNew
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Cable
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.MonitorWeight
-import androidx.compose.material.icons.filled.PrecisionManufacturing
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.entrenaguay.app.data.model.Exercise
 import com.entrenaguay.app.util.Labels
@@ -38,6 +37,7 @@ fun RoutineEditScreen(
     val allExercises by viewModel.allExercises.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var replaceIndex by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(routineId) { viewModel.loadRoutine(routineId) }
 
@@ -77,12 +77,16 @@ fun RoutineEditScreen(
             )
 
             LazyColumn {
-                items(exercises.size) { index ->
-                    val ex = exercises[index]
+                itemsIndexed(exercises, key = { _, ex -> ex.id }) { index, ex ->
                     val isFirst = index == 0
                     val isLast = index == exercises.size - 1
 
-                    Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp)) {
+                    Card(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 2.dp)
+                            .animateItem()
+                    ) {
                         Row(
                             Modifier.fillMaxWidth().padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -120,6 +124,9 @@ fun RoutineEditScreen(
                                 }
                             }
 
+                            IconButton(onClick = { replaceIndex = index }) {
+                                Icon(Icons.Default.Edit, "Reemplazar", modifier = Modifier.size(18.dp))
+                            }
                             IconButton(onClick = { viewModel.removeExercise(ex) }) {
                                 Icon(Icons.Default.Close, "Quitar", tint = MaterialTheme.colorScheme.error)
                             }
@@ -156,6 +163,20 @@ fun RoutineEditScreen(
         )
     }
 
+    replaceIndex?.let { idx ->
+        ExercisePickerDialog(
+            exercises = allExercises,
+            onDismiss = { replaceIndex = null },
+            onSelectMany = { selected ->
+                if (selected.isNotEmpty()) {
+                    viewModel.replaceExercise(idx, selected.first())
+                }
+                replaceIndex = null
+            },
+            singleSelect = true
+        )
+    }
+
     // Delete confirmation dialog
     if (showDeleteConfirm) {
         AlertDialog(
@@ -182,96 +203,148 @@ fun RoutineEditScreen(
 fun ExercisePickerDialog(
     exercises: List<Exercise>,
     onDismiss: () -> Unit,
-    onSelectMany: (List<Exercise>) -> Unit
+    onSelectMany: (List<Exercise>) -> Unit,
+    singleSelect: Boolean = false
 ) {
     val selectedIds = remember { mutableStateListOf<Long>() }
+    var query by remember { mutableStateOf("") }
+    val filtered = if (query.isBlank()) exercises
+        else exercises.filter { it.name.contains(query, ignoreCase = true) }
 
-    AlertDialog(
+    Dialog(
         onDismissRequest = onDismiss,
-        title = {
-            Column {
-                Text("Añadir Ejercicios")
-                if (selectedIds.isNotEmpty()) {
-                    Text(
-                        "${selectedIds.size} seleccionados",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-        },
-        text = {
-            if (exercises.isEmpty()) {
-                Text("Todos los ejercicios ya están en la rutina")
-            } else {
-                LazyColumn(Modifier.height(400.dp)) {
-                    val grouped = exercises.groupBy { it.muscleGroup }
-                    for ((group, exs) in grouped) {
-                        item {
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            topBar = {
+                TopAppBar(
+                    title = { Text(if (singleSelect) "Reemplazar Ejercicio" else "Añadir Ejercicios") },
+                    navigationIcon = {
+                        IconButton(onClick = onDismiss) {
+                            Icon(Icons.Default.Close, "Cerrar")
+                        }
+                    },
+                    actions = {
+                        if (selectedIds.isNotEmpty()) {
                             Text(
-                                Labels.muscleGroup(group),
-                                style = MaterialTheme.typography.titleSmall,
-                                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                                "${selectedIds.size} seleccionados",
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
-                        items(exs) { ex ->
-                            val isSelected = ex.id in selectedIds
-                            ListItem(
-                                headlineContent = { Text(ex.name) },
-                                supportingContent = {
-                                    Text(buildString {
-                                        if (ex.equipment.isNotEmpty()) {
-                                            append(Labels.equipment(ex.equipment))
-                                            append(" · ")
-                                        }
-                                        append(Labels.category(ex.category))
-                                        if (ex.isBilboEligible) append(" · Bilbo")
-                                    })
-                                },
-                                leadingContent = {
-                                    val icon = when (ex.equipment) {
-                                        "barbell" -> Icons.Filled.FitnessCenter
-                                        "dumbbell" -> Icons.Filled.MonitorWeight
-                                        "cable" -> Icons.Filled.Cable
-                                        "machine" -> Icons.Filled.PrecisionManufacturing
-                                        "bodyweight" -> Icons.Filled.AccessibilityNew
-                                        else -> Icons.Filled.FitnessCenter
-                                    }
-                                    Icon(icon, contentDescription = null)
-                                },
-                                trailingContent = {
-                                    Checkbox(
-                                        checked = isSelected,
-                                        onCheckedChange = {
-                                            if (isSelected) selectedIds.remove(ex.id)
-                                            else selectedIds.add(ex.id)
-                                        }
-                                    )
-                                },
-                                modifier = Modifier.clickable {
-                                    if (isSelected) selectedIds.remove(ex.id)
-                                    else selectedIds.add(ex.id)
+                    }
+                )
+            },
+            bottomBar = {
+                Surface(tonalElevation = 3.dp) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Cancelar")
+                        }
+                        Button(
+                            onClick = {
+                                val selected = if (singleSelect) {
+                                    exercises.filter { it.id in selectedIds }
+                                } else {
+                                    filtered.filter { it.id in selectedIds }
                                 }
-                            )
+                                if (selected.isNotEmpty()) onSelectMany(selected)
+                            },
+                            enabled = selectedIds.isNotEmpty(),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(if (singleSelect) "Reemplazar" else "Añadir (${selectedIds.size})")
                         }
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val selected = exercises.filter { it.id in selectedIds }
-                    if (selected.isNotEmpty()) onSelectMany(selected)
-                },
-                enabled = selectedIds.isNotEmpty()
-            ) {
-                Text("Añadir (${selectedIds.size})")
+        ) { padding ->
+            Column(Modifier.padding(padding)) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    placeholder = { Text("Buscar ejercicio...") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    trailingIcon = {
+                        if (query.isNotEmpty()) {
+                            IconButton(onClick = { query = "" }) {
+                                Icon(Icons.Default.Close, "Limpiar")
+                            }
+                        }
+                    }
+                )
+                if (filtered.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Sin resultados")
+                    }
+                } else {
+                    LazyColumn {
+                        val grouped = filtered.groupBy { it.muscleGroup }
+                        for ((group, exs) in grouped) {
+                            item {
+                                Text(
+                                    Labels.muscleGroup(group),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp, start = 16.dp),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            items(exs) { ex ->
+                                val isSelected = ex.id in selectedIds
+                                ListItem(
+                                    headlineContent = { Text(ex.name) },
+                                    supportingContent = {
+                                        Text(buildString {
+                                            if (ex.equipment.isNotEmpty()) {
+                                                append(Labels.equipment(ex.equipment))
+                                                append(" · ")
+                                            }
+                                            append(Labels.category(ex.category))
+                                            if (ex.isBilboEligible) append(" · Bilbo")
+                                        })
+                                    },
+                                    trailingContent = {
+                                        if (singleSelect) {
+                                            RadioButton(
+                                                selected = isSelected,
+                                                onClick = {
+                                                    selectedIds.clear()
+                                                    selectedIds.add(ex.id)
+                                                }
+                                            )
+                                        } else {
+                                            Checkbox(
+                                                checked = isSelected,
+                                                onCheckedChange = {
+                                                    if (isSelected) selectedIds.remove(ex.id)
+                                                    else selectedIds.add(ex.id)
+                                                }
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier.clickable {
+                                        if (singleSelect) {
+                                            selectedIds.clear()
+                                            selectedIds.add(ex.id)
+                                        } else {
+                                            if (isSelected) selectedIds.remove(ex.id)
+                                            else selectedIds.add(ex.id)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
         }
-    )
+    }
 }

@@ -7,13 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccessibilityNew
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Cable
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.MonitorWeight
-import androidx.compose.material.icons.filled.PrecisionManufacturing
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -102,20 +97,13 @@ fun ExerciseLibraryScreen(
                         headlineContent = { Text(ex.name) },
                         supportingContent = {
                             Text(buildString {
+                                if (ex.equipment.isNotEmpty()) {
+                                    append(Labels.equipment(ex.equipment))
+                                    append(" · ")
+                                }
                                 append(Labels.category(ex.category))
                                 if (ex.isBilboEligible) append(" · Bilbo")
                             })
-                        },
-                        leadingContent = {
-                            val icon = when (ex.equipment) {
-                                "barbell" -> Icons.Filled.FitnessCenter
-                                "dumbbell" -> Icons.Filled.MonitorWeight
-                                "cable" -> Icons.Filled.Cable
-                                "machine" -> Icons.Filled.PrecisionManufacturing
-                                "bodyweight" -> Icons.Filled.AccessibilityNew
-                                else -> Icons.Filled.FitnessCenter
-                            }
-                            Icon(icon, contentDescription = null)
                         },
                         trailingContent = {
                             if (deleteMode) {

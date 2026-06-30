@@ -7,6 +7,10 @@
   {"name": "Aperturas con mancuernas", "muscleGroup": "pecho", "category": "isolation", "isBilboEligible": false, "equipment": "dumbbell"},
   {"name": "Cruce de poleas", "muscleGroup": "pecho", "category": "isolation", "isBilboEligible": false, "equipment": "cable"},
   {"name": "Fondos en paralelas", "muscleGroup": "pecho", "category": "compound", "isBilboEligible": true, "equipment": "bodyweight"},
+  {"name": "Aperturas en máquina", "muscleGroup": "pecho", "category": "isolation", "isBilboEligible": false, "equipment": "machine"},
+  {"name": "Press declinado en máquina", "muscleGroup": "pecho", "category": "compound", "isBilboEligible": true, "equipment": "machine"},
+  {"name": "Cruce polea baja-arriba", "muscleGroup": "pecho", "category": "isolation", "isBilboEligible": false, "equipment": "cable"},
+  {"name": "Cruce polea alta-abajo", "muscleGroup": "pecho", "category": "isolation", "isBilboEligible": false, "equipment": "cable"},
 
   {"name": "Sentadilla con barra", "muscleGroup": "piernas", "category": "compound", "isBilboEligible": true, "equipment": "barbell"},
   {"name": "Prensa de piernas", "muscleGroup": "piernas", "category": "compound", "isBilboEligible": true, "equipment": "machine"},
@@ -19,6 +23,7 @@
   {"name": "Elevación de gemelos de pie", "muscleGroup": "piernas", "category": "isolation", "isBilboEligible": false, "equipment": "machine"},
   {"name": "Sentadilla búlgara", "muscleGroup": "piernas", "category": "compound", "isBilboEligible": false, "equipment": "dumbbell"},
   {"name": "Hip thrust con barra", "muscleGroup": "piernas", "category": "compound", "isBilboEligible": true, "equipment": "barbell"},
+  {"name": "Abducción en máquina", "muscleGroup": "piernas", "category": "isolation", "isBilboEligible": false, "equipment": "machine"},
 
   {"name": "Remo con barra", "muscleGroup": "espalda", "category": "compound", "isBilboEligible": true, "equipment": "barbell"},
   {"name": "Remo con mancuerna a una mano", "muscleGroup": "espalda", "category": "compound", "isBilboEligible": true, "equipment": "dumbbell"},
@@ -27,6 +32,9 @@
   {"name": "Remo en polea baja sentado", "muscleGroup": "espalda", "category": "compound", "isBilboEligible": true, "equipment": "cable"},
   {"name": "Remo al cuello", "muscleGroup": "espalda", "category": "compound", "isBilboEligible": false, "equipment": "barbell"},
   {"name": "Pullover con mancuerna", "muscleGroup": "espalda", "category": "isolation", "isBilboEligible": false, "equipment": "dumbbell"},
+  {"name": "Remo en polea unilateral", "muscleGroup": "espalda", "category": "compound", "isBilboEligible": true, "equipment": "cable"},
+  {"name": "Pullover en polea", "muscleGroup": "espalda", "category": "isolation", "isBilboEligible": false, "equipment": "cable"},
+  {"name": "Jalón cerrado en polea", "muscleGroup": "espalda", "category": "compound", "isBilboEligible": true, "equipment": "cable"},
 
   {"name": "Press militar con barra", "muscleGroup": "hombros", "category": "compound", "isBilboEligible": true, "equipment": "barbell"},
   {"name": "Press militar con mancuernas", "muscleGroup": "hombros", "category": "compound", "isBilboEligible": true, "equipment": "dumbbell"},
@@ -34,6 +42,8 @@
   {"name": "Elevaciones frontales", "muscleGroup": "hombros", "category": "isolation", "isBilboEligible": false, "equipment": "dumbbell"},
   {"name": "Pájaro en polea", "muscleGroup": "hombros", "category": "isolation", "isBilboEligible": false, "equipment": "cable"},
   {"name": "Face pull", "muscleGroup": "hombros", "category": "isolation", "isBilboEligible": false, "equipment": "cable"},
+  {"name": "Elevación lateral en polea", "muscleGroup": "hombros", "category": "isolation", "isBilboEligible": false, "equipment": "cable"},
+  {"name": "Rotación externa en polea", "muscleGroup": "hombros", "category": "isolation", "isBilboEligible": false, "equipment": "cable"},
 
   {"name": "Curl con barra", "muscleGroup": "brazos", "category": "isolation", "isBilboEligible": false, "equipment": "barbell"},
   {"name": "Curl con mancuernas", "muscleGroup": "brazos", "category": "isolation", "isBilboEligible": false, "equipment": "dumbbell"},
@@ -41,6 +51,9 @@
   {"name": "Extensiones de tríceps en polea", "muscleGroup": "brazos", "category": "isolation", "isBilboEligible": false, "equipment": "cable"},
   {"name": "Press francés", "muscleGroup": "brazos", "category": "isolation", "isBilboEligible": false, "equipment": "barbell"},
   {"name": "Fondos en banco", "muscleGroup": "brazos", "category": "isolation", "isBilboEligible": false, "equipment": "bodyweight"},
+  {"name": "Curl bíceps banco scott", "muscleGroup": "brazos", "category": "isolation", "isBilboEligible": false, "equipment": "barbell"},
+  {"name": "Curl bíceps en polea baja", "muscleGroup": "brazos", "category": "isolation", "isBilboEligible": false, "equipment": "cable"},
+  {"name": "Press tríceps en cuerda", "muscleGroup": "brazos", "category": "isolation", "isBilboEligible": false, "equipment": "cable"},
 
   {"name": "Plancha abdominal", "muscleGroup": "core", "category": "isolation", "isBilboEligible": false, "equipment": "bodyweight"},
   {"name": "Crunch en polea", "muscleGroup": "core", "category": "isolation", "isBilboEligible": false, "equipment": "cable"},
