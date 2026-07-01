@@ -35,7 +35,8 @@ data class TrainState(
     val workoutId: Long = 0,
     val isFinishing: Boolean = false,
     val suggestions: List<PerExerciseSuggestion> = emptyList(),
-    val workoutSummary: WorkoutSummary? = null
+    val workoutSummary: WorkoutSummary? = null,
+    val confirmEmpty: Boolean = false
 )
 
 data class MuscleGroupVolume(
@@ -74,7 +75,7 @@ class TrainViewModel @Inject constructor(
     private val _state = MutableStateFlow(TrainState())
     val state: StateFlow<TrainState> = _state.asStateFlow()
 
-    fun startWorkout(routineId: Long) {
+    fun startWorkout(routineId: Long, existingWorkoutId: Long? = null) {
         viewModelScope.launch {
             val routine = routineRepo.getById(routineId) ?: return@launch
             val reList = routineRepo.getWithExercises(routineId)
@@ -127,8 +128,30 @@ class TrainViewModel @Inject constructor(
                 }
             }
 
-            val workout = Workout(routineId = routineId)
-            val workoutId = workoutRepo.insert(workout)
+            // Resume existing workout or create new one
+            val workoutId: Long
+            if (existingWorkoutId != null) {
+                // Resume: load existing sets
+                val existingWorkout = workoutRepo.getById(existingWorkoutId) ?: return@launch
+                val existingSets = workoutRepo.getSetsWithExercise(existingWorkoutId)
+                val loadedExercises = exercises.map { ex ->
+                    val exSets = existingSets.filter { it.set.exerciseId == ex.exercise.id }
+                        .map { it.set }
+                    ex.copy(sets = exSets)
+                }
+                val startIdx = existingWorkout.lastExerciseIndex.coerceIn(0, (loadedExercises.size - 1).coerceAtLeast(0))
+                _state.value = TrainState(
+                    routine = routine,
+                    exercises = loadedExercises,
+                    workoutId = existingWorkoutId,
+                    suggestions = suggestions,
+                    currentExerciseIndex = startIdx
+                )
+                return@launch
+            } else {
+                val workout = Workout(routineId = routineId)
+                workoutId = workoutRepo.insert(workout)
+            }
 
             _state.value = TrainState(
                 routine = routine,
@@ -136,6 +159,13 @@ class TrainViewModel @Inject constructor(
                 workoutId = workoutId,
                 suggestions = suggestions
             )
+        }
+    }
+
+    private fun saveExerciseIndex(index: Int) {
+        viewModelScope.launch {
+            val workout = workoutRepo.getById(_state.value.workoutId) ?: return@launch
+            workoutRepo.update(workout.copy(lastExerciseIndex = index))
         }
     }
 
@@ -175,20 +205,46 @@ class TrainViewModel @Inject constructor(
     }
 
     fun setCurrentExercise(index: Int) {
-        _state.value = _state.value.copy(currentExerciseIndex = index.coerceIn(0, (_state.value.exercises.size - 1).coerceAtLeast(0)))
+        val clamped = index.coerceIn(0, (_state.value.exercises.size - 1).coerceAtLeast(0))
+        _state.value = _state.value.copy(currentExerciseIndex = clamped)
+        saveExerciseIndex(clamped)
     }
 
     fun finishWorkout() {
         viewModelScope.launch {
-            val workout = workoutRepo.getById(_state.value.workoutId) ?: return@launch
+            val current = _state.value
+            // Check if any sets were logged
+            val hasAnySets = current.exercises.any { it.sets.isNotEmpty() }
+            if (!hasAnySets) {
+                // ponytail: empty workout → ask confirmation, don't register
+                _state.value = current.copy(confirmEmpty = true)
+                return@launch
+            }
+
+            val workout = workoutRepo.getById(current.workoutId) ?: return@launch
             val endDate = System.currentTimeMillis()
             val durationMinutes = ((endDate - workout.date) / 60000).toInt().coerceAtLeast(0)
             val updatedWorkout = workout.copy(completed = true, endDate = endDate, durationMinutes = durationMinutes)
             workoutRepo.update(updatedWorkout)
 
-            val summary = computeWorkoutSummary(_state.value.workoutId, durationMinutes, workout.date)
-            _state.value = _state.value.copy(isFinishing = true, workoutSummary = summary)
+            val summary = computeWorkoutSummary(current.workoutId, durationMinutes, workout.date)
+            _state.value = current.copy(isFinishing = true, workoutSummary = summary)
         }
+    }
+
+    fun discardEmptyWorkout() {
+        viewModelScope.launch {
+            val workoutId = _state.value.workoutId
+            val workout = workoutRepo.getById(workoutId)
+            if (workout != null) {
+                workoutRepo.delete(workout)
+            }
+            _state.value = _state.value.copy(confirmEmpty = false)
+        }
+    }
+
+    fun cancelEmptyFinish() {
+        _state.value = _state.value.copy(confirmEmpty = false)
     }
 
     fun updateDuration(minutes: Int) {

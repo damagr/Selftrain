@@ -11,23 +11,26 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.selftrain.app.data.model.WorkoutSet
 import com.selftrain.app.util.BilboProgression
 import com.selftrain.app.util.Labels
+import com.selftrain.app.util.RestTimerService
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrainScreen(
     routineId: Long,
+    resumeWorkoutId: Long? = null,
     onFinish: () -> Unit,
     viewModel: TrainViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
 
-    LaunchedEffect(routineId) { viewModel.startWorkout(routineId) }
+    LaunchedEffect(routineId, resumeWorkoutId) { viewModel.startWorkout(routineId, resumeWorkoutId) }
 
     val totalExercises = state.exercises.size
     val currentIndex = state.currentExerciseIndex
@@ -167,6 +170,7 @@ fun TrainScreen(
                     appliesBilbo = appliesBilbo,
                     sets = ex.sets,
                     suggestion = currentSuggestion,
+                    exerciseKey = ex.exercise.id.toString(),
                     onLogBilboSet = { reps, weight, rir ->
                         viewModel.logSet(ex.exercise.id, "bilbo", reps, weight, rir, true)
                     },
@@ -211,6 +215,28 @@ fun TrainScreen(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { showJumpDialog = false }) { Text("Cerrar") }
+            }
+        )
+    }
+
+    // Empty workout confirmation dialog
+    if (state.confirmEmpty) {
+        AlertDialog(
+            onDismissRequest = { viewModel.cancelEmptyFinish() },
+            title = { Text("Entreno vacío") },
+            text = { Text("No has registrado ninguna serie. El entreno no se guardará.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.discardEmptyWorkout()
+                    onFinish()
+                }) {
+                    Text("Salir sin guardar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.cancelEmptyFinish() }) {
+                    Text("Seguir entrenando")
+                }
             }
         )
     }
@@ -302,6 +328,7 @@ fun ExerciseSetContent(
     appliesBilbo: Boolean,
     sets: List<WorkoutSet>,
     suggestion: PerExerciseSuggestion,
+    exerciseKey: String,
     onLogBilboSet: (reps: Int, weight: Float, rir: Int) -> Unit,
     onLogWorkSet: (reps: Int, weight: Float) -> Unit,
     onDeleteLastSet: () -> Unit
@@ -360,17 +387,23 @@ fun ExerciseSetContent(
                         val bilboDone = sets.any { it.setType == "bilbo" }
                         if (!bilboDone) {
                             BilboSetInput(
+                                exerciseKey = exerciseKey,
+                                sets = sets,
                                 suggestion = suggestion,
                                 onLog = onLogBilboSet
                             )
                         } else {
                             WorkSetInput(
+                                exerciseKey = exerciseKey,
+                                sets = sets,
                                 suggestion = suggestion,
                                 onLog = onLogWorkSet
                             )
                         }
                     } else {
                         WorkSetInput(
+                            exerciseKey = exerciseKey,
+                            sets = sets,
                             suggestion = suggestion,
                             onLog = onLogWorkSet
                         )
@@ -404,16 +437,31 @@ fun ExerciseSetContent(
 
 @Composable
 fun BilboSetInput(
+    exerciseKey: String,
+    sets: List<WorkoutSet>,
     suggestion: PerExerciseSuggestion,
     onLog: (reps: Int, weight: Float, rir: Int) -> Unit
 ) {
-    var reps by remember(suggestion) {
+    // ponytail: use exerciseKey for stable remember, sync weight via lastLoggedWeight
+    val lastSetWeight = sets.lastOrNull()?.weightKg
+    var reps by remember(exerciseKey) {
         mutableStateOf(if (suggestion.hasHistory) suggestion.bilboReps.toString() else "")
     }
-    var weight by remember(suggestion) {
-        mutableStateOf(if (suggestion.hasHistory && suggestion.bilboWeight > 0) String.format("%.1f", suggestion.bilboWeight) else "")
+    var weight by remember(exerciseKey) {
+        mutableStateOf(
+            if (lastSetWeight != null && lastSetWeight > 0) String.format("%.1f", lastSetWeight)
+            else if (suggestion.hasHistory && suggestion.bilboWeight > 0) String.format("%.1f", suggestion.bilboWeight)
+            else ""
+        )
     }
     var rir by remember { mutableStateOf("2") }
+
+    // Sync weight when last logged set changes (e.g. after logging a set in another context)
+    LaunchedEffect(lastSetWeight) {
+        if (lastSetWeight != null && lastSetWeight > 0) {
+            weight = String.format("%.1f", lastSetWeight)
+        }
+    }
 
     Column {
         Text("Registrar serie Bilbo", style = MaterialTheme.typography.titleSmall,
@@ -480,14 +528,29 @@ fun BilboSetInput(
 
 @Composable
 fun WorkSetInput(
+    exerciseKey: String,
+    sets: List<WorkoutSet>,
     suggestion: PerExerciseSuggestion,
     onLog: (reps: Int, weight: Float) -> Unit
 ) {
-    var reps by remember(suggestion) {
+    // ponytail: use exerciseKey for stable remember, sync weight via lastLoggedWeight
+    val lastSetWeight = sets.lastOrNull()?.weightKg
+    var reps by remember(exerciseKey) {
         mutableStateOf(if (suggestion.hasHistory) suggestion.workReps.toString() else "")
     }
-    var weight by remember(suggestion) {
-        mutableStateOf(if (suggestion.hasHistory && suggestion.workWeight > 0) String.format("%.1f", suggestion.workWeight) else "")
+    var weight by remember(exerciseKey) {
+        mutableStateOf(
+            if (lastSetWeight != null && lastSetWeight > 0) String.format("%.1f", lastSetWeight)
+            else if (suggestion.hasHistory && suggestion.workWeight > 0) String.format("%.1f", suggestion.workWeight)
+            else ""
+        )
+    }
+
+    // Sync weight when last logged set changes
+    LaunchedEffect(lastSetWeight) {
+        if (lastSetWeight != null && lastSetWeight > 0) {
+            weight = String.format("%.1f", lastSetWeight)
+        }
     }
 
     Column {
@@ -541,23 +604,73 @@ fun WorkSetInput(
 
 @Composable
 fun RestTimer() {
-    var seconds by remember { mutableIntStateOf(90) }
+    val context = LocalContext.current
+    var totalSeconds by remember { mutableIntStateOf(90) }
+    var remaining by remember { mutableIntStateOf(90) }
     var isRunning by remember { mutableStateOf(false) }
     var showTimer by remember { mutableStateOf(false) }
+    var startTimestamp by remember { mutableStateOf(0L) }
+    var pausedRemaining by remember { mutableIntStateOf(0) }
 
-    if (!showTimer) {
-        TextButton(onClick = { showTimer = true; isRunning = true }) {
-            Icon(Icons.Default.Timer, null, Modifier.size(16.dp))
-            Text("Iniciar descanso (90s)")
-        }
-    } else {
+    // Wall-clock tick: recompose every ~100ms for smooth countdown
+    if (isRunning) {
+        val frameMillis = remember { mutableStateOf(0L) }
         LaunchedEffect(isRunning) {
-            while (isRunning && seconds > 0) {
-                kotlinx.coroutines.delay(1000L)
-                seconds--
+            while (isRunning) {
+                withFrameMillis { ms -> frameMillis.value = ms }
+                val elapsed = (System.currentTimeMillis() - startTimestamp) / 1000
+                val newRemaining = (totalSeconds - elapsed.toInt()).coerceAtLeast(0)
+                if (newRemaining != remaining) {
+                    remaining = newRemaining
+                }
+                if (newRemaining <= 0) {
+                    isRunning = false
+                    remaining = 0
+                    // Stop service
+                    context.stopService(RestTimerService.createStopIntent(context))
+                }
             }
         }
+    }
 
+    if (!showTimer) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // +/- 30s buttons
+            IconButton(onClick = {
+                if (totalSeconds > 30) totalSeconds -= 30
+                remaining = totalSeconds
+            }) {
+                Text("−30s", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Spacer(Modifier.width(8.dp))
+            TextButton(onClick = {
+                showTimer = true
+                isRunning = true
+                remaining = totalSeconds
+                startTimestamp = System.currentTimeMillis()
+                // Start foreground service
+                RestTimerService.createChannel(context)
+                context.startForegroundService(RestTimerService.createStartIntent(context, totalSeconds))
+            }) {
+                Icon(Icons.Default.Timer, null, Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Iniciar descanso (${totalSeconds}s)")
+            }
+            Spacer(Modifier.width(8.dp))
+            IconButton(onClick = {
+                if (totalSeconds < 300) totalSeconds += 30
+                remaining = totalSeconds
+            }) {
+                Text("+30s", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    } else {
         Card(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
         ) {
@@ -568,14 +681,35 @@ fun RestTimer() {
             ) {
                 Icon(Icons.Default.Timer, "Descanso")
                 Text(
-                    "${seconds / 60}:${(seconds % 60).toString().padStart(2, '0')}",
+                    "${remaining / 60}:${(remaining % 60).toString().padStart(2, '0')}",
                     style = MaterialTheme.typography.headlineSmall
                 )
                 Row {
-                    TextButton(onClick = { isRunning = !isRunning }) {
+                    TextButton(onClick = {
+                        if (isRunning) {
+                            // Pause
+                            isRunning = false
+                            pausedRemaining = remaining
+                            context.stopService(RestTimerService.createStopIntent(context))
+                        } else {
+                            // Resume
+                            isRunning = true
+                            remaining = pausedRemaining
+                            totalSeconds = pausedRemaining
+                            startTimestamp = System.currentTimeMillis() - ((totalSeconds - pausedRemaining) * 1000L)
+                            // Restart service with remaining time
+                            RestTimerService.createChannel(context)
+                            context.startForegroundService(RestTimerService.createStartIntent(context, pausedRemaining))
+                        }
+                    }) {
                         Text(if (isRunning) "Pausa" else "Reanudar")
                     }
-                    TextButton(onClick = { seconds = 90; isRunning = true }) {
+                    TextButton(onClick = {
+                        isRunning = false
+                        remaining = totalSeconds
+                        showTimer = false
+                        context.stopService(RestTimerService.createStopIntent(context))
+                    }) {
                         Text("Reset")
                     }
                 }

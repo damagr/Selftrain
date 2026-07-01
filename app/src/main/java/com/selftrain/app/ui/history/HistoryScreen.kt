@@ -4,8 +4,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Settings
@@ -14,10 +17,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.selftrain.app.data.model.Exercise
 import com.selftrain.app.data.model.Workout
+import com.selftrain.app.data.db.SetWithExercise
+import com.selftrain.app.data.model.WorkoutSet
 import com.selftrain.app.util.Labels
 import java.text.SimpleDateFormat
 import java.util.*
@@ -147,15 +153,233 @@ fun HistoryScreen(
             }
 
             HistoryView.WORKOUT_DETAIL -> {
+                val grouped = remember(workoutDetailSets) {
+                    workoutDetailSets.groupBy { it.exerciseName }
+                }
                 LazyColumn(Modifier.padding(padding)) {
-                    items(workoutDetailSets) { s ->
-                        Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp)) {
-                            Column(Modifier.padding(12.dp)) {
-                                Text(s.exerciseName, style = MaterialTheme.typography.titleSmall)
-                                Text(
-                                    "${if (s.set.setType == "bilbo") "Bilbo" else "Trabajo"}: ${s.set.reps} reps \u00D7 ${String.format("%.1f", s.set.weightKg)} kg" +
-                                        if (s.set.rir > 0) " (RIR ${s.set.rir})" else "",
-                                    style = MaterialTheme.typography.bodyMedium
+                    grouped.forEach { (exerciseName, sets) ->
+                        val mg = sets.firstOrNull()?.muscleGroup ?: ""
+                        val firstExerciseId = sets.firstOrNull()?.set?.exerciseId ?: 0L
+                        item(key = "ex-$exerciseName") {
+                            Card(
+                                Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                                )
+                            ) {
+                                Column(Modifier.padding(12.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.FitnessCenter, null,
+                                            Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(exerciseName, style = MaterialTheme.typography.titleMedium)
+                                    }
+                                    Text("${Labels.muscleGroup(mg)} · ${sets.size} series",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+
+                        items(sets, key = { "set-${it.set.id}" }) { s ->
+                            var showEditDialog by remember { mutableStateOf(false) }
+
+                            Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp)
+                                .clickable { showEditDialog = true }
+                            ) {
+                                Row(
+                                    Modifier.fillMaxWidth().padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(
+                                            "${if (s.set.setType == "bilbo") "Bilbo" else "Trabajo"}: ${s.set.reps} reps \u00D7 ${String.format("%.1f", s.set.weightKg)} kg" +
+                                                if (s.set.rir > 0) " (RIR ${s.set.rir})" else "",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
+                                    IconButton(onClick = {
+                                        viewModel.deleteSetFromHistory(s.set)
+                                    }) {
+                                        Icon(Icons.Default.Delete, "Borrar",
+                                            Modifier.size(20.dp),
+                                            tint = MaterialTheme.colorScheme.error)
+        }
+    }
+}
+
+// ponytail: inline edit dialogs for history workout detail
+
+@Composable
+fun EditSetDialog(
+    set: WorkoutSet,
+    onDismiss: () -> Unit,
+    onSave: (reps: Int, weight: Float, rir: Int) -> Unit
+) {
+    var reps by remember { mutableStateOf(set.reps.toString()) }
+    var weight by remember { mutableStateOf(String.format("%.1f", set.weightKg)) }
+    var rir by remember { mutableStateOf(if (set.rir > 0) set.rir.toString() else "") }
+    var setType by remember { mutableStateOf(set.setType) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Editar serie") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = setType == "bilbo",
+                        onClick = { setType = "bilbo" },
+                        label = { Text("Bilbo") }
+                    )
+                    FilterChip(
+                        selected = setType == "work",
+                        onClick = { setType = "work" },
+                        label = { Text("Trabajo") }
+                    )
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = reps,
+                        onValueChange = { reps = it.filter { c -> c.isDigit() } },
+                        label = { Text("Reps") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = weight,
+                        onValueChange = { weight = it.filter { c -> c.isDigit() || c == '.' } },
+                        label = { Text("Peso (kg)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                }
+                OutlinedTextField(
+                    value = rir,
+                    onValueChange = { rir = it.filter { c -> c.isDigit() } },
+                    label = { Text("RIR") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val r = reps.toIntOrNull() ?: return@TextButton
+                val w = weight.toFloatOrNull() ?: return@TextButton
+                val ri = rir.toIntOrNull() ?: 0
+                onSave(r, w, ri)
+            }) { Text("Guardar") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
+}
+
+@Composable
+fun AddSetDialog(
+    onDismiss: () -> Unit,
+    onAdd: (setType: String, reps: Int, weight: Float, rir: Int) -> Unit
+) {
+    var reps by remember { mutableStateOf("") }
+    var weight by remember { mutableStateOf("") }
+    var rir by remember { mutableStateOf("") }
+    var setType by remember { mutableStateOf("work") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Añadir serie") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = setType == "bilbo",
+                        onClick = { setType = "bilbo" },
+                        label = { Text("Bilbo") }
+                    )
+                    FilterChip(
+                        selected = setType == "work",
+                        onClick = { setType = "work" },
+                        label = { Text("Trabajo") }
+                    )
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = reps,
+                        onValueChange = { reps = it.filter { c -> c.isDigit() } },
+                        label = { Text("Reps") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = weight,
+                        onValueChange = { weight = it.filter { c -> c.isDigit() || c == '.' } },
+                        label = { Text("Peso (kg)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                }
+                OutlinedTextField(
+                    value = rir,
+                    onValueChange = { rir = it.filter { c -> c.isDigit() } },
+                    label = { Text("RIR") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val r = reps.toIntOrNull() ?: return@TextButton
+                val w = weight.toFloatOrNull() ?: return@TextButton
+                val ri = rir.toIntOrNull() ?: 0
+                onAdd(setType, r, w, ri)
+            }) { Text("Añadir") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
+}
+
+                            // Edit dialog
+                            if (showEditDialog) {
+                                EditSetDialog(
+                                    set = s.set,
+                                    onDismiss = { showEditDialog = false },
+                                    onSave = { reps, weight, rir ->
+                                        viewModel.updateSet(s.set, reps, weight, rir)
+                                        showEditDialog = false
+                                    }
+                                )
+                            }
+                        }
+
+                        // Add set button
+                        item(key = "add-$exerciseName") {
+                            var showAddDialog by remember { mutableStateOf(false) }
+                            TextButton(
+                                onClick = { showAddDialog = true },
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                            ) {
+                                Icon(Icons.Default.Add, null, Modifier.size(16.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Añadir serie")
+                            }
+                            if (showAddDialog) {
+                                AddSetDialog(
+                                    onDismiss = { showAddDialog = false },
+                                    onAdd = { setType, reps, weight, rir ->
+                                        viewModel.addSetToHistory(firstExerciseId, setType, reps, weight, rir)
+                                        showAddDialog = false
+                                    }
                                 )
                             }
                         }
@@ -214,4 +438,143 @@ fun ExerciseProgressionView(
             }
         }
     }
+}
+
+// ponytail: inline edit dialogs for history workout detail
+
+@Composable
+fun EditSetDialog(
+    set: WorkoutSet,
+    onDismiss: () -> Unit,
+    onSave: (reps: Int, weight: Float, rir: Int) -> Unit
+) {
+    var reps by remember { mutableStateOf(set.reps.toString()) }
+    var weight by remember { mutableStateOf(String.format("%.1f", set.weightKg)) }
+    var rir by remember { mutableStateOf(if (set.rir > 0) set.rir.toString() else "") }
+    var setType by remember { mutableStateOf(set.setType) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Editar serie") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = setType == "bilbo",
+                        onClick = { setType = "bilbo" },
+                        label = { Text("Bilbo") }
+                    )
+                    FilterChip(
+                        selected = setType == "work",
+                        onClick = { setType = "work" },
+                        label = { Text("Trabajo") }
+                    )
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = reps,
+                        onValueChange = { reps = it.filter { c -> c.isDigit() } },
+                        label = { Text("Reps") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = weight,
+                        onValueChange = { weight = it.filter { c -> c.isDigit() || c == '.' } },
+                        label = { Text("Peso (kg)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                }
+                OutlinedTextField(
+                    value = rir,
+                    onValueChange = { rir = it.filter { c -> c.isDigit() } },
+                    label = { Text("RIR") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val r = reps.toIntOrNull() ?: return@TextButton
+                val w = weight.toFloatOrNull() ?: return@TextButton
+                val ri = rir.toIntOrNull() ?: 0
+                onSave(r, w, ri)
+            }) { Text("Guardar") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
+}
+
+@Composable
+fun AddSetDialog(
+    onDismiss: () -> Unit,
+    onAdd: (setType: String, reps: Int, weight: Float, rir: Int) -> Unit
+) {
+    var reps by remember { mutableStateOf("") }
+    var weight by remember { mutableStateOf("") }
+    var rir by remember { mutableStateOf("") }
+    var setType by remember { mutableStateOf("work") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Añadir serie") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = setType == "bilbo",
+                        onClick = { setType = "bilbo" },
+                        label = { Text("Bilbo") }
+                    )
+                    FilterChip(
+                        selected = setType == "work",
+                        onClick = { setType = "work" },
+                        label = { Text("Trabajo") }
+                    )
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = reps,
+                        onValueChange = { reps = it.filter { c -> c.isDigit() } },
+                        label = { Text("Reps") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = weight,
+                        onValueChange = { weight = it.filter { c -> c.isDigit() || c == '.' } },
+                        label = { Text("Peso (kg)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                }
+                OutlinedTextField(
+                    value = rir,
+                    onValueChange = { rir = it.filter { c -> c.isDigit() } },
+                    label = { Text("RIR") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val r = reps.toIntOrNull() ?: return@TextButton
+                val w = weight.toFloatOrNull() ?: return@TextButton
+                val ri = rir.toIntOrNull() ?: 0
+                onAdd(setType, r, w, ri)
+            }) { Text("Añadir") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
 }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
@@ -27,6 +28,7 @@ fun ProgramDaysScreen(
     val allRoutines by viewModel.routines.collectAsState()
     val parent = allRoutines.find { it.id == routineId }
     val children = allRoutines.filter { it.parentId == routineId }.sortedBy { it.order }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -36,6 +38,12 @@ fun ProgramDaysScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, "Volver")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showDeleteConfirm = true }) {
+                        Icon(Icons.Default.Delete, "Eliminar programa",
+                            tint = MaterialTheme.colorScheme.error)
                     }
                 }
             )
@@ -69,5 +77,28 @@ fun ProgramDaysScreen(
                 }
             }
         }
+    }
+
+    // Delete confirmation
+    if (showDeleteConfirm && parent != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("¿Eliminar programa?") },
+            text = {
+                Text("Se eliminará \"${parent!!.name}\" y todos sus ${children.size} días. Esta acción no se puede deshacer.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteConfirm = false
+                    viewModel.deleteRoutine(parent!!)
+                    onBack()
+                }) {
+                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancelar") }
+            }
+        )
     }
 }

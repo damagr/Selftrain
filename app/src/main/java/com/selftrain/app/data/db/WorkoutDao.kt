@@ -70,6 +70,12 @@ interface WorkoutDao {
     @Delete
     suspend fun deleteSet(workoutSet: WorkoutSet)
 
+    @Update
+    suspend fun updateSet(workoutSet: WorkoutSet)
+
+    @Query("SELECT * FROM workout_sets WHERE id = :id")
+    suspend fun getSetById(id: Long): WorkoutSet?
+
     @Query("""
         SELECT DISTINCT ws.exerciseId 
         FROM workout_sets ws 
@@ -86,4 +92,11 @@ interface WorkoutDao {
 
     @Query("SELECT * FROM workouts WHERE completed = 1 AND date BETWEEN :from AND :to ORDER BY date DESC")
     suspend fun getCompletedWorkoutsBetween(from: Long, to: Long): List<Workout>
+
+    // ponytail: crash recovery — find orphaned unfinished workouts
+    @Query("SELECT * FROM workouts WHERE completed = 0 ORDER BY date DESC LIMIT 1")
+    suspend fun getUnfinishedWorkout(): Workout?
+
+    @Query("DELETE FROM workouts WHERE id = :id")
+    suspend fun deleteById(id: Long)
 }

@@ -132,7 +132,10 @@ fun SelfTrainMain() {
                     onStartWorkout = { routineId -> navController.navigate("train/$routineId") },
                     onEditRoutine = { routineId -> navController.navigate("routine_edit/$routineId") },
                     onEnterProgram = { routineId -> navController.navigate("program/$routineId") },
-                    onSettings = { navController.navigate("settings") }
+                    onSettings = { navController.navigate("settings") },
+                    onResumeWorkout = { routineId, workoutId ->
+                        navController.navigate("train/$routineId?resumeWorkoutId=$workoutId")
+                    }
                 )
             }
             composable("program/{routineId}", arguments = listOf(navArgument("routineId") { type = NavType.LongType })) { backStackEntry ->
@@ -148,9 +151,20 @@ fun SelfTrainMain() {
                 val routineId = backStackEntry.arguments?.getLong("routineId") ?: 0L
                 RoutineEditScreen(routineId = routineId, onSaved = { navController.popBackStack() }, onDeleted = { navController.popBackStack() })
             }
-            composable("train/{routineId}", arguments = listOf(navArgument("routineId") { type = NavType.LongType })) { backStackEntry ->
+            composable(
+                "train/{routineId}?resumeWorkoutId={resumeWorkoutId}",
+                arguments = listOf(
+                    navArgument("routineId") { type = NavType.LongType },
+                    navArgument("resumeWorkoutId") { type = NavType.LongType; defaultValue = 0L }
+                )
+            ) { backStackEntry ->
                 val routineId = backStackEntry.arguments?.getLong("routineId") ?: 0L
-                TrainScreen(routineId = routineId, onFinish = { navController.popBackStack() })
+                val resumeWorkoutId = backStackEntry.arguments?.getLong("resumeWorkoutId") ?: 0L
+                TrainScreen(
+                    routineId = routineId,
+                    resumeWorkoutId = if (resumeWorkoutId > 0) resumeWorkoutId else null,
+                    onFinish = { navController.popBackStack() }
+                )
             }
             composable("history") {
                 HistoryScreen(onSettings = { navController.navigate("settings") })

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.selftrain.app.data.db.SetWithExercise
 import com.selftrain.app.data.model.Exercise
 import com.selftrain.app.data.model.Workout
+import com.selftrain.app.data.model.WorkoutSet
 import com.selftrain.app.data.repository.ExerciseRepository
 import com.selftrain.app.data.repository.WorkoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -88,4 +89,44 @@ class HistoryViewModel @Inject constructor(
             _view.value = HistoryView.SUMMARY
         }
     }
+
+    // ponytail: edit history — update/delete/add sets from workout detail
+    fun updateSet(set: WorkoutSet, reps: Int, weightKg: Float, rir: Int) {
+        viewModelScope.launch {
+            workoutRepo.updateSet(set.copy(reps = reps, weightKg = weightKg, rir = rir))
+            val workout = _selectedWorkout.value ?: return@launch
+            _workoutDetailSets.value = workoutRepo.getSetsWithExercise(workout.id)
+        }
+    }
+
+    fun deleteSetFromHistory(set: WorkoutSet) {
+        viewModelScope.launch {
+            workoutRepo.deleteSet(set)
+            val workout = _selectedWorkout.value ?: return@launch
+            _workoutDetailSets.value = workoutRepo.getSetsWithExercise(workout.id)
+        }
+    }
+
+    fun addSetToHistory(exerciseId: Long, setType: String, reps: Int, weightKg: Float, rir: Int) {
+        viewModelScope.launch {
+            val workout = _selectedWorkout.value ?: return@launch
+            val set = WorkoutSet(
+                workoutId = workout.id,
+                exerciseId = exerciseId,
+                setType = setType,
+                reps = reps,
+                weightKg = weightKg,
+                rir = rir,
+                explosive = false
+            )
+            workoutRepo.insertSet(set)
+            _workoutDetailSets.value = workoutRepo.getSetsWithExercise(workout.id)
+        }
+    }
+
+    fun getExercisesInWorkout(): List<Long> {
+        return _workoutDetailSets.value.map { it.set.exerciseId }.distinct()
+    }
+
+    fun getAllExercises(): StateFlow<List<Exercise>> = allExercises
 }

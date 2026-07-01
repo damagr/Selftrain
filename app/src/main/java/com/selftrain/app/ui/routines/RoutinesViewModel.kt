@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.selftrain.app.data.model.Routine
 import com.selftrain.app.data.repository.ExerciseRepository
 import com.selftrain.app.data.repository.RoutineRepository
+import com.selftrain.app.data.repository.WorkoutRepository
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,7 +29,8 @@ data class PredefinedRoutineData(
 class RoutinesViewModel @Inject constructor(
     app: Application,
     private val routineRepo: RoutineRepository,
-    private val exerciseRepo: ExerciseRepository
+    private val exerciseRepo: ExerciseRepository,
+    private val workoutRepo: WorkoutRepository
 ) : AndroidViewModel(app) {
 
     val routines = routineRepo.routines.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -90,6 +92,15 @@ class RoutinesViewModel @Inject constructor(
                 }
             }
             onDone()
+        }
+    }
+
+    // ponytail: crash recovery — check for unfinished workout on app launch
+    suspend fun getUnfinishedWorkout() = workoutRepo.getUnfinishedWorkout()
+
+    fun discardUnfinishedWorkout(workoutId: Long) {
+        viewModelScope.launch {
+            workoutRepo.deleteWorkoutById(workoutId)
         }
     }
 }

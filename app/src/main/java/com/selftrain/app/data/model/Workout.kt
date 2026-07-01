@@ -17,5 +17,6 @@ data class Workout(
     val notes: String = "",
     val completed: Boolean = false,
     val endDate: Long = 0,
-    val durationMinutes: Int = 0
+    val durationMinutes: Int = 0,
+    val lastExerciseIndex: Int = 0  // ponytail: recovery on crash
 )
