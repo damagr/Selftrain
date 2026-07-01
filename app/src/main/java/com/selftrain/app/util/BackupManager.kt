@@ -6,6 +6,10 @@ import com.selftrain.app.data.db.AppDatabase
 import com.selftrain.app.data.model.*
 import com.google.gson.Gson
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -56,5 +60,36 @@ class BackupManager @Inject constructor(
         data.routineExercises.forEach { db.routineDao().addExercise(it) }
         data.workouts.forEach { db.workoutDao().insert(it) }
         data.workoutSets.forEach { db.workoutDao().insertSet(it) }
+    }
+
+    suspend fun createAutomaticBackup(versionName: String) {
+        val dir = File(context.filesDir, "backups")
+        if (!dir.exists()) dir.mkdirs()
+
+        val timestamp = SimpleDateFormat("yyyy-MM-dd_HHmm", Locale.US).format(Date())
+        val file = File(dir, "selftrain_${versionName}_${timestamp}.json")
+
+        val data = BackupData(
+            exercises = db.exerciseDao().getAllList(),
+            routines = db.routineDao().getAllList(),
+            routineExercises = db.routineDao().getAllRoutineExercises(),
+            workouts = db.workoutDao().getAllList(),
+            workoutSets = db.workoutDao().getAllSets()
+        )
+        file.writeText(gson.toJson(data), Charsets.UTF_8)
+    }
+
+    fun cleanOldBackups(maxKeep: Int = 5) {
+        val dir = File(context.filesDir, "backups")
+        if (!dir.exists()) return
+
+        val backups = dir.listFiles { f -> f.name.startsWith("selftrain_") && f.name.endsWith(".json") }
+            ?: return
+
+        if (backups.size <= maxKeep) return
+
+        backups.sortedByDescending { it.lastModified() }
+            .drop(maxKeep)
+            .forEach { it.delete() }
     }
 }

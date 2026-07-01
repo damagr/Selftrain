@@ -42,6 +42,8 @@ Los programas se organizan en **jerarquía padre/hijo**: cada programa es una ta
 - Historial con drill-down: resumen → lista de entrenos → detalle por ejercicio
 - 1RM estimado (fórmula Epley)
 - Exportar/importar backup en JSON
+- **Backup automático diario** en el dispositivo (conserva los últimos 5)
+- **Actualización integrada**: detecta nuevas versiones, descarga e instala con backup previo
 - **Cuadro de mando web** para estudiar progresión con gráficas (1RM, peso, volumen, frecuencia) desde el navegador del PC
 
 ## Cuadro de mando (dashboard)

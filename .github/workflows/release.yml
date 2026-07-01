@@ -60,7 +60,7 @@ jobs:
 
       - name: Rename APK
         if: steps.check_tag.outputs.exists == 'false'
-        run: mv app/build/outputs/apk/debug/app-debug.apk EntrenaGuay-v${{ steps.version.outputs.VERSION }}.apk
+        run: mv app/build/outputs/apk/debug/app-debug.apk SelfTrain-v${{ steps.version.outputs.VERSION }}.apk
 
       - name: Create tag
         if: steps.check_tag.outputs.exists == 'false'
@@ -76,5 +76,5 @@ jobs:
         with:
           name: "v${{ steps.version.outputs.VERSION }}"
           tag_name: "v${{ steps.version.outputs.VERSION }}"
-          files: EntrenaGuay-v${{ steps.version.outputs.VERSION }}.apk
+          files: SelfTrain-v${{ steps.version.outputs.VERSION }}.apk
           generate_release_notes: true

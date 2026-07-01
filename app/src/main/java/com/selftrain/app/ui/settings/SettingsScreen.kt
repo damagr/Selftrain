@@ -23,6 +23,7 @@ import com.selftrain.app.data.model.Exercise
 import com.selftrain.app.data.repository.ExerciseRepository
 import com.selftrain.app.util.BackupManager
 import com.selftrain.app.util.Labels
+import com.selftrain.app.BuildConfig
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -184,7 +185,7 @@ fun SettingsScreen(
             Spacer(Modifier.weight(1f))
 
             // About
-            Text("SelfTrain v0.3.0",
+            Text("SelfTrain v${BuildConfig.VERSION_NAME}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(2.dp))
