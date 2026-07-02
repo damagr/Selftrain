@@ -19,13 +19,15 @@ jobs:
 
       - name: Write keystore properties
         run: |
-          echo "storeFile=release.jks" > keystore.properties
-          echo "storePassword=${{ secrets.KEYSTORE_PASS }}" >> keystore.properties
-          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> keystore.properties
-          echo "keyPassword=${{ secrets.KEY_PASS }}" >> keystore.properties
+          echo 'storeFile=release.jks' > keystore.properties
+          echo 'storePassword=${{ secrets.KEYSTORE_PASS }}' >> keystore.properties
+          echo 'keyAlias=${{ secrets.KEY_ALIAS }}' >> keystore.properties
+          echo 'keyPassword=${{ secrets.KEY_PASS }}' >> keystore.properties
 
       - name: Build release APK
-        run: ./gradlew assembleRelease
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
