@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import kotlinx.coroutines.*
 
 // ponytail: foreground service for rest timer, notification shows countdown
@@ -86,7 +87,11 @@ class RestTimerService : Service() {
                 val secs = intent?.getIntExtra(EXTRA_SECONDS, 90) ?: 90
                 secondsRemaining = secs
                 isRunning = true
-                startForeground(NOTIFICATION_ID, buildNotification())
+                // ponytail: guard startForeground so a denied/revoked POST_NOTIFICATIONS
+                // doesn't crash the service; countdown still runs without a visible notif.
+                if (NotificationManagerCompat.from(this).areNotificationsEnabled()) {
+                    startForeground(NOTIFICATION_ID, buildNotification())
+                }
                 startTicking()
             }
             "pause" -> {

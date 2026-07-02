@@ -1,9 +1,15 @@
 package com.selftrain.app
 
 import android.os.Bundle
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -70,6 +76,11 @@ fun SelfTrainMain() {
     val viewModel: MainViewModel = hiltViewModel()
     val context = LocalContext.current
 
+    // ponytail: one-time POST_NOTIFICATIONS ask on API 33+; minSdk 26 = no-op below
+    val notifLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* granted/denied handled by app behavior; no-op here */ }
+
     val bottomNavItems = listOf(
         BottomNavItem("routines", "Rutinas", Icons.Filled.FitnessCenter, Icons.Outlined.FitnessCenter),
         BottomNavItem("history", "Historial", Icons.Filled.History, Icons.Outlined.History),
@@ -84,6 +95,15 @@ fun SelfTrainMain() {
     // Update check on launch
     LaunchedEffect(Unit) {
         viewModel.checkForUpdate()
+    }
+
+    // Ask for notification permission on first launch (Android 13+)
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     // Watch for ready-to-install
