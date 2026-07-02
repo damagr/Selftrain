@@ -90,6 +90,14 @@ class HistoryViewModel @Inject constructor(
         }
     }
 
+    fun deleteWorkout(workout: Workout) {
+        viewModelScope.launch {
+            workoutRepo.deleteWorkoutById(workout.id)
+            _selectedWorkout.value = null
+            _view.value = HistoryView.WORKOUT_LIST
+        }
+    }
+
     // ponytail: edit history — update/delete/add sets from workout detail
     fun updateSet(set: WorkoutSet, reps: Int, weightKg: Float, rir: Int) {
         viewModelScope.launch {

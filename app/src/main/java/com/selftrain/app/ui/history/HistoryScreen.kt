@@ -45,6 +45,8 @@ fun HistoryScreen(
     val workoutDetailSets by viewModel.workoutDetailSets.collectAsState()
 
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showDeleteConfirm2 by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -71,6 +73,12 @@ fun HistoryScreen(
                     }
                 },
                 actions = {
+                    if (view == HistoryView.WORKOUT_DETAIL) {
+                        IconButton(onClick = { showDeleteConfirm = true }) {
+                            Icon(Icons.Default.Delete, "Eliminar entrenamiento",
+                                tint = MaterialTheme.colorScheme.error)
+                        }
+                    }
                     IconButton(onClick = onSettings) {
                         Icon(Icons.Default.Settings, "Ajustes")
                     }
@@ -387,6 +395,40 @@ fun AddSetDialog(
                 }
             }
         }
+    }
+
+    // Delete workout — double confirmation
+    if (showDeleteConfirm && selectedWorkout != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("¿Eliminar entrenamiento?") },
+            text = { Text("Se borrarán todas las series registradas en este entrenamiento.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteConfirm = false
+                    showDeleteConfirm2 = true
+                }) { Text("Eliminar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancelar") }
+            }
+        )
+    }
+    if (showDeleteConfirm2 && selectedWorkout != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm2 = false },
+            title = { Text("¿Estás seguro?") },
+            text = { Text("Esta acción es irreversible. No podrás recuperar este entrenamiento.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteConfirm2 = false
+                    viewModel.deleteWorkout(selectedWorkout!!)
+                }) { Text("Sí, eliminar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm2 = false }) { Text("Cancelar") }
+            }
+        )
     }
 }
 

@@ -3,6 +3,7 @@ package com.selftrain.app.ui.train
 import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -563,6 +564,19 @@ fun WorkSetInput(
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
+        // Progression hint
+        if (suggestion.hasHistory && suggestion.workProgression != BilboProgression.WorkProgression.MAINTAIN) {
+            Spacer(Modifier.height(4.dp))
+            val isIncrease = suggestion.workProgression == BilboProgression.WorkProgression.INCREASE
+            Text(
+                if (isIncrease) "↑ Subir peso (hiciste >12 reps la sesión anterior)"
+                else "↓ Bajar peso (hiciste <8 reps la sesión anterior)",
+                style = MaterialTheme.typography.labelSmall,
+                color = if (isIncrease) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.error
+            )
+        }
+
         Spacer(Modifier.height(8.dp))
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -609,24 +623,24 @@ fun RestTimer() {
     var remaining by remember { mutableIntStateOf(90) }
     var isRunning by remember { mutableStateOf(false) }
     var showTimer by remember { mutableStateOf(false) }
-    var startTimestamp by remember { mutableStateOf(0L) }
     var pausedRemaining by remember { mutableIntStateOf(0) }
 
-    // Wall-clock tick: recompose every ~100ms for smooth countdown
+    // Stop service when composable leaves composition (e.g. navigate away)
+    DisposableEffect(Unit) {
+        onDispose {
+            context.stopService(RestTimerService.createStopIntent(context))
+        }
+    }
+
+    // Tick loop: decrement every second while running
     if (isRunning) {
-        val frameMillis = remember { mutableStateOf(0L) }
         LaunchedEffect(isRunning) {
             while (isRunning) {
-                withFrameMillis { ms -> frameMillis.value = ms }
-                val elapsed = (System.currentTimeMillis() - startTimestamp) / 1000
-                val newRemaining = (totalSeconds - elapsed.toInt()).coerceAtLeast(0)
-                if (newRemaining != remaining) {
-                    remaining = newRemaining
-                }
-                if (newRemaining <= 0) {
+                delay(1000L)
+                remaining = (remaining - 1).coerceAtLeast(0)
+                if (remaining <= 0) {
                     isRunning = false
-                    remaining = 0
-                    // Stop service
+                    showTimer = false // back to pre-start with +30s/-30s buttons
                     context.stopService(RestTimerService.createStopIntent(context))
                 }
             }
@@ -652,7 +666,6 @@ fun RestTimer() {
                 showTimer = true
                 isRunning = true
                 remaining = totalSeconds
-                startTimestamp = System.currentTimeMillis()
                 // Start foreground service
                 RestTimerService.createChannel(context)
                 context.startForegroundService(RestTimerService.createStartIntent(context, totalSeconds))
@@ -696,7 +709,6 @@ fun RestTimer() {
                             isRunning = true
                             remaining = pausedRemaining
                             totalSeconds = pausedRemaining
-                            startTimestamp = System.currentTimeMillis() - ((totalSeconds - pausedRemaining) * 1000L)
                             // Restart service with remaining time
                             RestTimerService.createChannel(context)
                             context.startForegroundService(RestTimerService.createStartIntent(context, pausedRemaining))

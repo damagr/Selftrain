@@ -86,7 +86,7 @@ class RestTimerService : Service() {
                 stopSelf()
             }
         }
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     private fun startTicking() {
@@ -146,6 +146,7 @@ class RestTimerService : Service() {
 
     override fun onDestroy() {
         stopTicking()
+        stopForeground(STOP_FOREGROUND_REMOVE)
         super.onDestroy()
     }
 }

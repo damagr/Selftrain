@@ -25,7 +25,8 @@ data class PerExerciseSuggestion(
     val bilboWeight: Float = 0f,
     val workWeight: Float = 0f,
     val workReps: Int = 0,
-    val hasHistory: Boolean = false
+    val hasHistory: Boolean = false,
+    val workProgression: BilboProgression.WorkProgression = BilboProgression.WorkProgression.MAINTAIN
 )
 
 data class TrainState(
@@ -115,15 +116,25 @@ class TrainViewModel @Inject constructor(
                         history.filter { it.set.setType == "work" }.lastOrNull()?.set?.weightKg?.div(1.40f) ?: 0f
                     }
                     // ponytail: pre-fill work weight with max from last session, not bilbo-derived
-                    val workWeightFromLastSession = ex.lastSessionSets
-                        .filter { it.set.setType == "work" }
-                        .maxOfOrNull { it.set.weightKg }
+                    val lastWorkSets = ex.lastSessionSets.filter { it.set.setType == "work" }
+                    val workWeightFromLastSession = lastWorkSets.maxOfOrNull { it.set.weightKg }
+                    val baseWorkWeight = workWeightFromLastSession ?: (bilboWeight * 1.40f)
+
+                    // Progression: <8 reps → decrease, >12 reps → increase
+                    val lastWorkReps = lastWorkSets.map { it.set.reps }
+                    val progression = BilboProgression.workProgression(lastWorkReps)
+                    val adjustedWorkWeight = when (progression) {
+                        BilboProgression.WorkProgression.INCREASE -> baseWorkWeight * 1.05f
+                        BilboProgression.WorkProgression.DECREASE -> baseWorkWeight * 0.95f
+                        BilboProgression.WorkProgression.MAINTAIN -> baseWorkWeight
+                    }
                     PerExerciseSuggestion(
                         bilboReps = bilboReps,
                         bilboWeight = bilboWeight,
-                        workWeight = workWeightFromLastSession ?: (bilboWeight * 1.40f),
+                        workWeight = adjustedWorkWeight,
                         workReps = 10,
-                        hasHistory = true
+                        hasHistory = true,
+                        workProgression = progression
                     )
                 }
             }

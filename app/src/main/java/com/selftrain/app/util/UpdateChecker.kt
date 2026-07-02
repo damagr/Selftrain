@@ -24,6 +24,7 @@ class UpdateChecker(private val cacheDir: File) {
     fun checkForUpdate(currentVersion: String): GitHubRelease? {
         val conn = URL(apiUrl).openConnection() as HttpURLConnection
         conn.setRequestProperty("Accept", "application/vnd.github+json")
+        conn.useCaches = false
         conn.connectTimeout = 10_000
         conn.readTimeout = 10_000
 
