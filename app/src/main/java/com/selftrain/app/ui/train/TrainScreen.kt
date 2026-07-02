@@ -446,12 +446,12 @@ fun BilboSetInput(
     // ponytail: use exerciseKey for stable remember, sync weight via lastLoggedWeight
     val lastSetWeight = sets.lastOrNull()?.weightKg
     var reps by remember(exerciseKey) {
-        mutableStateOf(if (suggestion.hasHistory) suggestion.bilboReps.toString() else "")
+        mutableStateOf("")
     }
     var weight by remember(exerciseKey) {
         mutableStateOf(
-            if (lastSetWeight != null && lastSetWeight > 0) String.format("%.1f", lastSetWeight)
-            else if (suggestion.hasHistory && suggestion.bilboWeight > 0) String.format("%.1f", suggestion.bilboWeight)
+            if (lastSetWeight != null && lastSetWeight > 0) String.format(java.util.Locale.US, "%.1f", lastSetWeight)
+            else if (suggestion.hasHistory && suggestion.bilboWeight > 0) String.format(java.util.Locale.US, "%.1f", suggestion.bilboWeight)
             else ""
         )
     }
@@ -460,7 +460,7 @@ fun BilboSetInput(
     // Sync weight when last logged set changes (e.g. after logging a set in another context)
     LaunchedEffect(lastSetWeight) {
         if (lastSetWeight != null && lastSetWeight > 0) {
-            weight = String.format("%.1f", lastSetWeight)
+            weight = String.format(java.util.Locale.US, "%.1f", lastSetWeight)
         }
     }
 
@@ -535,14 +535,15 @@ fun WorkSetInput(
     onLog: (reps: Int, weight: Float) -> Unit
 ) {
     // ponytail: use exerciseKey for stable remember, sync weight via lastLoggedWeight
-    val lastSetWeight = sets.lastOrNull()?.weightKg
+    // Only consider work sets so the bilbo (light) weight doesn't leak into the work-set prefill
+    val lastSetWeight = sets.lastOrNull { it.setType == "work" }?.weightKg
     var reps by remember(exerciseKey) {
-        mutableStateOf(if (suggestion.hasHistory) suggestion.workReps.toString() else "")
+        mutableStateOf("")
     }
     var weight by remember(exerciseKey) {
         mutableStateOf(
-            if (lastSetWeight != null && lastSetWeight > 0) String.format("%.1f", lastSetWeight)
-            else if (suggestion.hasHistory && suggestion.workWeight > 0) String.format("%.1f", suggestion.workWeight)
+            if (lastSetWeight != null && lastSetWeight > 0) String.format(java.util.Locale.US, "%.1f", lastSetWeight)
+            else if (suggestion.hasHistory && suggestion.workWeight > 0) String.format(java.util.Locale.US, "%.1f", suggestion.workWeight)
             else ""
         )
     }
@@ -550,7 +551,7 @@ fun WorkSetInput(
     // Sync weight when last logged set changes
     LaunchedEffect(lastSetWeight) {
         if (lastSetWeight != null && lastSetWeight > 0) {
-            weight = String.format("%.1f", lastSetWeight)
+            weight = String.format(java.util.Locale.US, "%.1f", lastSetWeight)
         }
     }
 
