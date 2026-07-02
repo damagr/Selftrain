@@ -1,9 +1,13 @@
 package com.selftrain.app.ui.routines
 
 import android.app.Application
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.selftrain.app.data.model.Routine
+import com.selftrain.app.data.model.Workout
 import com.selftrain.app.data.repository.ExerciseRepository
 import com.selftrain.app.data.repository.RoutineRepository
 import com.selftrain.app.data.repository.WorkoutRepository
@@ -35,8 +39,19 @@ class RoutinesViewModel @Inject constructor(
 
     val routines = routineRepo.routines.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // Crash recovery dialog state — survives recomposition
+    var showRecoveryDialog by mutableStateOf(false)
+    var unfinishedWorkout by mutableStateOf<Workout?>(null)
+
     init {
         viewModelScope.launch { exerciseRepo.seedIfEmpty() }
+        viewModelScope.launch {
+            val uw = workoutRepo.getUnfinishedWorkout()
+            if (uw != null) {
+                unfinishedWorkout = uw
+                showRecoveryDialog = true
+            }
+        }
     }
 
     fun createRoutine(name: String, method: String = "bilbo", notes: String = "", onCreated: (Long) -> Unit) {

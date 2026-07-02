@@ -173,7 +173,10 @@ fun SelfTrainMain() {
                 ExerciseLibraryScreen(onSettings = { navController.navigate("settings") })
             }
             composable("settings") {
-                SettingsScreen(onBack = { navController.popBackStack() })
+                SettingsScreen(
+                    onBack = { navController.popBackStack() },
+                    onCheckUpdate = { viewModel.checkForUpdate() }
+                )
             }
         }
     }

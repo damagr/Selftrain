@@ -18,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.selftrain.app.data.model.Routine
-import com.selftrain.app.data.model.Workout
 import com.selftrain.app.util.Labels
 import kotlinx.coroutines.launch
 
@@ -35,8 +34,6 @@ fun RoutinesScreen(
     val routines by viewModel.routines.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
     var showPredefinedDialog by remember { mutableStateOf(false) }
-    var showRecoveryDialog by remember { mutableStateOf(false) }
-    var unfinishedWorkout by remember { mutableStateOf<Workout?>(null) }
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
@@ -136,27 +133,19 @@ fun RoutinesScreen(
         )
     }
 
-    // Crash recovery: check for unfinished workout
-    LaunchedEffect(Unit) {
-        val uw = viewModel.getUnfinishedWorkout()
-        if (uw != null) {
-            unfinishedWorkout = uw
-            showRecoveryDialog = true
-        }
-    }
-
-    if (showRecoveryDialog && unfinishedWorkout != null) {
-        val uw = unfinishedWorkout!!
+    // Crash recovery dialog — state lives in ViewModel, user MUST choose
+    if (viewModel.showRecoveryDialog && viewModel.unfinishedWorkout != null) {
+        val uw = viewModel.unfinishedWorkout!!
         val routine = routines.find { it.id == uw.routineId }
         AlertDialog(
-            onDismissRequest = { showRecoveryDialog = false },
+            onDismissRequest = { /* bloqueado: el usuario debe elegir */ },
             title = { Text("Entreno sin finalizar") },
             text = {
                 Text("Tienes un entreno sin finalizar de \"${routine?.name ?: "rutina"}\". ¿Quieres reanudarlo donde lo dejaste?")
             },
             confirmButton = {
                 TextButton(onClick = {
-                    showRecoveryDialog = false
+                    viewModel.showRecoveryDialog = false
                     onResumeWorkout(uw.routineId, uw.id)
                 }) {
                     Text("Reanudar")
@@ -164,7 +153,7 @@ fun RoutinesScreen(
             },
             dismissButton = {
                 TextButton(onClick = {
-                    showRecoveryDialog = false
+                    viewModel.showRecoveryDialog = false
                     viewModel.discardUnfinishedWorkout(uw.id)
                 }) {
                     Text("Descartar", color = MaterialTheme.colorScheme.error)

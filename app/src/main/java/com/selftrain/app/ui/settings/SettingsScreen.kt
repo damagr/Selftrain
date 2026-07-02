@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -83,6 +84,7 @@ class SettingsViewModel @Inject constructor(
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onCheckUpdate: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -178,6 +180,25 @@ fun SettingsScreen(
                         Icon(Icons.Filled.Restore, null)
                         Spacer(Modifier.width(8.dp))
                         Text("Ver ejercicios borrados")
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // Check for updates
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("Actualización", style = MaterialTheme.typography.titleSmall)
+                    Spacer(Modifier.height(4.dp))
+                    Text("Comprueba si hay una nueva versión disponible para descargar.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedButton(onClick = onCheckUpdate) {
+                        Icon(Icons.Default.SystemUpdate, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Buscar actualización")
                     }
                 }
             }
