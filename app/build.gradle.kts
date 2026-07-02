@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -10,6 +12,19 @@ android {
     namespace = "com.selftrain.app"
     compileSdk = 36
 
+    val keystoreProps = Properties()
+    val propsFile = rootProject.file("keystore.properties")
+    if (propsFile.exists()) keystoreProps.load(propsFile.inputStream())
+
+    signingConfigs {
+        create("release") {
+            storeFile = rootProject.file("release.jks")
+            storePassword = keystoreProps.getProperty("storePassword") ?: "android"
+            keyAlias = keystoreProps.getProperty("keyAlias") ?: "selftrain"
+            keyPassword = keystoreProps.getProperty("keyPassword") ?: "android"
+        }
+    }
+
     defaultConfig {
         applicationId = "com.selftrain.app"
         minSdk = 26
@@ -20,6 +35,7 @@ android {
 
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
         }
     }
