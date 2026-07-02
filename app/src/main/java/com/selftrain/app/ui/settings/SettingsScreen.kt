@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.*
@@ -44,6 +45,9 @@ class SettingsViewModel @Inject constructor(
     private val _deletedExercises = MutableStateFlow<List<Exercise>>(emptyList())
     val deletedExercises: StateFlow<List<Exercise>> = _deletedExercises.asStateFlow()
 
+    private val _backupFolderDisplay = MutableStateFlow(backupManager.getBackupFolderDisplay())
+    val backupFolderDisplay: StateFlow<String> = _backupFolderDisplay.asStateFlow()
+
     fun loadDeletedExercises() {
         viewModelScope.launch {
             _deletedExercises.value = exerciseRepo.getDeletedExercises()
@@ -54,6 +58,22 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             exerciseRepo.restoreExercise(id)
             _deletedExercises.value = exerciseRepo.getDeletedExercises()
+        }
+    }
+
+    fun setBackupFolder(uri: Uri, onDone: () -> Unit) {
+        viewModelScope.launch {
+            backupManager.setBackupFolder(uri)
+            _backupFolderDisplay.value = backupManager.getBackupFolderDisplay()
+            onDone()
+        }
+    }
+
+    fun clearBackupFolder(onDone: () -> Unit) {
+        viewModelScope.launch {
+            backupManager.clearBackupFolder()
+            _backupFolderDisplay.value = backupManager.getBackupFolderDisplay()
+            onDone()
         }
     }
 
@@ -91,6 +111,7 @@ fun SettingsScreen(
     var showImportConfirm by remember { mutableStateOf<Uri?>(null) }
     var showRecoveryDialog by remember { mutableStateOf(false) }
     val deletedExercises by viewModel.deletedExercises.collectAsState()
+    val backupFolderDisplay by viewModel.backupFolderDisplay.collectAsState()
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -102,6 +123,12 @@ fun SettingsScreen(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let { showImportConfirm = it }
+    }
+
+    val backupFolderLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        uri?.let { viewModel.setBackupFolder(it) { context.toast("Carpeta de backups guardada") } }
     }
 
     Scaffold(
@@ -156,6 +183,37 @@ fun SettingsScreen(
                         Icon(Icons.Filled.FileUpload, null)
                         Spacer(Modifier.width(8.dp))
                         Text("Importar backup")
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // Backup folder
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("Carpeta de backups automáticos", style = MaterialTheme.typography.titleSmall)
+                    Spacer(Modifier.height(4.dp))
+                    Text("Los backups que se crean al actualizar o diariamente se guardarán en esta carpeta. Si no eliges ninguna, se guardan en el almacenamiento interno de la app.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Actual: $backupFolderDisplay",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(12.dp))
+                    Row {
+                        OutlinedButton(onClick = { backupFolderLauncher.launch(null) }) {
+                            Icon(Icons.Filled.Folder, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Elegir carpeta")
+                        }
+                        if (backupFolderDisplay != "Interno (no configurable)") {
+                            Spacer(Modifier.width(8.dp))
+                            TextButton(onClick = {
+                                viewModel.clearBackupFolder { context.toast("Carpeta restablecida") }
+                            }) { Text("Restablecer") }
+                        }
                     }
                 }
             }

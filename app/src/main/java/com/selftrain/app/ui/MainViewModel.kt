@@ -44,11 +44,13 @@ class MainViewModel @Inject constructor(
 
     var showUpdateDialog by mutableStateOf(false)
     var downloadProgress by mutableIntStateOf(0)
+    var userMessage by mutableStateOf<String?>(null)
+        private set
 
     private val currentVersion: String = BuildConfig.VERSION_NAME
     private val checker = UpdateChecker(context.cacheDir)
 
-    fun checkForUpdate() {
+    fun checkForUpdate(userInitiated: Boolean = false) {
         updateState = UpdateState.Checking
         viewModelScope.launch {
             try {
@@ -60,9 +62,15 @@ class MainViewModel @Inject constructor(
                     showUpdateDialog = true
                 } else {
                     updateState = UpdateState.UpToDate
+                    if (userInitiated) {
+                        userMessage = "Ya tienes la última versión (v$currentVersion)"
+                    }
                 }
             } catch (e: Exception) {
                 updateState = UpdateState.UpToDate // fail silently
+                if (userInitiated) {
+                    userMessage = "No se pudo comprobar la actualización"
+                }
             }
         }
     }
@@ -76,6 +84,7 @@ class MainViewModel @Inject constructor(
                 withContext(Dispatchers.IO) {
                     backupManager.createAutomaticBackup(currentVersion)
                 }
+                userMessage = "Backup de seguridad creado"
                 updateState = UpdateState.Downloading(0)
 
                 val file = withContext(Dispatchers.IO) {
@@ -120,5 +129,9 @@ class MainViewModel @Inject constructor(
     fun dismissDialog() {
         showUpdateDialog = false
         updateState = UpdateState.UpToDate
+    }
+
+    fun clearMessage() {
+        userMessage = null
     }
 }

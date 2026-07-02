@@ -29,8 +29,8 @@ android {
         applicationId = "com.selftrain.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 14
-        versionName = "0.5.5"
+        versionCode = 15
+        versionName = "0.6.0"
     }
 
     buildTypes {
@@ -94,4 +94,7 @@ dependencies {
 
     // JSON parsing for seed data
     implementation("com.google.code.gson:gson:2.11.0")
+
+    // SAF tree operations for user-chosen backup folder
+    implementation("androidx.documentfile:documentfile:1.0.1")
 }

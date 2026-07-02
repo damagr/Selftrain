@@ -93,6 +93,14 @@ fun SelfTrainMain() {
         }
     }
 
+    // Show user messages (latest-version feedback, backup created, etc.)
+    LaunchedEffect(viewModel.userMessage) {
+        viewModel.userMessage?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+            viewModel.clearMessage()
+        }
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
@@ -175,7 +183,7 @@ fun SelfTrainMain() {
             composable("settings") {
                 SettingsScreen(
                     onBack = { navController.popBackStack() },
-                    onCheckUpdate = { viewModel.checkForUpdate() }
+                    onCheckUpdate = { viewModel.checkForUpdate(userInitiated = true) }
                 )
             }
         }
