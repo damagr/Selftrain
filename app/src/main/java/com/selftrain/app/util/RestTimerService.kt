@@ -17,7 +17,9 @@ class RestTimerService : Service() {
 
     companion object {
         const val CHANNEL_ID = "rest_timer_channel"
+        const val CHANNEL_ID_DONE = "rest_timer_done_channel"
         const val NOTIFICATION_ID = 1001
+        const val NOTIFICATION_ID_DONE = 1002
         const val EXTRA_SECONDS = "seconds"
         const val EXTRA_ACTION = "action" // "start", "pause", "stop"
         const val ACTION_PAUSE = "com.selftrain.app.PAUSE_TIMER"
@@ -46,6 +48,8 @@ class RestTimerService : Service() {
 
         fun createChannel(context: Context) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val nm = context.getSystemService(NotificationManager::class.java)
+                // Running countdown: silent, low priority
                 val channel = NotificationChannel(
                     CHANNEL_ID,
                     "Temporizador",
@@ -54,8 +58,18 @@ class RestTimerService : Service() {
                     description = "Temporizador de descanso"
                     setShowBadge(false)
                 }
-                val nm = context.getSystemService(NotificationManager::class.java)
                 nm.createNotificationChannel(channel)
+                // Finished: high priority, sound + heads-up bubble
+                val doneChannel = NotificationChannel(
+                    CHANNEL_ID_DONE,
+                    "Descanso terminado",
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Aviso sonoro cuando termina el descanso"
+                    enableVibration(true)
+                    enableLights(true)
+                }
+                nm.createNotificationChannel(doneChannel)
             }
         }
     }
@@ -100,8 +114,11 @@ class RestTimerService : Service() {
                 if (secondsRemaining <= 0) {
                     isRunning = false
                     sendBroadcast(Intent(BROADCAST_FINISHED))
-                    stopForeground(STOP_FOREGROUND_DETACH)
-                    updateNotification()
+                    // ponytail: post heads-up + sound notification on HIGH channel so it
+                    // surfaces over other apps; remove the silent running notification.
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    val nm = getSystemService(NotificationManager::class.java)
+                    nm.notify(NOTIFICATION_ID_DONE, buildDoneNotification())
                     stopSelf()
                 }
             }
@@ -139,6 +156,22 @@ class RestTimerService : Service() {
             .setOngoing(true)
             .addAction(0, if (isRunning) "Pausar" else "Reanudar", pausedIntent)
             .addAction(0, "Parar", stopIntent)
+            .build()
+    }
+
+    private fun buildDoneNotification(): Notification {
+        val stopIntent = PendingIntent.getService(
+            this, 1, createStopIntent(this),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        return NotificationCompat.Builder(this, CHANNEL_ID_DONE)
+            .setContentTitle("Descanso terminado")
+            .setContentText("Ya puedes continuar")
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_SOUND or NotificationCompat.DEFAULT_VIBRATE)
+            .setDeleteIntent(stopIntent)
             .build()
     }
 

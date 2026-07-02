@@ -642,7 +642,8 @@ fun RestTimer() {
                 if (remaining <= 0) {
                     isRunning = false
                     showTimer = false // back to pre-start with +30s/-30s buttons
-                    context.stopService(RestTimerService.createStopIntent(context))
+                    // ponytail: don't stop the service here; let it reach 0 and post the
+                    // heads-up + sound "done" notification. Service stops itself.
                 }
             }
         }
