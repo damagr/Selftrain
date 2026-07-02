@@ -36,14 +36,15 @@ Los programas se organizan en **jerarquía padre/hijo**: cada programa es una ta
 - **Reemplazar** ejercicios en la rutina sin necesidad de borrar y volver a añadir
 - **Reordenar** rutinas y ejercicios con ↑↓ y animación de deslizamiento
 - Entreno paso a paso con navegación lineal y salto entre ejercicios
-- Temporizador de descanso (90s configurable)
+- Temporizador de descanso configurable (±30s, 30–300s) con **aviso sonoro al terminar** (notificación heads-up + sonido predeterminado, aunque estés en otra app)
 - Sugerencias automáticas de peso/reps basadas en el historial
 - PRs de la sesión anterior visibles durante el entreno
 - Historial con drill-down: resumen → lista de entrenos → detalle por ejercicio
 - 1RM estimado (fórmula Epley)
 - Exportar/importar backup en JSON
-- **Backup automático diario** en el dispositivo (conserva los últimos 5)
-- **Actualización integrada**: detecta nuevas versiones, descarga e instala con backup previo
+- **Carpeta de backups configurable**: elige dónde guardar los backups automáticos desde Ajustes (accesible desde el gestor de archivos)
+- **Backup automático diario** + **backup previo a cada actualización** (conserva los últimos 5)
+- **Actualización integrada**: detecta nuevas versiones, descarga e instala con backup previo; avisa si ya estás en la última versión
 - **Cuadro de mando web** para estudiar progresión con gráficas (1RM, peso, volumen, frecuencia) desde el navegador del PC
 
 ## Cuadro de mando (dashboard)
