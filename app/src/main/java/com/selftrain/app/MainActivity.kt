@@ -2,8 +2,12 @@ package com.selftrain.app
 
 import android.os.Bundle
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
+import java.io.File
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -106,10 +110,30 @@ fun SelfTrainMain() {
         }
     }
 
-    // Watch for ready-to-install
+    // Watch for ready-to-install; handle permission via ActivityResult
+    var pendingInstallFile by remember { mutableStateOf<File?>(null) }
+
+    val installPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (!viewModel.needsInstallPermission()) {
+            pendingInstallFile?.let { viewModel.installApk(it) }
+        }
+        pendingInstallFile = null
+    }
+
     LaunchedEffect(viewModel.updateState) {
         if (viewModel.updateState is UpdateState.ReadyToInstall) {
-            viewModel.installApk((viewModel.updateState as UpdateState.ReadyToInstall).file)
+            val file = (viewModel.updateState as UpdateState.ReadyToInstall).file
+            if (viewModel.needsInstallPermission()) {
+                pendingInstallFile = file
+                val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                }
+                installPermissionLauncher.launch(intent)
+            } else {
+                viewModel.installApk(file)
+            }
         }
     }
 
