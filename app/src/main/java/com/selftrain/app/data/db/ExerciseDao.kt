@@ -9,9 +9,6 @@ interface ExerciseDao {
     @Query("SELECT * FROM exercises WHERE isDeleted = 0 ORDER BY muscleGroup, name")
     fun getAll(): Flow<List<Exercise>>
 
-    @Query("SELECT * FROM exercises WHERE category = :category AND isDeleted = 0 ORDER BY name")
-    fun getByCategory(category: String): Flow<List<Exercise>>
-
     @Query("SELECT * FROM exercises WHERE id = :id AND isDeleted = 0")
     suspend fun getById(id: Long): Exercise?
 

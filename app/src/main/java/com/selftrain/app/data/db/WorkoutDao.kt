@@ -73,13 +73,10 @@ interface WorkoutDao {
     @Update
     suspend fun updateSet(workoutSet: WorkoutSet)
 
-    @Query("SELECT * FROM workout_sets WHERE id = :id")
-    suspend fun getSetById(id: Long): WorkoutSet?
-
     @Query("""
-        SELECT DISTINCT ws.exerciseId 
-        FROM workout_sets ws 
-        JOIN workouts w ON ws.workoutId = w.id 
+        SELECT DISTINCT ws.exerciseId
+        FROM workout_sets ws
+        JOIN workouts w ON ws.workoutId = w.id
         WHERE w.completed = 1
     """)
     suspend fun getExerciseIdsWithHistory(): List<Long>

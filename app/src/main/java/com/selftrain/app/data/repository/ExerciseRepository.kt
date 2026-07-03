@@ -23,8 +23,6 @@ class ExerciseRepository @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     val exercises = dao.getAll()
-    val compounds = dao.getByCategory("compound")
-    val isolations = dao.getByCategory("isolation")
 
     suspend fun seedIfEmpty() {
         if (dao.count() == 0) {

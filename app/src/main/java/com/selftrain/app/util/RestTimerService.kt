@@ -23,10 +23,6 @@ class RestTimerService : Service() {
         const val NOTIFICATION_ID_DONE = 1002
         const val EXTRA_SECONDS = "seconds"
         const val EXTRA_ACTION = "action" // "start", "pause", "stop"
-        const val ACTION_PAUSE = "com.selftrain.app.PAUSE_TIMER"
-        const val ACTION_STOP = "com.selftrain.app.STOP_TIMER"
-        const val BROADCAST_TICK = "com.selftrain.app.TIMER_TICK"
-        const val BROADCAST_FINISHED = "com.selftrain.app.TIMER_FINISHED"
 
         fun createStartIntent(ctx: Context, seconds: Int): Intent {
             return Intent(ctx, RestTimerService::class.java).apply {
@@ -115,10 +111,8 @@ class RestTimerService : Service() {
                 delay(1000L)
                 secondsRemaining--
                 updateNotification()
-                sendBroadcast(Intent(BROADCAST_TICK).putExtra("remaining", secondsRemaining))
                 if (secondsRemaining <= 0) {
                     isRunning = false
-                    sendBroadcast(Intent(BROADCAST_FINISHED))
                     // ponytail: post heads-up + sound notification on HIGH channel so it
                     // surfaces over other apps; remove the silent running notification.
                     stopForeground(STOP_FOREGROUND_REMOVE)
