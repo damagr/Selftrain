@@ -43,8 +43,22 @@ object BilboProgression {
     fun workProgression(workSetReps: List<Int>): WorkProgression = when {
         workSetReps.isEmpty() -> WorkProgression.MAINTAIN
         workSetReps.first() < 8 -> WorkProgression.DECREASE
-        workSetReps.all { it > 12 } -> WorkProgression.INCREASE
+        workSetReps.all { it > 10 } -> WorkProgression.INCREASE
         else -> WorkProgression.MAINTAIN
+    }
+
+    /**
+     * Intra-session advice after each work set, based on the last logged set.
+     * Returns null when reps are in the maintain range (8..10).
+     *
+     * ponytail: asymmetric factor is intentional — a miss (<8) needs a bigger reset
+     * than the bump for exceeding range (>10). Upgrade path: per-exercise adaptive
+     * factor if progression data shows 10% is too aggressive.
+     */
+    fun workSetAdjustment(reps: Int, weightKg: Float): Pair<WorkProgression, Float>? = when {
+        reps < 8 -> WorkProgression.DECREASE to weightKg * 0.90f
+        reps > 10 -> WorkProgression.INCREASE to weightKg * 1.05f
+        else -> null
     }
 
     /** Epley formula for estimated 1RM */
@@ -61,4 +75,29 @@ object BilboProgression {
     /** Suggested Bilbo weight from last work set data */
     fun suggestBilboFromWorkSets(lastWorkSetWeight: Float): Float =
         lastWorkSetWeight / 1.40f  // work weight / 1.4 ≈ bilbo weight
+
+    @JvmStatic
+    private fun assertEq(actual: Float, expected: Float, msg: String) {
+        check(kotlin.math.abs(actual - expected) < 0.01f) { "$msg: $actual != $expected" }
+    }
+
+    @JvmStatic
+    private fun main() {
+        // workProgression thresholds
+        check(workProgression(listOf(7)) == WorkProgression.DECREASE)
+        check(workProgression(listOf(8)) == WorkProgression.MAINTAIN)
+        check(workProgression(listOf(10)) == WorkProgression.MAINTAIN)
+        check(workProgression(listOf(11)) == WorkProgression.INCREASE)
+        check(workProgression(listOf(12)) == WorkProgression.INCREASE)
+        check(workProgression(emptyList()) == WorkProgression.MAINTAIN)
+        // workSetAdjustment factors and thresholds
+        check(workSetAdjustment(7, 20f) == WorkProgression.DECREASE to 18.0f)
+        check(workSetAdjustment(8, 20f) == null)
+        check(workSetAdjustment(10, 20f) == null)
+        check(workSetAdjustment(11, 20f) == WorkProgression.INCREASE to 21.0f)
+        check(workSetAdjustment(12, 20f) == WorkProgression.INCREASE to 21.0f)
+        assertEq(workSetAdjustment(7, 20f)!!.second, 18.0f, "decrease 10%")
+        assertEq(workSetAdjustment(12, 20f)!!.second, 21.0f, "increase 5%")
+        println("BilboProgression self-check OK")
+    }
 }

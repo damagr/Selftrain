@@ -125,7 +125,7 @@ class TrainViewModel @Inject constructor(
                     val progression = BilboProgression.workProgression(lastWorkReps)
                     val adjustedWorkWeight = when (progression) {
                         BilboProgression.WorkProgression.INCREASE -> baseWorkWeight * 1.05f
-                        BilboProgression.WorkProgression.DECREASE -> baseWorkWeight * 0.95f
+                        BilboProgression.WorkProgression.DECREASE -> baseWorkWeight * 0.90f
                         BilboProgression.WorkProgression.MAINTAIN -> baseWorkWeight
                     }
                     PerExerciseSuggestion(

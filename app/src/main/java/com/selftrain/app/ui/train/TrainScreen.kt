@@ -536,7 +536,11 @@ fun WorkSetInput(
 ) {
     // ponytail: use exerciseKey for stable remember, sync weight via lastLoggedWeight
     // Only consider work sets so the bilbo (light) weight doesn't leak into the work-set prefill
-    val lastSetWeight = sets.lastOrNull { it.setType == "work" }?.weightKg
+    val lastWorkSet = sets.lastOrNull { it.setType == "work" }
+    val lastSetWeight = lastWorkSet?.weightKg
+    val intraAdjustment = lastWorkSet?.let {
+        BilboProgression.workSetAdjustment(it.reps, it.weightKg)
+    }
     var reps by remember(exerciseKey) {
         mutableStateOf("")
     }
@@ -555,6 +559,14 @@ fun WorkSetInput(
         }
     }
 
+    // ponytail: prefill suggested weight from intra-session advice; don't override manual edits
+    LaunchedEffect(intraAdjustment) {
+        val suggested = intraAdjustment?.second
+        if (suggested != null && suggested > 0) {
+            weight = String.format(java.util.Locale.US, "%.1f", suggested)
+        }
+    }
+
     Column {
         Text("Serie de trabajo", style = MaterialTheme.typography.titleSmall)
 
@@ -565,13 +577,28 @@ fun WorkSetInput(
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
-        // Progression hint
-        if (suggestion.hasHistory && suggestion.workProgression != BilboProgression.WorkProgression.MAINTAIN) {
+        // Progression hint between sessions (only before any work set is logged this session)
+        if (suggestion.hasHistory && lastWorkSet == null &&
+            suggestion.workProgression != BilboProgression.WorkProgression.MAINTAIN) {
             Spacer(Modifier.height(4.dp))
             val isIncrease = suggestion.workProgression == BilboProgression.WorkProgression.INCREASE
             Text(
-                if (isIncrease) "↑ Subir peso (hiciste >12 reps la sesión anterior)"
+                if (isIncrease) "↑ Subir peso (hiciste >10 reps la sesión anterior)"
                 else "↓ Bajar peso (hiciste <8 reps la sesión anterior)",
+                style = MaterialTheme.typography.labelSmall,
+                color = if (isIncrease) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.error
+            )
+        }
+
+        // Intra-session advice based on the last logged work set
+        intraAdjustment?.let { (progression, suggestedWeight) ->
+            Spacer(Modifier.height(4.dp))
+            val isIncrease = progression == BilboProgression.WorkProgression.INCREASE
+            val lastReps = lastWorkSet?.reps ?: 0
+            Text(
+                if (isIncrease) "↑ Sube a ~${String.format(java.util.Locale.US, "%.1f", suggestedWeight)} kg (hiciste $lastReps, >10)"
+                else "↓ Baja a ~${String.format(java.util.Locale.US, "%.1f", suggestedWeight)} kg (hiciste $lastReps, <8)",
                 style = MaterialTheme.typography.labelSmall,
                 color = if (isIncrease) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.error
