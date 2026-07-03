@@ -1,7 +1,8 @@
 name: Release APK
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+    paths: ["app/build.gradle.kts"]
 
 permissions:
   contents: write
@@ -11,16 +12,44 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+
+      - name: Detect version change
+        id: version
+        run: |
+          CURRENT=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
+          PREV=$(git show HEAD~1:app/build.gradle.kts 2>/dev/null | grep -oP 'versionName\s*=\s*"\K[^"]+' || echo "")
+          if [ "$CURRENT" = "$PREV" ]; then
+            echo "No version change, skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          elif git ls-remote --tags origin "v$CURRENT" | grep -q .; then
+            echo "Tag v$CURRENT already exists, skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "New version: $CURRENT"
+            echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create tag
+        if: steps.version.outputs.skip == 'false'
+        run: |
+          git tag v${{ steps.version.outputs.version }}
+          git push origin v${{ steps.version.outputs.version }}
 
       - uses: actions/setup-java@v5
+        if: steps.version.outputs.skip == 'false'
         with:
           distribution: temurin
           java-version: 17
 
       - name: Decode keystore
+        if: steps.version.outputs.skip == 'false'
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.jks
 
       - name: Write keystore properties
+        if: steps.version.outputs.skip == 'false'
         run: |
           echo 'storeFile=release.jks' > keystore.properties
           echo 'storePassword=${{ secrets.KEYSTORE_PASS }}' >> keystore.properties
@@ -28,12 +57,15 @@ jobs:
           echo 'keyPassword=${{ secrets.KEY_PASS }}' >> keystore.properties
 
       - name: Build release APK
+        if: steps.version.outputs.skip == 'false'
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease
 
       - name: Create GitHub Release
+        if: steps.version.outputs.skip == 'false'
         uses: softprops/action-gh-release@v3
         with:
+          tag_name: v${{ steps.version.outputs.version }}
           files: app/build/outputs/apk/release/*.apk
           generate_release_notes: true
