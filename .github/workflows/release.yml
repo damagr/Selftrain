@@ -3,6 +3,7 @@ on:
   push:
     branches: [main]
     paths: ["app/build.gradle.kts"]
+    tags: ["v*"]
 
 permissions:
   contents: write
@@ -13,27 +14,32 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 2
+          fetch-depth: ${{ github.ref_type == 'tag' && 1 || 2 }}
 
       - name: Detect version change
         id: version
         run: |
-          CURRENT=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
-          PREV=$(git show HEAD~1:app/build.gradle.kts 2>/dev/null | grep -oP 'versionName\s*=\s*"\K[^"]+' || echo "")
-          if [ "$CURRENT" = "$PREV" ]; then
-            echo "No version change, skipping"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          elif git ls-remote --tags origin "v$CURRENT" | grep -q .; then
-            echo "Tag v$CURRENT already exists, skipping"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "New version: $CURRENT"
-            echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
             echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            CURRENT=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
+            PREV=$(git show HEAD~1:app/build.gradle.kts 2>/dev/null | grep -oP 'versionName\s*=\s*"\K[^"]+' || echo "")
+            if [ "$CURRENT" = "$PREV" ]; then
+              echo "No version change, skipping"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+            elif git ls-remote --tags origin "v$CURRENT" | grep -q .; then
+              echo "Tag v$CURRENT already exists, skipping"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "New version: $CURRENT"
+              echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
+              echo "skip=false" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
       - name: Create tag
-        if: steps.version.outputs.skip == 'false'
+        if: steps.version.outputs.skip == 'false' && github.ref_type != 'tag'
         run: |
           git tag v${{ steps.version.outputs.version }}
           git push origin v${{ steps.version.outputs.version }}
