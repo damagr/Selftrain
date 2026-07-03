@@ -75,29 +75,4 @@ object BilboProgression {
     /** Suggested Bilbo weight from last work set data */
     fun suggestBilboFromWorkSets(lastWorkSetWeight: Float): Float =
         lastWorkSetWeight / 1.40f  // work weight / 1.4 ≈ bilbo weight
-
-    @JvmStatic
-    private fun assertEq(actual: Float, expected: Float, msg: String) {
-        check(kotlin.math.abs(actual - expected) < 0.01f) { "$msg: $actual != $expected" }
-    }
-
-    @JvmStatic
-    private fun main() {
-        // workProgression thresholds
-        check(workProgression(listOf(7)) == WorkProgression.DECREASE)
-        check(workProgression(listOf(8)) == WorkProgression.MAINTAIN)
-        check(workProgression(listOf(10)) == WorkProgression.MAINTAIN)
-        check(workProgression(listOf(11)) == WorkProgression.INCREASE)
-        check(workProgression(listOf(12)) == WorkProgression.INCREASE)
-        check(workProgression(emptyList()) == WorkProgression.MAINTAIN)
-        // workSetAdjustment factors and thresholds
-        check(workSetAdjustment(7, 20f) == WorkProgression.DECREASE to 18.0f)
-        check(workSetAdjustment(8, 20f) == null)
-        check(workSetAdjustment(10, 20f) == null)
-        check(workSetAdjustment(11, 20f) == WorkProgression.INCREASE to 21.0f)
-        check(workSetAdjustment(12, 20f) == WorkProgression.INCREASE to 21.0f)
-        assertEq(workSetAdjustment(7, 20f)!!.second, 18.0f, "decrease 10%")
-        assertEq(workSetAdjustment(12, 20f)!!.second, 21.0f, "increase 5%")
-        println("BilboProgression self-check OK")
-    }
 }

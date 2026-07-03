@@ -29,8 +29,8 @@ android {
         applicationId = "com.selftrain.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 20
-        versionName = "0.6.5"
+        versionCode = 21
+        versionName = "0.6.6"
     }
 
     buildTypes {
@@ -97,4 +97,7 @@ dependencies {
 
     // SAF tree operations for user-chosen backup folder
     implementation("androidx.documentfile:documentfile:1.0.1")
+
+    // Unit tests (JVM, no emulator)
+    testImplementation("junit:junit:4.13.2")
 }
