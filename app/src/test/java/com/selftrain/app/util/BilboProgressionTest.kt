@@ -53,6 +53,10 @@ class BilboProgressionTest {
         assertEquals(44f, BilboProgression.increasedBilboWeight(40f), 0.001f)
     }
 
+    @Test fun increasedBilboWeight_rirZero_isFifteenPercent() {
+        assertEquals(46f, BilboProgression.increasedBilboWeight(40f, rir = 0), 0.001f)
+    }
+
     // --- work progression (between sessions) ---
 
     @Test fun workProgression_emptyIsMaintain() {

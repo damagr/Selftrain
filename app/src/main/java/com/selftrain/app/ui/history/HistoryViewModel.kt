@@ -136,5 +136,23 @@ class HistoryViewModel @Inject constructor(
         return _workoutDetailSets.value.map { it.set.exerciseId }.distinct()
     }
 
+    // ponytail: add a missed exercise to an already-completed workout
+    fun addExerciseToWorkout(exerciseId: Long) {
+        viewModelScope.launch {
+            val workout = _selectedWorkout.value ?: return@launch
+            val set = WorkoutSet(
+                workoutId = workout.id,
+                exerciseId = exerciseId,
+                setType = "bilbo",
+                reps = 0,
+                weightKg = 0f,
+                rir = 0,
+                explosive = false
+            )
+            workoutRepo.insertSet(set)
+            _workoutDetailSets.value = workoutRepo.getSetsWithExercise(workout.id)
+        }
+    }
+
     fun getAllExercises(): StateFlow<List<Exercise>> = allExercises
 }

@@ -3,11 +3,13 @@ package com.selftrain.app.util
 import android.app.*
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import kotlinx.coroutines.*
+import com.selftrain.app.MainActivity
 
 // ponytail: foreground service for rest timer, notification shows countdown
 class RestTimerService : Service() {
@@ -86,7 +88,19 @@ class RestTimerService : Service() {
                 // ponytail: guard startForeground so a denied/revoked POST_NOTIFICATIONS
                 // doesn't crash the service; countdown still runs without a visible notif.
                 if (NotificationManagerCompat.from(this).areNotificationsEnabled()) {
-                    startForeground(NOTIFICATION_ID, buildNotification())
+                    try {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                            startForeground(
+                                NOTIFICATION_ID,
+                                buildNotification(),
+                                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                            )
+                        } else {
+                            startForeground(NOTIFICATION_ID, buildNotification())
+                        }
+                    } catch (_: SecurityException) {
+                        // FGS permission denied at runtime — timer runs silently
+                    }
                 }
                 startTicking()
             }
@@ -143,6 +157,11 @@ class RestTimerService : Service() {
             this, 1, createStopIntent(this),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        val openIntent = PendingIntent.getActivity(
+            this, 2,
+            Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
         val mins = secondsRemaining / 60
         val secs = secondsRemaining % 60
@@ -153,6 +172,7 @@ class RestTimerService : Service() {
             .setContentText(if (isRunning) "Tiempo restante..." else "Pausado")
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setOngoing(true)
+            .setContentIntent(openIntent)
             .addAction(0, if (isRunning) "Pausar" else "Reanudar", pausedIntent)
             .addAction(0, "Parar", stopIntent)
             .build()
@@ -163,11 +183,17 @@ class RestTimerService : Service() {
             this, 1, createStopIntent(this),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        val openIntent = PendingIntent.getActivity(
+            this, 2,
+            Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
         return NotificationCompat.Builder(this, CHANNEL_ID_DONE)
             .setContentTitle("Descanso terminado")
             .setContentText("Ya puedes continuar")
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setAutoCancel(true)
+            .setContentIntent(openIntent)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setDefaults(NotificationCompat.DEFAULT_SOUND or NotificationCompat.DEFAULT_VIBRATE)
             .setDeleteIntent(stopIntent)

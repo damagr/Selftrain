@@ -70,7 +70,7 @@ fun TrainScreen(
                 windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
                 title = { Text(state.routine?.name ?: "Entrenando...") },
                 actions = {
-                    TextButton(onClick = { viewModel.finishWorkout() }) {
+                    TextButton(onClick = { viewModel.showConfirmFinish() }) {
                         Icon(Icons.Default.Done, null)
                         Spacer(Modifier.width(4.dp))
                         Text("Finalizar")
@@ -175,8 +175,8 @@ fun TrainScreen(
                     onLogBilboSet = { reps, weight, rir ->
                         viewModel.logSet(ex.exercise.id, "bilbo", reps, weight, rir, true)
                     },
-                    onLogWorkSet = { reps, weight ->
-                        viewModel.logSet(ex.exercise.id, "work", reps, weight, 0, false)
+                    onLogWorkSet = { reps, weight, rir ->
+                        viewModel.logSet(ex.exercise.id, "work", reps, weight, rir, false)
                     },
                     onDeleteLastSet = { viewModel.deleteLastSet(ex.exercise.id) }
                 )
@@ -236,6 +236,31 @@ fun TrainScreen(
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.cancelEmptyFinish() }) {
+                    Text("Seguir entrenando")
+                }
+            }
+        )
+    }
+
+    // Pre-confirm finish dialog
+    if (state.confirmFinish) {
+        val totalSets = state.exercises.sumOf { it.sets.size }
+        val exercisesWithSets = state.exercises.count { it.sets.isNotEmpty() }
+        val workout = state.routine
+
+        AlertDialog(
+            onDismissRequest = { viewModel.cancelConfirmFinish() },
+            title = { Text("¿Terminar entreno?") },
+            text = {
+                Text("Has registrado $totalSets series en $exercisesWithSets ejercicios.")
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.finishWorkout() }) {
+                    Text("Sí, finalizar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.cancelConfirmFinish() }) {
                     Text("Seguir entrenando")
                 }
             }
@@ -303,9 +328,7 @@ fun TrainScreen(
                                 "%,.0f%%".format(java.util.Locale.getDefault(), ((wc.thisWorkoutKg - wc.lastWeekKg) / wc.lastWeekKg) * 100)
                             } else "—"
                             Text(
-                                "${Labels.muscleGroup(wc.muscleGroup)}: %,.1f kg → ${pct} vs semana pasada".format(
-                                    java.util.Locale.getDefault(), wc.thisWorkoutKg
-                                ),
+                                "${Labels.muscleGroup(wc.muscleGroup)}: ${"%,.1f".format(java.util.Locale.getDefault(), wc.thisWorkoutKg)} kg → $pct vs semana pasada",
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
@@ -331,7 +354,7 @@ fun ExerciseSetContent(
     suggestion: PerExerciseSuggestion,
     exerciseKey: String,
     onLogBilboSet: (reps: Int, weight: Float, rir: Int) -> Unit,
-    onLogWorkSet: (reps: Int, weight: Float) -> Unit,
+    onLogWorkSet: (reps: Int, weight: Float, rir: Int) -> Unit,
     onDeleteLastSet: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(true) }
@@ -532,12 +555,14 @@ fun WorkSetInput(
     exerciseKey: String,
     sets: List<WorkoutSet>,
     suggestion: PerExerciseSuggestion,
-    onLog: (reps: Int, weight: Float) -> Unit
+    onLog: (reps: Int, weight: Float, rir: Int) -> Unit
 ) {
     // ponytail: use exerciseKey for stable remember, sync weight via lastLoggedWeight
     // Only consider work sets so the bilbo (light) weight doesn't leak into the work-set prefill
     val lastWorkSet = sets.lastOrNull { it.setType == "work" }
     val lastSetWeight = lastWorkSet?.weightKg
+    // ponytail: if no history and bilbo was just logged, derive work weight from its weight × 1.40
+    val lastBilboInSession = sets.lastOrNull { it.setType == "bilbo" }
     val intraAdjustment = lastWorkSet?.let {
         BilboProgression.workSetAdjustment(it.reps, it.weightKg)
     }
@@ -548,9 +573,11 @@ fun WorkSetInput(
         mutableStateOf(
             if (lastSetWeight != null && lastSetWeight > 0) String.format(java.util.Locale.US, "%.1f", lastSetWeight)
             else if (suggestion.hasHistory && suggestion.workWeight > 0) String.format(java.util.Locale.US, "%.1f", suggestion.workWeight)
+            else if (lastBilboInSession != null) String.format(java.util.Locale.US, "%.1f", lastBilboInSession.weightKg * 1.40f)
             else ""
         )
     }
+    var rir by remember { mutableStateOf("2") }
 
     // Sync weight when last logged set changes
     LaunchedEffect(lastSetWeight) {
@@ -626,6 +653,14 @@ fun WorkSetInput(
                 modifier = Modifier.weight(1f),
                 singleLine = true
             )
+            OutlinedTextField(
+                value = rir,
+                onValueChange = { rir = it.filter { c -> c.isDigit() } },
+                label = { Text("RIR") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.weight(0.6f),
+                singleLine = true
+            )
         }
 
         Spacer(Modifier.height(8.dp))
@@ -634,7 +669,8 @@ fun WorkSetInput(
             onClick = {
                 val r = reps.toIntOrNull() ?: return@Button
                 val w = weight.toFloatOrNull() ?: return@Button
-                onLog(r, w)
+                val ri = rir.toIntOrNull() ?: 2
+                onLog(r, w, ri)
                 reps = ""
             },
             modifier = Modifier.fillMaxWidth()

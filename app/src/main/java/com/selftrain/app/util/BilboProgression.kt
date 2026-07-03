@@ -34,8 +34,9 @@ object BilboProgression {
     /** Check if Bilbo weight should increase */
     fun shouldIncreaseBilboWeight(lastReps: Int): Boolean = lastReps >= 50
 
-    /** New Bilbo weight after reaching 50 reps: ~10% increase */
-    fun increasedBilboWeight(currentBilboWeight: Float): Float = currentBilboWeight * 1.10f
+    /** New Bilbo weight after reaching 50 reps: ~10% increase (15% if user hit failure at the milestone) */
+    fun increasedBilboWeight(currentBilboWeight: Float, rir: Int = 2): Float =
+        if (rir == 0) currentBilboWeight * 1.15f else currentBilboWeight * 1.10f
 
     /** Work set progression suggestion */
     enum class WorkProgression { INCREASE, MAINTAIN, DECREASE }

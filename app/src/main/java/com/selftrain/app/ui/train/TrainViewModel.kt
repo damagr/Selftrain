@@ -37,7 +37,8 @@ data class TrainState(
     val isFinishing: Boolean = false,
     val suggestions: List<PerExerciseSuggestion> = emptyList(),
     val workoutSummary: WorkoutSummary? = null,
-    val confirmEmpty: Boolean = false
+    val confirmEmpty: Boolean = false,
+    val confirmFinish: Boolean = false
 )
 
 data class MuscleGroupVolume(
@@ -110,7 +111,7 @@ class TrainViewModel @Inject constructor(
                     val bilboReps = if (lastBilbo != null) BilboProgression.suggestBilboReps(lastBilbo.set.reps) else 15
                     val bilboWeight = if (lastBilbo != null) {
                         if (BilboProgression.shouldIncreaseBilboWeight(lastBilbo.set.reps))
-                            BilboProgression.increasedBilboWeight(lastBilbo.set.weightKg)
+                            BilboProgression.increasedBilboWeight(lastBilbo.set.weightKg, lastBilbo.set.rir)
                         else lastBilbo.set.weightKg
                     } else {
                         history.filter { it.set.setType == "work" }.lastOrNull()?.set?.weightKg?.div(1.40f) ?: 0f
@@ -219,6 +220,14 @@ class TrainViewModel @Inject constructor(
         val clamped = index.coerceIn(0, (_state.value.exercises.size - 1).coerceAtLeast(0))
         _state.value = _state.value.copy(currentExerciseIndex = clamped)
         saveExerciseIndex(clamped)
+    }
+
+    fun showConfirmFinish() {
+        _state.value = _state.value.copy(confirmFinish = true)
+    }
+
+    fun cancelConfirmFinish() {
+        _state.value = _state.value.copy(confirmFinish = false)
     }
 
     fun finishWorkout() {
