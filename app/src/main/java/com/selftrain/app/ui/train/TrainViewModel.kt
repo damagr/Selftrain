@@ -263,6 +263,17 @@ class TrainViewModel @Inject constructor(
         }
     }
 
+    // ponytail: discard without confirmEmpty flag, used by back-handler
+    fun discardWorkout() {
+        viewModelScope.launch {
+            val workoutId = _state.value.workoutId
+            val workout = workoutRepo.getById(workoutId)
+            if (workout != null) {
+                workoutRepo.delete(workout)
+            }
+        }
+    }
+
     fun cancelEmptyFinish() {
         _state.value = _state.value.copy(confirmEmpty = false)
     }

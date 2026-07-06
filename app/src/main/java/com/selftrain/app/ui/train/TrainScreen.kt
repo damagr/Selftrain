@@ -12,6 +12,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import android.media.RingtoneManager
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -63,6 +68,9 @@ fun TrainScreen(
     }
 
     var showJumpDialog by remember { mutableStateOf(false) }
+    var showBackConfirm by remember { mutableStateOf(false) }
+
+    BackHandler { showBackConfirm = true }
 
     Scaffold(
         topBar = {
@@ -242,6 +250,28 @@ fun TrainScreen(
         )
     }
 
+    // Back confirm dialog
+    if (showBackConfirm) {
+        AlertDialog(
+            onDismissRequest = { showBackConfirm = false },
+            title = { Text("¿Cancelar entreno?") },
+            text = { Text("Se perderán los datos no guardados.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.discardWorkout()
+                    onFinish()
+                }) {
+                    Text("Cancelar entreno", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBackConfirm = false }) {
+                    Text("Seguir entrenando")
+                }
+            }
+        )
+    }
+
     // Pre-confirm finish dialog
     if (state.confirmFinish) {
         val totalSets = state.exercises.sumOf { it.sets.size }
@@ -398,6 +428,24 @@ fun ExerciseSetContent(
                                 }
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        // Bilbo progression hint (50+ reps → ready to increase weight)
+        val lastSet = sets.lastOrNull()
+        if (lastSet?.setType == "bilbo" && lastSet.reps >= 50) {
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text("¡50 reps alcanzadas!", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "Próxima sesión: sube peso un ${if (lastSet.rir == 0) "15" else "10"}% y resetea a 15-20 reps",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
                     }
                 }
             }
@@ -688,6 +736,7 @@ fun RestTimer() {
     var isRunning by remember { mutableStateOf(false) }
     var showTimer by remember { mutableStateOf(false) }
     var pausedRemaining by remember { mutableIntStateOf(0) }
+    var showFinishedMessage by remember { mutableStateOf(false) }
 
     // Stop service when composable leaves composition (e.g. navigate away)
     DisposableEffect(Unit) {
@@ -703,10 +752,21 @@ fun RestTimer() {
                 delay(1000L)
                 remaining = (remaining - 1).coerceAtLeast(0)
                 if (remaining <= 0) {
+                    // In-app feedback: vibrate, beep, flash message
+                    val vibrator = context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as Vibrator
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        vibrator.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE))
+                    } else {
+                        @Suppress("DEPRECATION")
+                        vibrator.vibrate(500)
+                    }
+                    val tone = RingtoneManager.getRingtone(context, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                    tone.play()
+                    showFinishedMessage = true
+                    delay(2000)
+                    showFinishedMessage = false
                     isRunning = false
-                    showTimer = false // back to pre-start with +30s/-30s buttons
-                    // ponytail: don't stop the service here; let it reach 0 and post the
-                    // heads-up + sound "done" notification. Service stops itself.
+                    showTimer = false
                 }
             }
         }
@@ -791,6 +851,21 @@ fun RestTimer() {
                     }
                 }
             }
+        }
+    }
+
+    // Flash "finished" message
+    if (showFinishedMessage) {
+        Card(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        ) {
+            Text(
+                "¡Descanso terminado!",
+                modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
         }
     }
 }
