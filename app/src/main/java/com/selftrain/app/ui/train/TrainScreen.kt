@@ -166,6 +166,9 @@ fun TrainScreen(
                 }
             }
 
+            // Rest timer (shared across exercises)
+            RestTimer()
+
             // Current exercise sets + input
             currentEx?.let { ex ->
                 val appliesBilbo = BilboProgression.appliesTo(
@@ -482,11 +485,6 @@ fun ExerciseSetContent(
                     }
                 }
             }
-        }
-
-        // Rest timer
-        if (sets.isNotEmpty()) {
-            item { RestTimer() }
         }
 
         // Delete last
