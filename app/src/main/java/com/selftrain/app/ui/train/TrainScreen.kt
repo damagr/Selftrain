@@ -12,10 +12,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import android.media.RingtoneManager
-import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
@@ -750,16 +746,7 @@ fun RestTimer() {
                 delay(1000L)
                 remaining = (remaining - 1).coerceAtLeast(0)
                 if (remaining <= 0) {
-                    // In-app feedback: vibrate, beep, flash message
-                    val vibrator = context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as Vibrator
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        vibrator.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE))
-                    } else {
-                        @Suppress("DEPRECATION")
-                        vibrator.vibrate(500)
-                    }
-                    val tone = RingtoneManager.getRingtone(context, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
-                    tone.play()
+                    // ponytail: service notification handles sound+vibrate; in-app shows flash only
                     showFinishedMessage = true
                     delay(2000)
                     showFinishedMessage = false
@@ -808,6 +795,7 @@ fun RestTimer() {
         }
     } else {
         Card(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
         ) {
             Row(
