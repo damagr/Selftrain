@@ -11,6 +11,10 @@ import com.selftrain.app.data.repository.WorkoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
+import java.time.YearMonth
+import java.time.ZoneId
 import javax.inject.Inject
 
 enum class HistoryView { SUMMARY, WORKOUT_LIST, WORKOUT_DETAIL }
@@ -43,6 +47,20 @@ class HistoryViewModel @Inject constructor(
     val completedWorkouts: StateFlow<List<Workout>> = workouts.map { list ->
         list.filter { it.completed }.sortedByDescending { it.date }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Calendar state
+    private val _currentMonth = MutableStateFlow(YearMonth.now())
+    val currentMonth: StateFlow<YearMonth> = _currentMonth.asStateFlow()
+
+    val workoutsByDay: StateFlow<Map<LocalDate, List<Workout>>> = completedWorkouts.map { list ->
+        list.groupBy { w ->
+            Instant.ofEpochMilli(w.date).atZone(ZoneId.systemDefault()).toLocalDate()
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
+    fun nextMonth() { _currentMonth.value = _currentMonth.value.plusMonths(1) }
+    fun previousMonth() { _currentMonth.value = _currentMonth.value.minusMonths(1) }
+    fun goToToday() { _currentMonth.value = YearMonth.now() }
 
     // Exercise progression
     private val _selectedExercise = MutableStateFlow<Exercise?>(null)

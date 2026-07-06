@@ -1,13 +1,18 @@
 package com.selftrain.app.ui.history
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.FitnessCenter
@@ -17,7 +22,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.selftrain.app.data.model.Exercise
@@ -26,6 +33,11 @@ import com.selftrain.app.data.db.SetWithExercise
 import com.selftrain.app.data.model.WorkoutSet
 import com.selftrain.app.util.Labels
 import java.text.SimpleDateFormat
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.Month
+import java.time.YearMonth
+import java.time.format.TextStyle
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,6 +57,11 @@ fun HistoryScreen(
     val workoutDetailSets by viewModel.workoutDetailSets.collectAsState()
     val allExercises by viewModel.getAllExercises().collectAsState()
 
+    val currentMonth by viewModel.currentMonth.collectAsState()
+    val workoutsByDay by viewModel.workoutsByDay.collectAsState()
+    var selectedDay by remember { mutableStateOf<LocalDate?>(null) }
+    val today = remember { LocalDate.now() }
+    val localeES = remember { Locale.forLanguageTag("es-ES") }
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showDeleteConfirm2 by remember { mutableStateOf(false) }
@@ -135,25 +152,173 @@ fun HistoryScreen(
             }
 
             HistoryView.WORKOUT_LIST -> {
+                val firstOfMonth = remember(currentMonth) { currentMonth.atDay(1) }
+                val daysInMonth = remember(currentMonth) { currentMonth.lengthOfMonth() }
+                val startDow = remember(currentMonth) { firstOfMonth.dayOfWeek.value }
+
+                val allDays = remember(currentMonth) {
+                    buildList<LocalDate?> {
+                        repeat(startDow - 1) { add(null) }
+                        for (d in 1..daysInMonth) add(currentMonth.atDay(d))
+                    }
+                }
+
+                LaunchedEffect(currentMonth) { selectedDay = null }
+
+                val dayWorkouts = remember(selectedDay, workoutsByDay) {
+                    selectedDay?.let { workoutsByDay[it] } ?: emptyList()
+                }
+
                 LazyColumn(Modifier.padding(padding)) {
-                    if (completedWorkouts.isEmpty()) {
+                    // --- Calendar header ---
+                    item {
+                        Row(
+                            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            IconButton(onClick = { viewModel.previousMonth() }) {
+                                Icon(Icons.Default.ChevronLeft, "Mes anterior")
+                            }
+                            TextButton(onClick = { viewModel.goToToday() }) {
+                                Text(
+                                    "${currentMonth.month.getDisplayName(TextStyle.FULL, localeES)} ${currentMonth.year}",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                            }
+                            IconButton(onClick = { viewModel.nextMonth() }) {
+                                Icon(Icons.Default.ChevronRight, "Mes siguiente")
+                            }
+                        }
+
+                        Row(Modifier.fillMaxWidth()) {
+                            DayOfWeek.entries.forEach { dow ->
+                                Text(
+                                    dow.getDisplayName(TextStyle.NARROW, localeES),
+                                    modifier = Modifier.weight(1f),
+                                    textAlign = TextAlign.Center,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.height(4.dp))
+
+                        allDays.chunked(7).forEach { week ->
+                            Row(Modifier.fillMaxWidth()) {
+                                week.forEach { date ->
+                                    Box(
+                                        Modifier.weight(1f).aspectRatio(1f),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (date != null) {
+                                            val hasWorkout = workoutsByDay.containsKey(date)
+                                            val isToday = date == today
+                                            val isSelected = date == selectedDay
+
+                                            val bgMod = when {
+                                                isSelected -> Modifier.background(
+                                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape
+                                                )
+                                                hasWorkout -> Modifier.background(
+                                                    MaterialTheme.colorScheme.primaryContainer, CircleShape
+                                                )
+                                                else -> Modifier
+                                            }
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(36.dp)
+                                                    .then(bgMod)
+                                                    .then(
+                                                        if (isSelected) Modifier.border(
+                                                            2.dp,
+                                                            MaterialTheme.colorScheme.primary,
+                                                            CircleShape
+                                                        ) else Modifier
+                                                    )
+                                                    .clickable(enabled = hasWorkout) { selectedDay = date },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    date.dayOfMonth.toString(),
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    fontWeight = if (hasWorkout) FontWeight.Bold else FontWeight.Normal,
+                                                    color = when {
+                                                        hasWorkout -> MaterialTheme.colorScheme.onPrimaryContainer
+                                                        isToday -> MaterialTheme.colorScheme.primary
+                                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+                    }
+
+                    // --- Selected day header ---
+                    if (selectedDay != null) {
                         item {
-                            Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                                Text("No hay entrenos completados aun",
-                                    style = MaterialTheme.typography.bodyLarge)
+                            HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "${selectedDay!!.dayOfMonth} de ${selectedDay!!.month.getDisplayName(TextStyle.FULL, localeES)}",
+                                style = MaterialTheme.typography.titleSmall,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                        }
+                    }
+
+                    // --- Workout cards for selected day ---
+                    if (selectedDay != null) {
+                        items(dayWorkouts, key = { it.id }) { workout ->
+                            Card(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                                    .clickable { viewModel.selectWorkout(workout) }
+                            ) {
+                                Column(Modifier.padding(16.dp)) {
+                                    Text(
+                                        dateFormat.format(Date(workout.date)),
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                    if (workout.notes.isNotBlank()) {
+                                        Text(workout.notes, style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
                             }
                         }
                     }
-                    items(completedWorkouts) { workout ->
-                        Card(
-                            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
-                                .clickable { viewModel.selectWorkout(workout) }
-                        ) {
-                            Column(Modifier.padding(16.dp)) {
-                                Text(dateFormat.format(Date(workout.date)),
-                                    style = MaterialTheme.typography.titleMedium)
-                                if (workout.notes.isNotBlank()) {
-                                    Text(workout.notes, style = MaterialTheme.typography.bodySmall)
+
+                    // --- Hint / empty state ---
+                    if (selectedDay == null) {
+                        item {
+                            if (completedWorkouts.isEmpty()) {
+                                Box(
+                                    Modifier.fillMaxWidth().padding(32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        "No hay entrenos completados aun",
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                }
+                            } else {
+                                Box(
+                                    Modifier.fillMaxWidth().padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        "Toca un día resaltado para ver los entrenos",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
                         }
