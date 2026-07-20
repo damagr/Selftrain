@@ -29,8 +29,8 @@ android {
         applicationId = "com.selftrain.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 28
-        versionName = "0.8.0"
+        versionCode = 29
+        versionName = "0.8.1"
     }
 
     buildTypes {
@@ -97,6 +97,7 @@ dependencies {
 
     // Coil for GIF loading
     implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("io.coil-kt:coil-gif:2.7.0")
 
     // SAF tree operations for user-chosen backup folder
     implementation("androidx.documentfile:documentfile:1.0.1")

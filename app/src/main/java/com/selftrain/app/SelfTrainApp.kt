@@ -7,13 +7,20 @@ import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import coil.ImageLoader
+import coil.ImageLoaderFactory
+import coil.decode.ImageDecoderDecoder
 import com.selftrain.app.util.AutoBackupWorker
 import dagger.hilt.android.HiltAndroidApp
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @HiltAndroidApp
-class SelfTrainApp : Application(), Configuration.Provider {
+class SelfTrainApp : Application(), Configuration.Provider, ImageLoaderFactory {
+
+    override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)
+        .components { add(ImageDecoderDecoder.Factory()) }
+        .build()
 
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
