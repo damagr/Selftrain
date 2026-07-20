@@ -18,9 +18,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.selftrain.app.data.model.WorkoutSet
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import com.selftrain.app.util.BilboProgression
 import com.selftrain.app.util.Labels
 import com.selftrain.app.util.RestTimerService
+import com.selftrain.app.util.getExerciseGifUrl
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,6 +67,7 @@ fun TrainScreen(
     }
 
     var showJumpDialog by remember { mutableStateOf(false) }
+    var showGifDialog by remember { mutableStateOf(false) }
     var showBackConfirm by remember { mutableStateOf(false) }
 
     BackHandler { showBackConfirm = true }
@@ -103,12 +107,26 @@ fun TrainScreen(
                             Icon(Icons.Default.ChevronLeft, "Anterior")
                         }
 
-                        // Exercise name + position
+                        // Exercise name + info button + position
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                currentEx?.exercise?.name ?: "",
-                                style = MaterialTheme.typography.titleMedium
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    currentEx?.exercise?.name ?: "",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                if (currentEx?.exercise?.name?.let { getExerciseGifUrl(it) } != null) {
+                                    IconButton(
+                                        onClick = { showGifDialog = true },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Info,
+                                            contentDescription = "Ver demostración",
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
                             Text(
                                 "${currentIndex + 1} de $totalExercises",
                                 style = MaterialTheme.typography.bodySmall,
@@ -136,9 +154,10 @@ fun TrainScreen(
                 }
             }
 
-            // Previous best session (PRs)
+            // Previous best session (PRs) — collapsible
             currentEx?.let { ex ->
                 if (ex.lastSessionSets.isNotEmpty()) {
+                    var prExpanded by remember { mutableStateOf(true) }
                     Card(
                         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                         colors = CardDefaults.cardColors(
@@ -146,16 +165,31 @@ fun TrainScreen(
                         )
                     ) {
                         Column(Modifier.padding(12.dp)) {
-                            Text("Tu mejor sesión anterior",
-                                style = MaterialTheme.typography.titleSmall)
-                            Spacer(Modifier.height(4.dp))
-                            ex.lastSessionSets.forEach { s ->
-                                val label = if (s.set.setType == "bilbo") "Bilbo" else "Trabajo"
-                                Text(
-                                    "$label: ${s.set.reps} reps \u00D7 ${String.format("%.1f", s.set.weightKg)} kg" +
-                                        if (s.set.rir > 0) " (RIR ${s.set.rir})" else "",
-                                    style = MaterialTheme.typography.bodyMedium
+                            Row(
+                                Modifier.fillMaxWidth().clickable { prExpanded = !prExpanded },
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Tu mejor sesión anterior",
+                                    style = MaterialTheme.typography.titleSmall)
+                                Icon(
+                                    if (prExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = if (prExpanded) "Colapsar" else "Expandir",
+                                    modifier = Modifier.size(20.dp)
                                 )
+                            }
+                            AnimatedVisibility(visible = prExpanded) {
+                                Column {
+                                    Spacer(Modifier.height(4.dp))
+                                    ex.lastSessionSets.forEach { s ->
+                                        val label = if (s.set.setType == "bilbo") "Bilbo" else "Trabajo"
+                                        Text(
+                                            "$label: ${s.set.reps} reps \u00D7 ${String.format("%.1f", s.set.weightKg)} kg" +
+                                                if (s.set.rir > 0) " (RIR ${s.set.rir})" else "",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -223,6 +257,33 @@ fun TrainScreen(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { showJumpDialog = false }) { Text("Cerrar") }
+            }
+        )
+    }
+
+    // Exercise GIF demonstration dialog
+    if (showGifDialog) {
+        val gifUrl = currentEx?.exercise?.name?.let { getExerciseGifUrl(it) }
+        AlertDialog(
+            onDismissRequest = { showGifDialog = false },
+            title = { Text(currentEx?.exercise?.name ?: "") },
+            text = {
+                if (gifUrl != null) {
+                    AsyncImage(
+                        model = gifUrl,
+                        contentDescription = "Demostración del ejercicio",
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                } else {
+                    Text("No hay demostración disponible para este ejercicio.")
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showGifDialog = false }) {
+                    Text("Cerrar")
+                }
             }
         )
     }
