@@ -29,6 +29,8 @@ import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -174,10 +176,49 @@ fun SelfTrainMain() {
             }
         }
     ) { innerPadding ->
+        val themePrefs = com.selftrain.app.util.rememberThemePreferences()
+        val themeMode by themePrefs.mode.collectAsState()
+
         NavHost(
             navController = navController,
             startDestination = "routines",
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(innerPadding),
+            enterTransition = {
+                when (themeMode) {
+                    com.selftrain.app.util.ThemeMode.CLASSIC -> fadeIn(animationSpec = tween(200))
+                    com.selftrain.app.util.ThemeMode.MODERN -> fadeIn(animationSpec = tween(300)) + slideInHorizontally(
+                        animationSpec = tween(300),
+                        initialOffsetX = { it / 4 }
+                    )
+                }
+            },
+            exitTransition = {
+                when (themeMode) {
+                    com.selftrain.app.util.ThemeMode.CLASSIC -> fadeOut(animationSpec = tween(200))
+                    com.selftrain.app.util.ThemeMode.MODERN -> fadeOut(animationSpec = tween(200)) + slideOutHorizontally(
+                        animationSpec = tween(200),
+                        targetOffsetX = { -it / 4 }
+                    )
+                }
+            },
+            popEnterTransition = {
+                when (themeMode) {
+                    com.selftrain.app.util.ThemeMode.CLASSIC -> fadeIn(animationSpec = tween(200))
+                    com.selftrain.app.util.ThemeMode.MODERN -> fadeIn(animationSpec = tween(300)) + slideInHorizontally(
+                        animationSpec = tween(300),
+                        initialOffsetX = { -it / 4 }
+                    )
+                }
+            },
+            popExitTransition = {
+                when (themeMode) {
+                    com.selftrain.app.util.ThemeMode.CLASSIC -> fadeOut(animationSpec = tween(200))
+                    com.selftrain.app.util.ThemeMode.MODERN -> fadeOut(animationSpec = tween(200)) + slideOutHorizontally(
+                        animationSpec = tween(200),
+                        targetOffsetX = { it / 4 }
+                    )
+                }
+            }
         ) {
             composable("routines") {
                 RoutinesScreen(

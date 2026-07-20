@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -27,6 +28,8 @@ import com.selftrain.app.data.model.Exercise
 import com.selftrain.app.data.repository.ExerciseRepository
 import com.selftrain.app.util.BackupManager
 import com.selftrain.app.util.Labels
+import com.selftrain.app.util.ThemeMode
+import com.selftrain.app.util.rememberThemePreferences
 import com.selftrain.app.BuildConfig
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -217,6 +220,33 @@ fun SettingsScreen(
                             }) { Text("Restablecer") }
                         }
                     }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // Theme toggle
+            val themePrefs = rememberThemePreferences()
+            val currentMode by themePrefs.mode.collectAsState()
+            Card(Modifier.fillMaxWidth()) {
+                Row(
+                    Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Interfaz moderna", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            if (currentMode == ThemeMode.MODERN) "Tema dinámico con colores adaptativos"
+                            else "Activa el diseño renovado con Material You",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = currentMode == ThemeMode.MODERN,
+                        onCheckedChange = { themePrefs.toggle() }
+                    )
                 }
             }
 

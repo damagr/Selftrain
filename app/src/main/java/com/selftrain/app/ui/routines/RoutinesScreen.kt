@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.selftrain.app.data.model.Routine
 import com.selftrain.app.util.Labels
+import com.selftrain.app.util.ThemeMode
+import com.selftrain.app.util.rememberThemeMode
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -215,64 +217,89 @@ fun CreateRoutineDialog(
     onDismiss: () -> Unit,
     onCreate: (name: String, method: String) -> Unit
 ) {
+    val themeMode by rememberThemeMode()
     var name by remember { mutableStateOf("") }
     val methods = listOf("bilbo", "full_body", "ppl")
     val methodLabels = methods.map { Labels.method(it) }
     var selectedMethod by remember { mutableStateOf("bilbo") }
     var expanded by remember { mutableStateOf(false) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Nueva Rutina") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Nombre") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+    val formContent = @Composable {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Nombre") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
 
-                // Method selector dropdown
-                ExposedDropdownMenuBox(
+            // Method selector dropdown
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = it }
+            ) {
+                OutlinedTextField(
+                    value = Labels.method(selectedMethod),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Método") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(
                     expanded = expanded,
-                    onExpandedChange = { expanded = it }
+                    onDismissRequest = { expanded = false }
                 ) {
-                    OutlinedTextField(
-                        value = Labels.method(selectedMethod),
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Método") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        methods.forEachIndexed { index, method ->
-                            DropdownMenuItem(
-                                text = { Text(methodLabels[index]) },
-                                onClick = {
-                                    selectedMethod = method
-                                    expanded = false
-                                }
-                            )
-                        }
+                    methods.forEachIndexed { index, method ->
+                        DropdownMenuItem(
+                            text = { Text(methodLabels[index]) },
+                            onClick = {
+                                selectedMethod = method
+                                expanded = false
+                            }
+                        )
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = { if (name.isNotBlank()) onCreate(name.trim(), selectedMethod) }) {
-                Text("Crear")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
         }
-    )
+    }
+
+    if (themeMode == ThemeMode.MODERN) {
+        ModalBottomSheet(
+            onDismissRequest = onDismiss,
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ) {
+            Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+                Text("Nueva Rutina", style = MaterialTheme.typography.headlineSmall)
+                Spacer(Modifier.height(16.dp))
+                formContent()
+                Spacer(Modifier.height(24.dp))
+                Button(
+                    onClick = { if (name.isNotBlank()) onCreate(name.trim(), selectedMethod) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = name.isNotBlank()
+                ) {
+                    Text("Crear")
+                }
+                Spacer(Modifier.height(32.dp))
+            }
+        }
+    } else {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Nueva Rutina") },
+            text = { formContent() },
+            confirmButton = {
+                TextButton(onClick = { if (name.isNotBlank()) onCreate(name.trim(), selectedMethod) }) {
+                    Text("Crear")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) { Text("Cancelar") }
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

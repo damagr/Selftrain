@@ -1,8 +1,13 @@
 package com.selftrain.app.ui.train
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontWeight
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
@@ -23,7 +28,9 @@ import androidx.compose.ui.layout.ContentScale
 import com.selftrain.app.util.BilboProgression
 import com.selftrain.app.util.Labels
 import com.selftrain.app.util.RestTimerService
+import com.selftrain.app.util.ThemeMode
 import com.selftrain.app.util.getExerciseGifUrl
+import com.selftrain.app.util.rememberThemeMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -225,40 +232,58 @@ fun TrainScreen(
         }
     }
 
-    // Jump dialog
+    // Jump dialog / bottom sheet
     if (showJumpDialog) {
-        AlertDialog(
-            onDismissRequest = { showJumpDialog = false },
-            title = { Text("Saltar a ejercicio") },
-            text = {
-                Column {
-                    state.exercises.forEachIndexed { index, ex ->
-                        val isCurrent = index == currentIndex
-                        ListItem(
-                            headlineContent = { Text(ex.exercise.name) },
-                            supportingContent = {
-                                val setsCount = ex.sets.size
-                                Text(if (setsCount > 0) "$setsCount series registradas" else "Sin series")
-                            },
-                            leadingContent = {
-                                if (isCurrent) Icon(Icons.Default.Check, "Actual")
-                            },
-                            modifier = Modifier.clickable {
-                                viewModel.setCurrentExercise(index)
-                                showJumpDialog = false
-                            },
-                            colors = if (isCurrent) ListItemDefaults.colors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer
-                            ) else ListItemDefaults.colors()
-                        )
-                    }
+        val themeMode by rememberThemeMode()
+        val content = @Composable {
+            Column {
+                state.exercises.forEachIndexed { index, ex ->
+                    val isCurrent = index == currentIndex
+                    ListItem(
+                        headlineContent = { Text(ex.exercise.name) },
+                        supportingContent = {
+                            val setsCount = ex.sets.size
+                            Text(if (setsCount > 0) "$setsCount series registradas" else "Sin series")
+                        },
+                        leadingContent = {
+                            if (isCurrent) Icon(Icons.Default.Check, "Actual")
+                        },
+                        modifier = Modifier.clickable {
+                            viewModel.setCurrentExercise(index)
+                            showJumpDialog = false
+                        },
+                        colors = if (isCurrent) ListItemDefaults.colors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        ) else ListItemDefaults.colors()
+                    )
                 }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showJumpDialog = false }) { Text("Cerrar") }
             }
-        )
+        }
+        if (themeMode == ThemeMode.MODERN) {
+            ModalBottomSheet(
+                onDismissRequest = { showJumpDialog = false },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            ) {
+                Column(Modifier.padding(bottom = 32.dp)) {
+                    Text(
+                        "Saltar a ejercicio",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                    )
+                    content()
+                }
+            }
+        } else {
+            AlertDialog(
+                onDismissRequest = { showJumpDialog = false },
+                title = { Text("Saltar a ejercicio") },
+                text = { content() },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { showJumpDialog = false }) { Text("Cerrar") }
+                }
+            )
+        }
     }
 
     // Exercise GIF demonstration dialog
@@ -357,81 +382,105 @@ fun TrainScreen(
         )
     }
 
-    // Workout summary dialog
+    // Workout summary dialog / bottom sheet
     state.workoutSummary?.let { summary ->
         var editDuration by remember { mutableStateOf(summary.durationMinutes.toString()) }
+        val themeMode by rememberThemeMode()
 
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissSummary(); onFinish() },
-            title = { Text("¡Entreno completado!") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    // Duration
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Duración: ")
-                        OutlinedTextField(
-                            value = editDuration,
-                            onValueChange = { v ->
-                                editDuration = v.filter { ch -> ch.isDigit() }
-                                v.toIntOrNull()?.let { viewModel.updateDuration(it) }
-                            },
-                            label = { Text("min") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.width(100.dp),
-                            singleLine = true
+        val content = @Composable {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Duration
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Duración: ")
+                    OutlinedTextField(
+                        value = editDuration,
+                        onValueChange = { v ->
+                            editDuration = v.filter { ch -> ch.isDigit() }
+                            v.toIntOrNull()?.let { viewModel.updateDuration(it) }
+                        },
+                        label = { Text("min") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.width(100.dp),
+                        singleLine = true
+                    )
+                }
+
+                // Volume per muscle group
+                if (summary.volumeByMuscle.isNotEmpty()) {
+                    Text("Volumen por grupo muscular", style = MaterialTheme.typography.titleSmall)
+                    summary.volumeByMuscle.forEach { mgv: MuscleGroupVolume ->
+                        Text(
+                            "${Labels.muscleGroup(mgv.muscleGroup)}: %,.1f kg (${mgv.setCount} series)".format(
+                                java.util.Locale.getDefault(), mgv.totalKg
+                            ),
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
+                }
 
-                    // Volume per muscle group
-                    if (summary.volumeByMuscle.isNotEmpty()) {
-                        Text("Volumen por grupo muscular", style = MaterialTheme.typography.titleSmall)
-                        summary.volumeByMuscle.forEach { mgv: MuscleGroupVolume ->
-                            Text(
-                                "${Labels.muscleGroup(mgv.muscleGroup)}: %,.1f kg (${mgv.setCount} series)".format(
-                                    java.util.Locale.getDefault(), mgv.totalKg
-                                ),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
-
-                    // Personal records
-                    if (summary.personalRecords.isNotEmpty()) {
-                        Text("¡Nuevos récords!", style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary)
-                        summary.personalRecords.forEach { pr: PersonalRecord ->
-                            Text(
-                                "${pr.exerciseName}: %,.1f → %,.1f kg (1RM)".format(
-                                    java.util.Locale.getDefault(),
-                                    pr.previousBest, pr.newRecord
-                                ),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
-
-                    // Weekly comparison
-                    if (summary.weeklyComparison.isNotEmpty()) {
-                        Text("vs semana pasada", style = MaterialTheme.typography.titleSmall)
-                        summary.weeklyComparison.forEach { wc: WeeklyComparison ->
-                            val pct = if (wc.lastWeekKg > 0) {
-                                "%,.0f%%".format(java.util.Locale.getDefault(), ((wc.thisWorkoutKg - wc.lastWeekKg) / wc.lastWeekKg) * 100)
-                            } else "—"
-                            Text(
-                                "${Labels.muscleGroup(wc.muscleGroup)}: ${"%,.1f".format(java.util.Locale.getDefault(), wc.thisWorkoutKg)} kg → $pct vs semana pasada",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
+                // Personal records
+                if (summary.personalRecords.isNotEmpty()) {
+                    Text("¡Nuevos récords!", style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary)
+                    summary.personalRecords.forEach { pr: PersonalRecord ->
+                        Text(
+                            "${pr.exerciseName}: %,.1f → %,.1f kg (1RM)".format(
+                                java.util.Locale.getDefault(),
+                                pr.previousBest, pr.newRecord
+                            ),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { viewModel.dismissSummary(); onFinish() }) {
-                    Text("Volver a rutinas")
+
+                // Weekly comparison
+                if (summary.weeklyComparison.isNotEmpty()) {
+                    Text("vs semana pasada", style = MaterialTheme.typography.titleSmall)
+                    summary.weeklyComparison.forEach { wc: WeeklyComparison ->
+                        val pct = if (wc.lastWeekKg > 0) {
+                            "%,.0f%%".format(java.util.Locale.getDefault(), ((wc.thisWorkoutKg - wc.lastWeekKg) / wc.lastWeekKg) * 100)
+                        } else "—"
+                        Text(
+                            "${Labels.muscleGroup(wc.muscleGroup)}: ${"%,.1f".format(java.util.Locale.getDefault(), wc.thisWorkoutKg)} kg → $pct vs semana pasada",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
                 }
-            },
-            dismissButton = null
-        )
+            }
+        }
+
+        if (themeMode == ThemeMode.MODERN) {
+            ModalBottomSheet(
+                onDismissRequest = { viewModel.dismissSummary(); onFinish() },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            ) {
+                Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+                    Text("¡Entreno completado!", style = MaterialTheme.typography.headlineSmall)
+                    Spacer(Modifier.height(16.dp))
+                    content()
+                    Spacer(Modifier.height(24.dp))
+                    Button(
+                        onClick = { viewModel.dismissSummary(); onFinish() },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Volver a rutinas")
+                    }
+                    Spacer(Modifier.height(32.dp))
+                }
+            }
+        } else {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissSummary(); onFinish() },
+                title = { Text("¡Entreno completado!") },
+                text = { content() },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.dismissSummary(); onFinish() }) {
+                        Text("Volver a rutinas")
+                    }
+                },
+                dismissButton = null
+            )
+        }
     }
 }
 
@@ -786,6 +835,7 @@ fun WorkSetInput(
 @Composable
 fun RestTimer() {
     val context = LocalContext.current
+    val themeMode by rememberThemeMode()
     var totalSeconds by remember { mutableIntStateOf(90) }
     var remaining by remember { mutableIntStateOf(90) }
     var isRunning by remember { mutableStateOf(false) }
@@ -818,37 +868,111 @@ fun RestTimer() {
         }
     }
 
+    if (themeMode == ThemeMode.MODERN) {
+        ModernRestTimer(
+            totalSeconds = totalSeconds,
+            remaining = remaining,
+            isRunning = isRunning,
+            showTimer = showTimer,
+            onTotalChange = { totalSeconds = it; remaining = it },
+            onStart = {
+                showTimer = true
+                isRunning = true
+                remaining = totalSeconds
+                RestTimerService.createChannel(context)
+                context.startForegroundService(RestTimerService.createStartIntent(context, totalSeconds))
+            },
+            onPause = {
+                isRunning = false
+                pausedRemaining = remaining
+                context.stopService(RestTimerService.createStopIntent(context))
+            },
+            onResume = {
+                isRunning = true
+                remaining = pausedRemaining
+                totalSeconds = pausedRemaining
+                RestTimerService.createChannel(context)
+                context.startForegroundService(RestTimerService.createStartIntent(context, pausedRemaining))
+            },
+            onReset = {
+                isRunning = false
+                remaining = totalSeconds
+                showTimer = false
+                context.stopService(RestTimerService.createStopIntent(context))
+            },
+            showFinishedMessage = showFinishedMessage
+        )
+    } else {
+        ClassicRestTimer(
+            totalSeconds = totalSeconds,
+            remaining = remaining,
+            isRunning = isRunning,
+            showTimer = showTimer,
+            onTotalChange = { totalSeconds = it; remaining = it },
+            onStart = {
+                showTimer = true
+                isRunning = true
+                remaining = totalSeconds
+                RestTimerService.createChannel(context)
+                context.startForegroundService(RestTimerService.createStartIntent(context, totalSeconds))
+            },
+            onPause = {
+                isRunning = false
+                pausedRemaining = remaining
+                context.stopService(RestTimerService.createStopIntent(context))
+            },
+            onResume = {
+                isRunning = true
+                remaining = pausedRemaining
+                totalSeconds = pausedRemaining
+                RestTimerService.createChannel(context)
+                context.startForegroundService(RestTimerService.createStartIntent(context, pausedRemaining))
+            },
+            onReset = {
+                isRunning = false
+                remaining = totalSeconds
+                showTimer = false
+                context.stopService(RestTimerService.createStopIntent(context))
+            },
+            showFinishedMessage = showFinishedMessage
+        )
+    }
+}
+
+@Composable
+private fun ClassicRestTimer(
+    totalSeconds: Int,
+    remaining: Int,
+    isRunning: Boolean,
+    showTimer: Boolean,
+    onTotalChange: (Int) -> Unit,
+    onStart: () -> Unit,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onReset: () -> Unit,
+    showFinishedMessage: Boolean
+) {
     if (!showTimer) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // +/- 30s buttons
             IconButton(onClick = {
-                if (totalSeconds > 30) totalSeconds -= 30
-                remaining = totalSeconds
+                if (totalSeconds > 30) onTotalChange(totalSeconds - 30)
             }) {
                 Text("−30s", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Spacer(Modifier.width(8.dp))
-            TextButton(onClick = {
-                showTimer = true
-                isRunning = true
-                remaining = totalSeconds
-                // Start foreground service
-                RestTimerService.createChannel(context)
-                context.startForegroundService(RestTimerService.createStartIntent(context, totalSeconds))
-            }) {
+            TextButton(onClick = onStart) {
                 Icon(Icons.Default.Timer, null, Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
                 Text("Iniciar descanso (${totalSeconds}s)")
             }
             Spacer(Modifier.width(8.dp))
             IconButton(onClick = {
-                if (totalSeconds < 300) totalSeconds += 30
-                remaining = totalSeconds
+                if (totalSeconds < 300) onTotalChange(totalSeconds + 30)
             }) {
                 Text("+30s", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -870,30 +994,10 @@ fun RestTimer() {
                     style = MaterialTheme.typography.headlineSmall
                 )
                 Row {
-                    TextButton(onClick = {
-                        if (isRunning) {
-                            // Pause
-                            isRunning = false
-                            pausedRemaining = remaining
-                            context.stopService(RestTimerService.createStopIntent(context))
-                        } else {
-                            // Resume
-                            isRunning = true
-                            remaining = pausedRemaining
-                            totalSeconds = pausedRemaining
-                            // Restart service with remaining time
-                            RestTimerService.createChannel(context)
-                            context.startForegroundService(RestTimerService.createStartIntent(context, pausedRemaining))
-                        }
-                    }) {
+                    TextButton(onClick = { if (isRunning) onPause() else onResume() }) {
                         Text(if (isRunning) "Pausa" else "Reanudar")
                     }
-                    TextButton(onClick = {
-                        isRunning = false
-                        remaining = totalSeconds
-                        showTimer = false
-                        context.stopService(RestTimerService.createStopIntent(context))
-                    }) {
+                    TextButton(onClick = onReset) {
                         Text("Reset")
                     }
                 }
@@ -901,7 +1005,6 @@ fun RestTimer() {
         }
     }
 
-    // Flash "finished" message
     if (showFinishedMessage) {
         Card(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -913,6 +1016,146 @@ fun RestTimer() {
                 style = MaterialTheme.typography.titleMedium,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
+        }
+    }
+}
+
+@Composable
+private fun ModernRestTimer(
+    totalSeconds: Int,
+    remaining: Int,
+    isRunning: Boolean,
+    showTimer: Boolean,
+    onTotalChange: (Int) -> Unit,
+    onStart: () -> Unit,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onReset: () -> Unit,
+    showFinishedMessage: Boolean
+) {
+    if (!showTimer) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            FilledTonalIconButton(onClick = {
+                if (totalSeconds > 30) onTotalChange(totalSeconds - 30)
+            }) {
+                Text("−30s", style = MaterialTheme.typography.labelSmall)
+            }
+            Spacer(Modifier.width(12.dp))
+            FilledTonalButton(onClick = onStart) {
+                Icon(Icons.Default.Timer, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Descanso ${totalSeconds}s")
+            }
+            Spacer(Modifier.width(12.dp))
+            FilledTonalIconButton(onClick = {
+                if (totalSeconds < 300) onTotalChange(totalSeconds + 30)
+            }) {
+                Text("+30s", style = MaterialTheme.typography.labelSmall)
+            }
+        }
+    } else {
+        val progress = if (totalSeconds > 0) remaining.toFloat() / totalSeconds else 0f
+        val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
+        val arcColorCapture = when {
+            progress > 0.5f -> MaterialTheme.colorScheme.primary
+            progress > 0.25f -> MaterialTheme.colorScheme.tertiary
+            else -> MaterialTheme.colorScheme.error
+        }
+
+        Card(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            colors = CardDefaults.cardColors(containerColor = surfaceVariant)
+        ) {
+            Column(
+                Modifier.fillMaxWidth().padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.size(120.dp)) {
+                    // Background ring
+                    Canvas(Modifier.fillMaxSize()) {
+                        val strokeWidth = 10.dp.toPx()
+                        drawCircle(
+                            color = surfaceVariant.copy(alpha = 0.5f),
+                            radius = size.minDimension / 2 - strokeWidth / 2,
+                            style = Stroke(strokeWidth)
+                        )
+                    }
+                    // Progress arc
+                    Canvas(Modifier.fillMaxSize()) {
+                        val strokeWidth = 10.dp.toPx()
+                        val sweep = 360f * (1f - progress)
+                        drawArc(
+                            color = arcColorCapture,
+                            startAngle = -90f,
+                            sweepAngle = 360f - sweep,
+                            useCenter = false,
+                            style = Stroke(
+                                width = strokeWidth,
+                                cap = StrokeCap.Round
+                            )
+                        )
+                    }
+                    // Center time
+                    Text(
+                        "${remaining / 60}:${(remaining % 60).toString().padStart(2, '0')}",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(onClick = { if (isRunning) onPause() else onResume() }) {
+                        Icon(
+                            if (isRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            null, Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(if (isRunning) "Pausa" else "Reanudar")
+                    }
+                    TextButton(onClick = onReset) {
+                        Icon(Icons.Default.Stop, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Detener")
+                    }
+                }
+            }
+        }
+    }
+
+    // Flash "finished" message
+    if (showFinishedMessage) {
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(animationSpec = tween(200)),
+            exit = fadeOut(animationSpec = tween(200))
+        ) {
+            Card(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            ) {
+                Row(
+                    Modifier.padding(12.dp).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.CheckCircle, null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "¡Descanso terminado!",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
         }
     }
 }
