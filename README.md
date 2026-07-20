@@ -1,20 +1,29 @@
 # SelfTrain
 
-App Android para registrar entrenamientos de gimnasio. Soporta el **Método Bilbo** (series de activación explosiva + series de trabajo), Full Body y Push-Pull-Legs.
+App Android para registrar entrenamientos de gimnasio. Soporta **Método Bilbo** (series de activación explosiva + series de trabajo), Full Body y Push-Pull-Legs.
 
-## Método Bilbo
+## Funcionalidades
 
+### Entreno en vivo
+- **Navegación paso a paso** entre ejercicios con anterior/siguiente y salto directo
+- **GIF demostrativo** de cada ejercicio — botón `i` junto al nombre → popup con animación del movimiento (vía CDN, sin peso en la app)
+- **Sugerencias automáticas** de peso y reps basadas en el historial de la sesión anterior
+- **PRs de la mejor sesión anterior** visibles durante el entreno (card colapsable para no ocupar espacio)
+- **Series Bilbo + series de trabajo** con prellavereo inteligente del peso
+- **Progresión intra-sesión**: ajuste automático de peso según reps del set anterior
+- **Temporizador de descanso** configurable (±30s, 30–300s) con **aviso sonoro al terminar** (notificación heads-up, funciona aunque estés en otra app)
+- **Resumen al finalizar**: volumen por grupo muscular, 1RM estimado (Epley), comparativa con la semana anterior, nuevos récords
+
+### Método Bilbo
 Sistema creado por Jesús María Varela Goicochea:
-
-- **1 serie Bilbo**: 15–50 reps al ~50% 1RM, fase concéntrica explosiva, excéntrica controlada, RIR 1–3
+- **1 serie Bilbo**: 15–50 reps al ~50% 1RM, concéntrica explosiva, excéntrica controlada, RIR 1–3
 - **3–4 series de trabajo**: 8–12 reps con ~40% más peso, descanso 90–120s
-- Progresión automática: al llegar a 50 reps limpias → +10% peso y reinicio
+- **Progresión automática**: al llegar a 50 reps limpias → +10% peso y reinicio a 15–20 reps
 
-Solo se aplica a ejercicios compuestos (press, sentadilla, remo, peso muerto…). Los de aislamiento van directos a series de trabajo.
+Solo aplica a ejercicios compuestos (press, sentadilla, remo, peso muerto…). Los de aislamiento van directos a series de trabajo.
 
-## Rutinas predefinidas
-
-La app incluye **6 programas** listos para cargar en un toque (botón "Cargar rutinas"):
+### Rutinas
+- **6 programas predefinidos** cargables con un toque (botón "Cargar rutinas"):
 
 | Programa | Días | Método |
 |----------|------|--------|
@@ -25,29 +34,40 @@ La app incluye **6 programas** listos para cargar en un toque (botón "Cargar ru
 | Bilbo Full Body 3 Días | Día 1 / 2 / 3 | Bilbo |
 | Bilbo PPL 3 Días | Push / Pull / Legs | Bilbo |
 
-Los programas se organizan en **jerarquía padre/hijo**: cada programa es una tarjeta expandible que contiene sus días. Las rutinas sueltas conviven sin interferir.
+- **Jerarquía padre/hijo**: los programas se expanden para mostrar sus días, las rutinas sueltas conviven sin interferir
+- Crear rutinas personalizadas con selector de método
+- Añadir/quitar/reordenar ejercicios (↑↓ con animación)
+- Reemplazar ejercicios sin borrar y volver a añadir
+- Buscador en el selector de ejercicios (filtro en tiempo real)
 
-## Funcionalidades
+### Biblioteca de ejercicios
+- **54 ejercicios pre-cargados** con grupo muscular, categoría (compuesto/aislamiento) y equipamiento
+- **GIF demostrativo** de cada ejercicio cargado desde CDN (no ocupa espacio en la app)
+- Crear ejercicios propios (nombre, grupo muscular, categoría, equipamiento)
+- Eliminación suave (soft delete) con restauración desde Ajustes
+- Validación: no permite borrar ejercicios en uso en rutinas o histórico
 
-- Crear rutinas con selector de método (Bilbo / Full Body / Push-Pull-Legs)
-- **6 programas predefinidos** cargables con un toque, agrupados en jerarquía expandible
-- **Biblioteca de 54 ejercicios** pre-cargados con equipamiento (Barra, Mancuerna, Polea, Máquina, Peso corporal) + crear/eliminar ejercicios propios
-- **Buscador** en el selector de ejercicios (filtra por nombre en tiempo real)
-- **Reemplazar** ejercicios en la rutina sin necesidad de borrar y volver a añadir
-- **Reordenar** rutinas y ejercicios con ↑↓ y animación de deslizamiento
-- Entreno paso a paso con navegación lineal y salto entre ejercicios
-- Temporizador de descanso configurable (±30s, 30–300s) con **aviso sonoro al terminar** (notificación heads-up + sonido predeterminado, aunque estés en otra app)
-- Sugerencias automáticas de peso/reps basadas en el historial
-- PRs de la sesión anterior visibles durante el entreno
-- Historial con drill-down: resumen → lista de entrenos → detalle por ejercicio
-- 1RM estimado (fórmula Epley)
-- Exportar/importar backup en JSON
-- **Carpeta de backups configurable**: elige dónde guardar los backups automáticos desde Ajustes (accesible desde el gestor de archivos)
-- **Backup automático diario** + **backup previo a cada actualización** (conserva los últimos 5)
-- **Actualización integrada**: detecta nuevas versiones, descarga e instala con backup previo; avisa si ya estás en la última versión
-- **Cuadro de mando web** para estudiar progresión con gráficas (1RM, peso, volumen, frecuencia) desde el navegador del PC
+### Historial
+- Vista resumen con volumen por grupos musculares
+- Drill-down: lista de entrenos → detalle por ejercicio
+- 1RM estimado (fórmula Epley) con evolución
+- Gráfico de progresión de 1RM por ejercicio
+- Comparativa con la semana anterior
 
-## Cuadro de mando (dashboard)
+### Backup y datos
+- **Backup automático diario** (WorkManager) en segundo plano
+- **Backup preventivo antes de cada actualización** de la app
+- **Carpeta configurable**: elige dónde guardar los backups desde Ajustes (accesible desde el gestor de archivos)
+- Conserva los últimos 5 backups automáticos
+- Exportar/importar manual en JSON
+
+### Actualización integrada
+- Detecta automáticamente nuevas versiones en GitHub
+- Descarga e instala el APK con backup previo automático
+- Avisa si ya estás en la última versión
+
+### Cuadro de mando web
+Dashboard interactivo para estudiar progresión desde el navegador del PC:
 
 ```bash
 # Exporta el backup desde la app (Ajustes → Exportar)
@@ -56,11 +76,19 @@ python3 dashboard/dashboard.py selftrain_backup.json
 # Abre http://localhost:8080
 ```
 
-Gráficas interactivas con Chart.js: 1RM estimado (Epley), peso máximo por sesión, volumen total, frecuencia semanal de entrenos. Solo necesita Python 3 (sin dependencias extra).
+Gráficas con Chart.js: 1RM estimado (Epley), peso máximo por sesión, volumen total, frecuencia semanal. Solo necesita Python 3 (sin dependencias extra).
 
 ## Stack
 
-Kotlin + Jetpack Compose + Material 3 + Room + Hilt + Navigation Compose
+Kotlin + Jetpack Compose + Material 3 + Room + Hilt + Navigation Compose + Coil
+
+### Dependencias principales
+- **Coil** — carga de GIFs demostrativos desde CDN
+- **Room** — persistencia local SQLite
+- **Hilt** — inyección de dependencias
+- **Navigation Compose** — navegación tipo single-activity
+- **Gson** — parsing de ejercicios semilla y backups JSON
+- **WorkManager** — backup automático diario
 
 ## Build
 
@@ -68,4 +96,4 @@ Kotlin + Jetpack Compose + Material 3 + Room + Hilt + Navigation Compose
 ./gradlew assembleDebug
 ```
 
-APK en `app/build/outputs/apk/debug/app-debug.apk`
+APK en `app/build/outputs/apk/debug/selftrain-debug.apk`
