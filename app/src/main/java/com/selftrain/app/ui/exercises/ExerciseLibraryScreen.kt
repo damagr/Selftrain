@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.selftrain.app.data.model.Exercise
 import com.selftrain.app.util.Labels
+import com.selftrain.app.ui.SelfTrainFab
+import com.selftrain.app.ui.SelfTrainListItem
 import com.selftrain.app.util.ThemeMode
 import com.selftrain.app.util.rememberThemeMode
 
@@ -79,7 +81,7 @@ fun ExerciseLibraryScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showCreateDialog = true }) {
+            SelfTrainFab(onClick = { showCreateDialog = true }) {
                 Icon(Icons.Default.Add, "Añadir ejercicio")
             }
         },
@@ -98,7 +100,7 @@ fun ExerciseLibraryScreen(
                     )
                 }
                 items(exs, key = { it.id }) { ex ->
-                    ListItem(
+                    SelfTrainListItem(
                         headlineContent = { Text(ex.name) },
                         supportingContent = {
                             Text(buildString {

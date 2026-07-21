@@ -31,6 +31,8 @@ import com.selftrain.app.util.Labels
 import com.selftrain.app.util.ThemeMode
 import com.selftrain.app.util.rememberThemePreferences
 import com.selftrain.app.BuildConfig
+import com.selftrain.app.ui.SelfTrainCard
+import com.selftrain.app.ui.SelfTrainTopAppBar
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -139,8 +141,7 @@ fun SettingsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
+            SelfTrainTopAppBar(
                 title = { Text("Ajustes") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -152,7 +153,7 @@ fun SettingsScreen(
     ) { padding ->
         Column(Modifier.padding(padding).padding(16.dp).verticalScroll(rememberScrollState())) {
             // Export
-            Card(Modifier.fillMaxWidth()) {
+            SelfTrainCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Text("Exportar datos", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
@@ -174,7 +175,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
 
             // Import
-            Card(Modifier.fillMaxWidth()) {
+            SelfTrainCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Text("Importar datos", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
@@ -196,7 +197,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
 
             // Backup folder
-            Card(Modifier.fillMaxWidth()) {
+            SelfTrainCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Text("Carpeta de backups automáticos", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
@@ -229,7 +230,7 @@ fun SettingsScreen(
             // Theme toggle
             val themePrefs = rememberThemePreferences()
             val currentMode by themePrefs.mode.collectAsState()
-            Card(Modifier.fillMaxWidth()) {
+            SelfTrainCard(Modifier.fillMaxWidth()) {
                 Row(
                     Modifier.fillMaxWidth().padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -259,7 +260,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
 
             // Recover deleted exercises
-            Card(Modifier.fillMaxWidth()) {
+            SelfTrainCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Text("Recuperar ejercicios borrados", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
@@ -283,7 +284,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
 
             // Check for updates
-            Card(Modifier.fillMaxWidth()) {
+            SelfTrainCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Text("Actualización", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))

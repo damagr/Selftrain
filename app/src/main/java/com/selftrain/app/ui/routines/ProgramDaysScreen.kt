@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.selftrain.app.data.model.Routine
+import com.selftrain.app.ui.SelfTrainCard
+import com.selftrain.app.ui.SelfTrainTopAppBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,8 +34,7 @@ fun ProgramDaysScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
+            SelfTrainTopAppBar(
                 title = { Text(parent?.name ?: "Programa") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -56,7 +57,7 @@ fun ProgramDaysScreen(
         } else {
             LazyColumn(Modifier.padding(padding)) {
                 items(children, key = { it.id }) { child ->
-                    Card(
+                    SelfTrainCard(
                         Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp)

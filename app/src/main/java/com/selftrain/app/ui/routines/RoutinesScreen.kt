@@ -18,6 +18,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.selftrain.app.data.model.Routine
+import com.selftrain.app.ui.SelfTrainCard
+import com.selftrain.app.ui.SelfTrainFab
+import com.selftrain.app.ui.SelfTrainListItem
+import com.selftrain.app.ui.SelfTrainTopAppBar
 import com.selftrain.app.util.Labels
 import com.selftrain.app.util.ThemeMode
 import com.selftrain.app.util.rememberThemeMode
@@ -40,9 +44,8 @@ fun RoutinesScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            SelfTrainTopAppBar(
                 title = { Text("Mis Rutinas") },
-                windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
                 actions = {
                     TextButton(onClick = { showPredefinedDialog = true }) {
                         Text("Cargar rutinas", style = MaterialTheme.typography.labelSmall)
@@ -54,7 +57,7 @@ fun RoutinesScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showCreateDialog = true }) {
+            SelfTrainFab(onClick = { showCreateDialog = true }) {
                 Icon(Icons.Default.Add, "Nueva rutina")
             }
         }
@@ -77,7 +80,7 @@ fun RoutinesScreen(
                     val (routine, children) = groups[index]
                     if (children.isNotEmpty()) {
                         // Parent — tap to navigate
-                        Card(
+                        SelfTrainCard(
                             Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -100,7 +103,7 @@ fun RoutinesScreen(
                         }
                     } else {
                         // Standalone routine
-                        RoutineCard(
+                        RoutineSelfTrainCard(
                             routine = routine,
                             index = index,
                             total = groups.size,
@@ -166,7 +169,7 @@ fun RoutinesScreen(
 }
 
 @Composable
-fun RoutineCard(
+fun RoutineSelfTrainCard(
     routine: Routine,
     index: Int,
     total: Int,
@@ -175,7 +178,7 @@ fun RoutineCard(
     onMove: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
+    SelfTrainCard(
         modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
     ) {
         Row(
@@ -346,7 +349,7 @@ fun PredefinedRoutinesDialog(
         val listContent = @Composable {
             LazyColumn {
                 items(programs) { program ->
-                    ListItem(
+                    SelfTrainListItem(
                         headlineContent = { Text(program.program) },
                         supportingContent = {
                             Text("${program.routines.size} días · ${Labels.method(program.method)}",
@@ -377,7 +380,7 @@ fun PredefinedRoutinesDialog(
                 text = {
                     LazyColumn(Modifier.height(400.dp)) {
                         items(programs) { program ->
-                            ListItem(
+                            SelfTrainListItem(
                                 headlineContent = { Text(program.program) },
                                 supportingContent = {
                                     Text("${program.routines.size} días · ${Labels.method(program.method)}",

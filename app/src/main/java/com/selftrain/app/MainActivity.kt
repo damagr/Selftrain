@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.animation.*
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -219,8 +220,8 @@ fun SelfTrainMain() {
             enterTransition = {
                 when (themeMode) {
                     com.selftrain.app.util.ThemeMode.CLASSIC -> fadeIn(animationSpec = tween(200))
-                    com.selftrain.app.util.ThemeMode.MODERN -> fadeIn(animationSpec = tween(300)) + slideInHorizontally(
-                        animationSpec = tween(300),
+                    com.selftrain.app.util.ThemeMode.MODERN -> fadeIn(animationSpec = spring(dampingRatio = 0.8f)) + slideInHorizontally(
+                        animationSpec = spring(dampingRatio = 0.8f),
                         initialOffsetX = { it / 4 }
                     )
                 }
@@ -229,7 +230,7 @@ fun SelfTrainMain() {
                 when (themeMode) {
                     com.selftrain.app.util.ThemeMode.CLASSIC -> fadeOut(animationSpec = tween(200))
                     com.selftrain.app.util.ThemeMode.MODERN -> fadeOut(animationSpec = tween(200)) + slideOutHorizontally(
-                        animationSpec = tween(200),
+                        animationSpec = spring(dampingRatio = 0.8f),
                         targetOffsetX = { -it / 4 }
                     )
                 }
@@ -237,8 +238,8 @@ fun SelfTrainMain() {
             popEnterTransition = {
                 when (themeMode) {
                     com.selftrain.app.util.ThemeMode.CLASSIC -> fadeIn(animationSpec = tween(200))
-                    com.selftrain.app.util.ThemeMode.MODERN -> fadeIn(animationSpec = tween(300)) + slideInHorizontally(
-                        animationSpec = tween(300),
+                    com.selftrain.app.util.ThemeMode.MODERN -> fadeIn(animationSpec = spring(dampingRatio = 0.8f)) + slideInHorizontally(
+                        animationSpec = spring(dampingRatio = 0.8f),
                         initialOffsetX = { -it / 4 }
                     )
                 }
@@ -247,7 +248,7 @@ fun SelfTrainMain() {
                 when (themeMode) {
                     com.selftrain.app.util.ThemeMode.CLASSIC -> fadeOut(animationSpec = tween(200))
                     com.selftrain.app.util.ThemeMode.MODERN -> fadeOut(animationSpec = tween(200)) + slideOutHorizontally(
-                        animationSpec = tween(200),
+                        animationSpec = spring(dampingRatio = 0.8f),
                         targetOffsetX = { it / 4 }
                     )
                 }

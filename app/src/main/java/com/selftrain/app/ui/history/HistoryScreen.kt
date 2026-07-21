@@ -32,6 +32,9 @@ import com.selftrain.app.data.model.Workout
 import com.selftrain.app.data.db.SetWithExercise
 import com.selftrain.app.data.model.WorkoutSet
 import com.selftrain.app.util.Labels
+import com.selftrain.app.ui.SelfTrainCard
+import com.selftrain.app.ui.SelfTrainListItem
+import com.selftrain.app.ui.SelfTrainTopAppBar
 import com.selftrain.app.util.ThemeMode
 import com.selftrain.app.util.rememberThemeMode
 import java.text.SimpleDateFormat
@@ -70,8 +73,7 @@ fun HistoryScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
+            SelfTrainTopAppBar(
                 title = {
                     Text(when (view) {
                         HistoryView.SUMMARY -> if (selectedExercise != null) "Progreso: ${selectedExercise!!.name}" else "Historial"
@@ -117,7 +119,7 @@ fun HistoryScreen(
                     )
                 } else {
                     Column(Modifier.padding(padding)) {
-                        Card(
+                        SelfTrainCard(
                             Modifier.fillMaxWidth().padding(16.dp).clickable { viewModel.showWorkoutList() }
                         ) {
                             Column(Modifier.padding(16.dp)) {
@@ -141,7 +143,7 @@ fun HistoryScreen(
                         } else {
                             LazyColumn {
                                 items(exercises) { ex ->
-                                    ListItem(
+                                    SelfTrainListItem(
                                         headlineContent = { Text(ex.name) },
                                         supportingContent = { Text(Labels.muscleGroup(ex.muscleGroup)) },
                                         modifier = Modifier.clickable { viewModel.selectExercise(ex) }
@@ -279,7 +281,7 @@ fun HistoryScreen(
                     // --- Workout cards for selected day ---
                     if (selectedDay != null) {
                         items(dayWorkouts, key = { it.id }) { workout ->
-                            Card(
+                            SelfTrainCard(
                                 Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -361,7 +363,7 @@ fun HistoryScreen(
                         items(sets, key = { "set-${it.set.id}" }) { s ->
                             var showEditDialog by remember { mutableStateOf(false) }
 
-                            Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp)
+                            SelfTrainCard(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp)
                                 .clickable { showEditDialog = true }
                             ) {
                                 Row(
@@ -495,7 +497,7 @@ fun ExerciseProgressionView(
 ) {
     LazyColumn(modifier.padding(16.dp)) {
         item {
-            Card(Modifier.fillMaxWidth()) {
+            SelfTrainCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.EmojiEvents, null, tint = Color(0xFFFFC107))
@@ -522,7 +524,7 @@ fun ExerciseProgressionView(
 
             history.reversed().forEach { s ->
                 item {
-                    Card(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                    SelfTrainCard(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
                         Row(Modifier.padding(12.dp)) {
                             val label = if (s.set.setType == "bilbo") "Bilbo" else "Trabajo"
                             Text("$label: ${s.set.reps} reps \u00D7 ${String.format("%.1f", s.set.weightKg)} kg" +
@@ -750,7 +752,7 @@ fun AddExerciseToWorkoutDialog(
         } else {
             LazyColumn {
                 items(exercises) { ex ->
-                    ListItem(
+                    SelfTrainListItem(
                         headlineContent = { Text(ex.name) },
                         supportingContent = { Text(Labels.muscleGroup(ex.muscleGroup)) },
                         modifier = Modifier.clickable { onAdd(ex.id) }

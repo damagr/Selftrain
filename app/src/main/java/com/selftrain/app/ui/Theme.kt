@@ -3,6 +3,7 @@ package com.selftrain.app.ui
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -215,9 +216,92 @@ fun SelfTrainCard(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant
             ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
             content = content
         )
     } else {
         Card(modifier = modifier, content = content)
+    }
+}
+
+@Composable
+fun SelfTrainListItem(
+    headlineContent: @Composable () -> Unit,
+    supportingContent: @Composable (() -> Unit)? = null,
+    leadingContent: @Composable (() -> Unit)? = null,
+    trailingContent: @Composable (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    val themeMode by rememberThemeMode()
+    if (themeMode == com.selftrain.app.util.ThemeMode.MODERN) {
+        ListItem(
+            headlineContent = headlineContent,
+            supportingContent = supportingContent,
+            leadingContent = leadingContent,
+            trailingContent = trailingContent,
+            colors = ListItemDefaults.colors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            ),
+            modifier = modifier
+        )
+    } else {
+        ListItem(
+            headlineContent = headlineContent,
+            supportingContent = supportingContent,
+            leadingContent = leadingContent,
+            trailingContent = trailingContent,
+            modifier = modifier
+        )
+    }
+}
+
+@Composable
+fun SelfTrainFab(
+    onClick: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    val themeMode by rememberThemeMode()
+    if (themeMode == com.selftrain.app.util.ThemeMode.MODERN) {
+        FloatingActionButton(
+            onClick = onClick,
+            containerColor = MaterialTheme.colorScheme.secondary,
+            contentColor = MaterialTheme.colorScheme.onSecondary
+        ) {
+            content()
+        }
+    } else {
+        FloatingActionButton(onClick = onClick) {
+            content()
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SelfTrainTopAppBar(
+    title: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    navigationIcon: @Composable () -> Unit = {},
+    actions: @Composable RowScope.() -> Unit = {}
+) {
+    val themeMode by rememberThemeMode()
+    if (themeMode == com.selftrain.app.util.ThemeMode.MODERN) {
+        TopAppBar(
+            title = title,
+            modifier = modifier,
+            navigationIcon = navigationIcon,
+            actions = actions,
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                titleContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        )
+    } else {
+        TopAppBar(
+            title = title,
+            modifier = modifier,
+            navigationIcon = navigationIcon,
+            actions = actions
+        )
     }
 }

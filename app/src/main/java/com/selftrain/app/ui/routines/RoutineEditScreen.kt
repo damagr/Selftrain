@@ -23,6 +23,10 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.selftrain.app.data.model.Exercise
 import com.selftrain.app.util.Labels
+import com.selftrain.app.ui.SelfTrainCard
+import com.selftrain.app.ui.SelfTrainFab
+import com.selftrain.app.ui.SelfTrainListItem
+import com.selftrain.app.ui.SelfTrainTopAppBar
 import com.selftrain.app.util.ThemeMode
 import com.selftrain.app.util.rememberThemeMode
 
@@ -45,8 +49,7 @@ fun RoutineEditScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
+            SelfTrainTopAppBar(
                 title = { Text(routine?.name ?: "Editar Rutina") },
                 actions = {
                     IconButton(onClick = { viewModel.save(onSaved) }) {
@@ -56,7 +59,7 @@ fun RoutineEditScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }) {
+            SelfTrainFab(onClick = { showAddDialog = true }) {
                 Icon(Icons.Default.Add, "Añadir ejercicio")
             }
         }
@@ -84,7 +87,7 @@ fun RoutineEditScreen(
                     val isFirst = index == 0
                     val isLast = index == exercises.size - 1
 
-                    Card(
+                    SelfTrainCard(
                         Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 2.dp)
@@ -249,7 +252,7 @@ fun ExercisePickerDialog(
                         }
                         items(exs) { ex ->
                             val isSelected = ex.id in selectedIds
-                            ListItem(
+                            SelfTrainListItem(
                                 headlineContent = { Text(ex.name) },
                                 supportingContent = {
                                     Text(buildString {
@@ -341,9 +344,8 @@ fun ExercisePickerDialog(
         ) {
             Scaffold(modifier = Modifier.fillMaxSize(),
                 topBar = {
-                    TopAppBar(
+                    SelfTrainTopAppBar(
                         title = { Text(if (singleSelect) "Reemplazar Ejercicio" else "Añadir Ejercicios") },
-                        windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
                         navigationIcon = {
                             IconButton(onClick = onDismiss) {
                                 Icon(Icons.Default.Close, "Cerrar")
@@ -408,7 +410,7 @@ fun ExercisePickerDialog(
                                 }
                                 items(exs) { ex ->
                                     val isSelected = ex.id in selectedIds
-                                    ListItem(
+                                    SelfTrainListItem(
                                         headlineContent = { Text(ex.name) },
                                         supportingContent = {
                                             Text(buildString {

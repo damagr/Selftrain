@@ -29,6 +29,7 @@ import com.selftrain.app.util.BilboProgression
 import com.selftrain.app.util.Labels
 import com.selftrain.app.util.RestTimerService
 import com.selftrain.app.util.ThemeMode
+import com.selftrain.app.ui.SelfTrainTopAppBar
 import com.selftrain.app.util.getExerciseGifUrl
 import com.selftrain.app.util.rememberThemeMode
 
@@ -81,8 +82,7 @@ fun TrainScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
+            SelfTrainTopAppBar(
                 title = { Text(state.routine?.name ?: "Entrenando...") },
                 actions = {
                     TextButton(onClick = { viewModel.showConfirmFinish() }) {
