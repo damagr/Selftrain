@@ -30,6 +30,13 @@ import androidx.compose.material.icons.outlined.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -74,11 +81,15 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SelfTrainMain() {
     val navController = rememberNavController()
     val viewModel: MainViewModel = hiltViewModel()
     val context = LocalContext.current
+    // ponytail: expressive-style spring without MotionScheme type-inference headache
+    val navAnimSpec = spring<IntOffset>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
+    val fadeAnimSpec = spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
 
     // ponytail: one-time POST_NOTIFICATIONS ask on API 33+; minSdk 26 = no-op below
     val notifLauncher = rememberLauncherForActivityResult(
@@ -177,7 +188,23 @@ fun SelfTrainMain() {
         NavHost(
             navController = navController,
             startDestination = "routines",
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(innerPadding),
+            enterTransition = {
+                slideInHorizontally(animationSpec = navAnimSpec) { it } +
+                    fadeIn(animationSpec = fadeAnimSpec)
+            },
+            exitTransition = {
+                slideOutHorizontally(animationSpec = navAnimSpec) { -it / 3 } +
+                    fadeOut(animationSpec = fadeAnimSpec)
+            },
+            popEnterTransition = {
+                slideInHorizontally(animationSpec = navAnimSpec) { -it / 3 } +
+                    fadeIn(animationSpec = fadeAnimSpec)
+            },
+            popExitTransition = {
+                slideOutHorizontally(animationSpec = navAnimSpec) { it } +
+                    fadeOut(animationSpec = fadeAnimSpec)
+            }
         ) {
             composable("routines") {
                 RoutinesScreen(
@@ -239,6 +266,7 @@ fun SelfTrainMain() {
         val release = (viewModel.updateState as UpdateState.Available).release
         AlertDialog(
             onDismissRequest = { viewModel.dismissDialog() },
+            shape = MaterialTheme.shapes.large,
             title = { Text("Nueva versión disponible") },
             text = {
                 Text("Versión ${release.tagName} disponible.\n" +
@@ -261,6 +289,7 @@ fun SelfTrainMain() {
         is UpdateState.Downloading -> {
             AlertDialog(
                 onDismissRequest = {},
+                shape = MaterialTheme.shapes.large,
                 title = { Text("Descargando actualización…") },
                 text = {
                     Column(Modifier.fillMaxWidth()) {
@@ -278,6 +307,7 @@ fun SelfTrainMain() {
         is UpdateState.Error -> {
             AlertDialog(
                 onDismissRequest = { viewModel.dismissError() },
+                shape = MaterialTheme.shapes.large,
                 title = { Text("Error") },
                 text = { Text(state.message) },
                 confirmButton = {

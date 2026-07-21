@@ -22,13 +22,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.selftrain.app.data.model.Exercise
 import com.selftrain.app.util.Labels
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ExerciseLibraryScreen(
     onSettings: () -> Unit,
     viewModel: ExerciseLibraryViewModel = hiltViewModel()
 ) {
     val exercises by viewModel.exercises.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf<Exercise?>(null) }
@@ -47,6 +48,15 @@ fun ExerciseLibraryScreen(
         topBar = {
             TopAppBar(
                 windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
+                colors = if (deleteMode) TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    actionIconContentColor = MaterialTheme.colorScheme.onErrorContainer
+                ) else TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ),
                 title = {
                     Column {
                         Text("Biblioteca de Ejercicios")
@@ -57,10 +67,6 @@ fun ExerciseLibraryScreen(
                         }
                     }
                 },
-                colors = if (deleteMode) TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onErrorContainer
-                ) else TopAppBarDefaults.topAppBarColors(),
                 actions = {
                     IconButton(onClick = { deleteMode = !deleteMode }) {
                         Icon(
@@ -83,45 +89,64 @@ fun ExerciseLibraryScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        val grouped = exercises.groupBy { it.muscleGroup }
+        if (isLoading) {
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                ContainedLoadingIndicator(
+                    containerShape = MaterialTheme.shapes.medium,
+                    polygons = LoadingIndicatorDefaults.IndeterminateIndicatorPolygons
+                )
+            }
+        } else {
+            val grouped = exercises.groupBy { it.muscleGroup }
 
-        LazyColumn(Modifier.padding(padding)) {
-            grouped.entries.forEach { (group, exs) ->
-                item {
-                    Text(
-                        Labels.muscleGroup(group),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-                }
-                items(exs, key = { it.id }) { ex ->
-                    ListItem(
-                        headlineContent = { Text(ex.name) },
-                        supportingContent = {
-                            Text(buildString {
-                                if (ex.equipment.isNotEmpty()) {
-                                    append(Labels.equipment(ex.equipment))
-                                    append(" · ")
+            LazyColumn(Modifier.padding(padding)) {
+                grouped.entries.forEach { (group, exs) ->
+                    item {
+                        Text(
+                            Labels.muscleGroup(group),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
+                    items(exs, key = { it.id }) { ex ->
+                        ElevatedCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                                .combinedClickable(
+                                    onClick = {},
+                                    onLongClick = { showDeleteConfirm = ex }
+                                ),
+                            shape = MaterialTheme.shapes.medium
+                        ) {
+                            Row(
+                                Modifier.fillMaxWidth().padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(ex.name, style = MaterialTheme.typography.titleSmall)
+                                    Text(
+                                        buildString {
+                                            if (ex.equipment.isNotEmpty()) {
+                                                append(Labels.equipment(ex.equipment))
+                                                append(" · ")
+                                            }
+                                            append(Labels.category(ex.category))
+                                            if (ex.isBilboEligible) append(" · Bilbo")
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
-                                append(Labels.category(ex.category))
-                                if (ex.isBilboEligible) append(" · Bilbo")
-                            })
-                        },
-                        trailingContent = {
-                            if (deleteMode) {
-                                IconButton(onClick = { showDeleteConfirm = ex }) {
-                                    Icon(Icons.Default.Delete, "Eliminar", tint = MaterialTheme.colorScheme.error)
+                                if (deleteMode) {
+                                    IconButton(onClick = { showDeleteConfirm = ex }) {
+                                        Icon(Icons.Default.Delete, "Eliminar", tint = MaterialTheme.colorScheme.error)
+                                    }
                                 }
                             }
-                        },
-                        modifier = Modifier
-                            .padding(horizontal = 8.dp)
-                            .combinedClickable(
-                                onClick = {},
-                                onLongClick = { showDeleteConfirm = ex }
-                            )
-                    )
+                        }
+                    }
                 }
             }
         }
@@ -140,6 +165,7 @@ fun ExerciseLibraryScreen(
     showDeleteConfirm?.let { ex ->
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = null },
+            shape = MaterialTheme.shapes.large,
             title = { Text("¿Eliminar ejercicio?") },
             text = { Text("¿Seguro que quieres eliminar \"${ex.name}\"?") },
             confirmButton = {
@@ -159,7 +185,7 @@ fun ExerciseLibraryScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CreateExerciseDialog(
     onDismiss: () -> Unit,
@@ -180,6 +206,7 @@ fun CreateExerciseDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier.fillMaxHeight(0.85f),
+        shape = MaterialTheme.shapes.large,
         title = { Text("Nuevo Ejercicio") },
         text = {
             Column(

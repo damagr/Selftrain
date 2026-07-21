@@ -25,7 +25,7 @@ import com.selftrain.app.util.Labels
 import com.selftrain.app.util.RestTimerService
 import com.selftrain.app.util.getExerciseGifUrl
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun TrainScreen(
     routineId: Long,
@@ -60,7 +60,10 @@ fun TrainScreen(
             }
         } else {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                ContainedLoadingIndicator(
+                    containerShape = MaterialTheme.shapes.medium,
+                    polygons = LoadingIndicatorDefaults.IndeterminateIndicatorPolygons
+                )
             }
         }
         return
@@ -90,7 +93,8 @@ fun TrainScreen(
         Column(Modifier.padding(padding).fillMaxSize()) {
             // Navigation header
             Card(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                shape = MaterialTheme.shapes.large,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
             ) {
                 Column(Modifier.padding(12.dp)) {
@@ -159,7 +163,8 @@ fun TrainScreen(
                 if (ex.lastSessionSets.isNotEmpty()) {
                     var prExpanded by remember { mutableStateOf(true) }
                     Card(
-                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                        shape = MaterialTheme.shapes.medium,
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.secondaryContainer
                         )
@@ -178,7 +183,13 @@ fun TrainScreen(
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
-                            AnimatedVisibility(visible = prExpanded) {
+                            AnimatedVisibility(
+                                visible = prExpanded,
+                                enter = fadeIn(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) +
+                                    expandVertically(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()),
+                                exit = fadeOut(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) +
+                                    shrinkVertically(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec())
+                            ) {
                                 Column {
                                     Spacer(Modifier.height(4.dp))
                                     ex.lastSessionSets.forEach { s ->
@@ -229,28 +240,43 @@ fun TrainScreen(
     if (showJumpDialog) {
         AlertDialog(
             onDismissRequest = { showJumpDialog = false },
+            shape = MaterialTheme.shapes.large,
             title = { Text("Saltar a ejercicio") },
             text = {
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     state.exercises.forEachIndexed { index, ex ->
                         val isCurrent = index == currentIndex
-                        ListItem(
-                            headlineContent = { Text(ex.exercise.name) },
-                            supportingContent = {
-                                val setsCount = ex.sets.size
-                                Text(if (setsCount > 0) "$setsCount series registradas" else "Sin series")
-                            },
-                            leadingContent = {
-                                if (isCurrent) Icon(Icons.Default.Check, "Actual")
-                            },
-                            modifier = Modifier.clickable {
-                                viewModel.setCurrentExercise(index)
-                                showJumpDialog = false
-                            },
-                            colors = if (isCurrent) ListItemDefaults.colors(
+                        ElevatedCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.setCurrentExercise(index)
+                                    showJumpDialog = false
+                                },
+                            shape = MaterialTheme.shapes.medium,
+                            colors = if (isCurrent) CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.primaryContainer
-                            ) else ListItemDefaults.colors()
-                        )
+                            ) else CardDefaults.cardColors()
+                        ) {
+                            Row(
+                                Modifier.fillMaxWidth().padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(ex.exercise.name, style = MaterialTheme.typography.titleSmall)
+                                    val setsCount = ex.sets.size
+                                    Text(
+                                        if (setsCount > 0) "$setsCount series registradas" else "Sin series",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                if (isCurrent) {
+                                    Icon(Icons.Default.Check, "Actual",
+                                        tint = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -266,6 +292,7 @@ fun TrainScreen(
         val gifUrl = currentEx?.exercise?.name?.let { getExerciseGifUrl(it) }
         AlertDialog(
             onDismissRequest = { showGifDialog = false },
+            shape = MaterialTheme.shapes.large,
             title = { Text(currentEx?.exercise?.name ?: "") },
             text = {
                 if (gifUrl != null) {
@@ -292,6 +319,7 @@ fun TrainScreen(
     if (state.confirmEmpty) {
         AlertDialog(
             onDismissRequest = { viewModel.cancelEmptyFinish() },
+            shape = MaterialTheme.shapes.large,
             title = { Text("Entreno vacío") },
             text = { Text("No has registrado ninguna serie. El entreno no se guardará.") },
             confirmButton = {
@@ -314,6 +342,7 @@ fun TrainScreen(
     if (showBackConfirm) {
         AlertDialog(
             onDismissRequest = { showBackConfirm = false },
+            shape = MaterialTheme.shapes.large,
             title = { Text("¿Cancelar entreno?") },
             text = { Text("Se perderán los datos no guardados.") },
             confirmButton = {
@@ -340,6 +369,7 @@ fun TrainScreen(
 
         AlertDialog(
             onDismissRequest = { viewModel.cancelConfirmFinish() },
+            shape = MaterialTheme.shapes.large,
             title = { Text("¿Terminar entreno?") },
             text = {
                 Text("Has registrado $totalSets series en $exercisesWithSets ejercicios.")
@@ -363,6 +393,7 @@ fun TrainScreen(
 
         AlertDialog(
             onDismissRequest = { viewModel.dismissSummary(); onFinish() },
+            shape = MaterialTheme.shapes.large,
             title = { Text("¡Entreno completado!") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -435,6 +466,7 @@ fun TrainScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ExerciseSetContent(
     exerciseName: String,
@@ -447,7 +479,13 @@ fun ExerciseSetContent(
     onLogWorkSet: (reps: Int, weight: Float, rir: Int) -> Unit,
     onDeleteLastSet: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(true) }
+    val lastWorkSet = sets.lastOrNull { it.setType == "work" }
+    val intraAdjustment = lastWorkSet?.let {
+        BilboProgression.workSetAdjustment(it.reps, it.weightKg)
+    }
+    val hasBetweenHint = suggestion.hasHistory && lastWorkSet == null &&
+        suggestion.workProgression != BilboProgression.WorkProgression.MAINTAIN
+    val bilboDone = sets.any { it.setType == "bilbo" }
 
     LazyColumn(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -469,7 +507,7 @@ fun ExerciseSetContent(
         // Logged sets
         if (sets.isNotEmpty()) {
             item {
-                Card {
+                ElevatedCard(shape = MaterialTheme.shapes.medium) {
                     Column(Modifier.padding(12.dp)) {
                         Text("Series de hoy:", style = MaterialTheme.typography.labelSmall)
                         Spacer(Modifier.height(4.dp))
@@ -493,11 +531,12 @@ fun ExerciseSetContent(
             }
         }
 
-        // Bilbo progression hint (50+ reps → ready to increase weight)
+        // Bilbo 50+ progression hint
         val lastSet = sets.lastOrNull()
         if (lastSet?.setType == "bilbo" && lastSet.reps >= 50) {
             item {
-                Card(
+                ElevatedCard(
+                    shape = MaterialTheme.shapes.medium,
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                 ) {
                     Column(Modifier.padding(12.dp)) {
@@ -511,48 +550,107 @@ fun ExerciseSetContent(
             }
         }
 
-        // Input section
-        item {
-            Card {
-                Column(Modifier.padding(12.dp)) {
-                    if (appliesBilbo) {
-                        val bilboDone = sets.any { it.setType == "bilbo" }
-                        if (!bilboDone) {
-                            BilboSetInput(
-                                exerciseKey = exerciseKey,
-                                sets = sets,
-                                suggestion = suggestion,
-                                onLog = onLogBilboSet
-                            )
-                        } else {
-                            WorkSetInput(
-                                exerciseKey = exerciseKey,
-                                sets = sets,
-                                suggestion = suggestion,
-                                onLog = onLogWorkSet
-                            )
-                        }
-                    } else {
-                        WorkSetInput(
-                            exerciseKey = exerciseKey,
-                            sets = sets,
-                            suggestion = suggestion,
-                            onLog = onLogWorkSet
+        // Between-sessions progression hint
+        if (hasBetweenHint) {
+            item {
+                val isIncrease = suggestion.workProgression == BilboProgression.WorkProgression.INCREASE
+                ElevatedCard(
+                    shape = MaterialTheme.shapes.medium,
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isIncrease) MaterialTheme.colorScheme.primaryContainer
+                                        else MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            if (isIncrease) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                            null,
+                            tint = if (isIncrease) MaterialTheme.colorScheme.onPrimaryContainer
+                                   else MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            if (isIncrease) "Subir peso \u2014 hiciste >10 reps la sesi\u00F3n anterior"
+                            else "Bajar peso \u2014 hiciste <8 reps la sesi\u00F3n anterior",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (isIncrease) MaterialTheme.colorScheme.onPrimaryContainer
+                                    else MaterialTheme.colorScheme.onErrorContainer
                         )
                     }
                 }
             }
         }
 
-        // Delete last
-        if (sets.isNotEmpty()) {
+        // Intra-session advice
+        intraAdjustment?.let { (progression, suggestedWeight) ->
             item {
-                TextButton(
-                    onClick = onDeleteLastSet,
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                val isIncrease = progression == BilboProgression.WorkProgression.INCREASE
+                val lastReps = lastWorkSet?.reps ?: 0
+                ElevatedCard(
+                    shape = MaterialTheme.shapes.medium,
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isIncrease) MaterialTheme.colorScheme.primaryContainer
+                                        else MaterialTheme.colorScheme.errorContainer
+                    )
                 ) {
-                    Icon(Icons.Default.Delete, null, Modifier.size(16.dp))
-                    Text("Deshacer última serie")
+                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            if (isIncrease) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                            null,
+                            tint = if (isIncrease) MaterialTheme.colorScheme.onPrimaryContainer
+                                   else MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            if (isIncrease) "Sube a ~${String.format(java.util.Locale.US, "%.1f", suggestedWeight)} kg (hiciste $lastReps, >10)"
+                            else "Baja a ~${String.format(java.util.Locale.US, "%.1f", suggestedWeight)} kg (hiciste $lastReps, <8)",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (isIncrease) MaterialTheme.colorScheme.onPrimaryContainer
+                                    else MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            }
+        }
+
+        // Input section with animated transition
+        item {
+            ElevatedCard(shape = MaterialTheme.shapes.medium) {
+                Column(Modifier.padding(12.dp)) {
+                    if (appliesBilbo) {
+                        AnimatedVisibility(
+                            visible = !bilboDone,
+                            enter = fadeIn(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) +
+                                expandVertically(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()),
+                            exit = fadeOut(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) +
+                                shrinkVertically(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec())
+                        ) {
+                            BilboSetInput(
+                                exerciseKey = exerciseKey, sets = sets,
+                                suggestion = suggestion, onLog = onLogBilboSet,
+                                onDeleteLastSet = onDeleteLastSet
+                            )
+                        }
+                        AnimatedVisibility(
+                            visible = bilboDone,
+                            enter = fadeIn(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) +
+                                expandVertically(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()),
+                            exit = fadeOut(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) +
+                                shrinkVertically(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec())
+                        ) {
+                            WorkSetInput(
+                                exerciseKey = exerciseKey, sets = sets,
+                                suggestion = suggestion, onLog = onLogWorkSet,
+                                onDeleteLastSet = onDeleteLastSet
+                            )
+                        }
+                    } else {
+                        WorkSetInput(
+                            exerciseKey = exerciseKey, sets = sets,
+                            suggestion = suggestion, onLog = onLogWorkSet,
+                            onDeleteLastSet = onDeleteLastSet
+                        )
+                    }
                 }
             }
         }
@@ -567,13 +665,11 @@ fun BilboSetInput(
     exerciseKey: String,
     sets: List<WorkoutSet>,
     suggestion: PerExerciseSuggestion,
-    onLog: (reps: Int, weight: Float, rir: Int) -> Unit
+    onLog: (reps: Int, weight: Float, rir: Int) -> Unit,
+    onDeleteLastSet: () -> Unit
 ) {
-    // ponytail: use exerciseKey for stable remember, sync weight via lastLoggedWeight
     val lastSetWeight = sets.lastOrNull()?.weightKg
-    var reps by remember(exerciseKey) {
-        mutableStateOf("")
-    }
+    var reps by remember(exerciseKey) { mutableStateOf("") }
     var weight by remember(exerciseKey) {
         mutableStateOf(
             if (lastSetWeight != null && lastSetWeight > 0) String.format(java.util.Locale.US, "%.1f", lastSetWeight)
@@ -583,7 +679,6 @@ fun BilboSetInput(
     }
     var rir by remember { mutableStateOf("2") }
 
-    // Sync weight when last logged set changes (e.g. after logging a set in another context)
     LaunchedEffect(lastSetWeight) {
         if (lastSetWeight != null && lastSetWeight > 0) {
             weight = String.format(java.util.Locale.US, "%.1f", lastSetWeight)
@@ -595,16 +690,15 @@ fun BilboSetInput(
             color = MaterialTheme.colorScheme.primary)
         Text("Explosivo en la subida, controlado en la bajada",
             style = MaterialTheme.typography.bodySmall)
-
         if (!suggestion.hasHistory) {
             Spacer(Modifier.height(4.dp))
             Text("Primer entreno: introduce los valores manualmente",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-
         Spacer(Modifier.height(8.dp))
 
+        // Row 1: Reps + Peso
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
                 value = reps,
@@ -612,8 +706,7 @@ fun BilboSetInput(
                 label = { Text("Reps") },
                 placeholder = if (!suggestion.hasHistory) {{ Text("Ej: 15") }} else null,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.weight(1f),
-                singleLine = true
+                modifier = Modifier.weight(1f), singleLine = true
             )
             OutlinedTextField(
                 value = weight,
@@ -621,34 +714,44 @@ fun BilboSetInput(
                 label = { Text("Peso (kg)") },
                 placeholder = if (!suggestion.hasHistory) {{ Text("Ej: 40") }} else null,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.weight(1f),
-                singleLine = true
-            )
-            OutlinedTextField(
-                value = rir,
-                onValueChange = { rir = it.filter { c -> c.isDigit() } },
-                label = { Text("RIR") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.weight(0.6f),
-                singleLine = true
+                modifier = Modifier.weight(1f), singleLine = true
             )
         }
-
         Spacer(Modifier.height(8.dp))
 
-        Button(
-            onClick = {
-                val r = reps.toIntOrNull() ?: return@Button
-                val w = weight.toFloatOrNull() ?: return@Button
-                val ri = rir.toIntOrNull() ?: 2
-                onLog(r, w, ri)
-                reps = ""
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.Whatshot, null)
-            Spacer(Modifier.width(8.dp))
-            Text("Registrar serie Bilbo")
+        // Row 2: RIR sola
+        OutlinedTextField(
+            value = rir,
+            onValueChange = { rir = it.filter { c -> c.isDigit() } },
+            label = { Text("RIR (Reps en Reserva)") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(), singleLine = true
+        )
+        Spacer(Modifier.height(8.dp))
+
+        // Row 3: Registrar + Deshacer
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                onClick = {
+                    val r = reps.toIntOrNull() ?: return@Button
+                    val w = weight.toFloatOrNull() ?: return@Button
+                    val ri = rir.toIntOrNull() ?: 2
+                    onLog(r, w, ri)
+                    reps = ""
+                },
+                modifier = Modifier.weight(1f), shape = MaterialTheme.shapes.medium
+            ) {
+                Icon(Icons.Default.Whatshot, null)
+                Spacer(Modifier.width(8.dp))
+                Text("Registrar Bilbo")
+            }
+            if (sets.isNotEmpty()) {
+                OutlinedButton(onClick = onDeleteLastSet, shape = MaterialTheme.shapes.medium) {
+                    Icon(Icons.Default.Delete, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Deshacer")
+                }
+            }
         }
     }
 }
@@ -658,20 +761,13 @@ fun WorkSetInput(
     exerciseKey: String,
     sets: List<WorkoutSet>,
     suggestion: PerExerciseSuggestion,
-    onLog: (reps: Int, weight: Float, rir: Int) -> Unit
+    onLog: (reps: Int, weight: Float, rir: Int) -> Unit,
+    onDeleteLastSet: () -> Unit
 ) {
-    // ponytail: use exerciseKey for stable remember, sync weight via lastLoggedWeight
-    // Only consider work sets so the bilbo (light) weight doesn't leak into the work-set prefill
     val lastWorkSet = sets.lastOrNull { it.setType == "work" }
     val lastSetWeight = lastWorkSet?.weightKg
-    // ponytail: if no history and bilbo was just logged, derive work weight from its weight × 1.40
     val lastBilboInSession = sets.lastOrNull { it.setType == "bilbo" }
-    val intraAdjustment = lastWorkSet?.let {
-        BilboProgression.workSetAdjustment(it.reps, it.weightKg)
-    }
-    var reps by remember(exerciseKey) {
-        mutableStateOf("")
-    }
+    var reps by remember(exerciseKey) { mutableStateOf("") }
     var weight by remember(exerciseKey) {
         mutableStateOf(
             if (lastSetWeight != null && lastSetWeight > 0) String.format(java.util.Locale.US, "%.1f", lastSetWeight)
@@ -682,61 +778,23 @@ fun WorkSetInput(
     }
     var rir by remember { mutableStateOf("2") }
 
-    // Sync weight when last logged set changes
     LaunchedEffect(lastSetWeight) {
         if (lastSetWeight != null && lastSetWeight > 0) {
             weight = String.format(java.util.Locale.US, "%.1f", lastSetWeight)
         }
     }
 
-    // ponytail: prefill suggested weight from intra-session advice; don't override manual edits
-    LaunchedEffect(intraAdjustment) {
-        val suggested = intraAdjustment?.second
-        if (suggested != null && suggested > 0) {
-            weight = String.format(java.util.Locale.US, "%.1f", suggested)
-        }
-    }
-
     Column {
         Text("Serie de trabajo", style = MaterialTheme.typography.titleSmall)
-
         if (!suggestion.hasHistory) {
             Spacer(Modifier.height(4.dp))
             Text("Primer entreno: introduce los valores manualmente",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-
-        // Progression hint between sessions (only before any work set is logged this session)
-        if (suggestion.hasHistory && lastWorkSet == null &&
-            suggestion.workProgression != BilboProgression.WorkProgression.MAINTAIN) {
-            Spacer(Modifier.height(4.dp))
-            val isIncrease = suggestion.workProgression == BilboProgression.WorkProgression.INCREASE
-            Text(
-                if (isIncrease) "↑ Subir peso (hiciste >10 reps la sesión anterior)"
-                else "↓ Bajar peso (hiciste <8 reps la sesión anterior)",
-                style = MaterialTheme.typography.labelSmall,
-                color = if (isIncrease) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.error
-            )
-        }
-
-        // Intra-session advice based on the last logged work set
-        intraAdjustment?.let { (progression, suggestedWeight) ->
-            Spacer(Modifier.height(4.dp))
-            val isIncrease = progression == BilboProgression.WorkProgression.INCREASE
-            val lastReps = lastWorkSet?.reps ?: 0
-            Text(
-                if (isIncrease) "↑ Sube a ~${String.format(java.util.Locale.US, "%.1f", suggestedWeight)} kg (hiciste $lastReps, >10)"
-                else "↓ Baja a ~${String.format(java.util.Locale.US, "%.1f", suggestedWeight)} kg (hiciste $lastReps, <8)",
-                style = MaterialTheme.typography.labelSmall,
-                color = if (isIncrease) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.error
-            )
-        }
-
         Spacer(Modifier.height(8.dp))
 
+        // Row 1: Reps + Peso
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
                 value = reps,
@@ -744,8 +802,7 @@ fun WorkSetInput(
                 label = { Text("Reps") },
                 placeholder = if (!suggestion.hasHistory) {{ Text("Ej: 10") }} else null,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.weight(1f),
-                singleLine = true
+                modifier = Modifier.weight(1f), singleLine = true
             )
             OutlinedTextField(
                 value = weight,
@@ -753,32 +810,42 @@ fun WorkSetInput(
                 label = { Text("Peso (kg)") },
                 placeholder = if (!suggestion.hasHistory) {{ Text("Ej: 60") }} else null,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.weight(1f),
-                singleLine = true
-            )
-            OutlinedTextField(
-                value = rir,
-                onValueChange = { rir = it.filter { c -> c.isDigit() } },
-                label = { Text("RIR") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.weight(0.6f),
-                singleLine = true
+                modifier = Modifier.weight(1f), singleLine = true
             )
         }
-
         Spacer(Modifier.height(8.dp))
 
-        Button(
-            onClick = {
-                val r = reps.toIntOrNull() ?: return@Button
-                val w = weight.toFloatOrNull() ?: return@Button
-                val ri = rir.toIntOrNull() ?: 2
-                onLog(r, w, ri)
-                reps = ""
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Registrar serie")
+        // Row 2: RIR sola
+        OutlinedTextField(
+            value = rir,
+            onValueChange = { rir = it.filter { c -> c.isDigit() } },
+            label = { Text("RIR (Reps en Reserva)") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(), singleLine = true
+        )
+        Spacer(Modifier.height(8.dp))
+
+        // Row 3: Registrar + Deshacer
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                onClick = {
+                    val r = reps.toIntOrNull() ?: return@Button
+                    val w = weight.toFloatOrNull() ?: return@Button
+                    val ri = rir.toIntOrNull() ?: 2
+                    onLog(r, w, ri)
+                    reps = ""
+                },
+                modifier = Modifier.weight(1f), shape = MaterialTheme.shapes.medium
+            ) {
+                Text("Registrar serie")
+            }
+            if (sets.isNotEmpty()) {
+                OutlinedButton(onClick = onDeleteLastSet, shape = MaterialTheme.shapes.medium) {
+                    Icon(Icons.Default.Delete, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Deshacer")
+                }
+            }
         }
     }
 }
@@ -856,7 +923,8 @@ fun RestTimer() {
         }
     } else {
         Card(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            shape = MaterialTheme.shapes.medium,
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
         ) {
             Row(
@@ -904,7 +972,8 @@ fun RestTimer() {
     // Flash "finished" message
     if (showFinishedMessage) {
         Card(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            shape = MaterialTheme.shapes.medium,
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
         ) {
             Text(

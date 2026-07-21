@@ -21,7 +21,7 @@ import com.selftrain.app.data.model.Routine
 import com.selftrain.app.util.Labels
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun RoutinesScreen(
     onStartWorkout: (Long) -> Unit,
@@ -41,6 +41,11 @@ fun RoutinesScreen(
             TopAppBar(
                 title = { Text("Mis Rutinas") },
                 windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ),
                 actions = {
                     TextButton(onClick = { showPredefinedDialog = true }) {
                         Text("Cargar rutinas", style = MaterialTheme.typography.labelSmall)
@@ -75,12 +80,16 @@ fun RoutinesScreen(
                     val (routine, children) = groups[index]
                     if (children.isNotEmpty()) {
                         // Parent — tap to navigate
-                        Card(
-                            Modifier
+                        ElevatedCard(
+                            modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 4.dp)
                                 .clickable { onEnterProgram(routine.id) }
-                                .animateItem()
+                                .animateItem(),
+                            shape = MaterialTheme.shapes.large,
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer
+                            )
                         ) {
                             Row(
                                 Modifier.fillMaxWidth().padding(16.dp),
@@ -139,6 +148,7 @@ fun RoutinesScreen(
         val routine = routines.find { it.id == uw.routineId }
         AlertDialog(
             onDismissRequest = { /* bloqueado: el usuario debe elegir */ },
+            shape = MaterialTheme.shapes.large,
             title = { Text("Entreno sin finalizar") },
             text = {
                 Text("Tienes un entreno sin finalizar de \"${routine?.name ?: "rutina"}\". ¿Quieres reanudarlo donde lo dejaste?")
@@ -173,8 +183,9 @@ fun RoutineCard(
     onMove: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
+    ElevatedCard(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        shape = MaterialTheme.shapes.largeIncreased
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(12.dp),
@@ -209,7 +220,7 @@ fun RoutineCard(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CreateRoutineDialog(
     onDismiss: () -> Unit,
@@ -223,6 +234,7 @@ fun CreateRoutineDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.large,
         title = { Text("Nueva Rutina") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -275,7 +287,7 @@ fun CreateRoutineDialog(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PredefinedRoutinesDialog(
     viewModel: RoutinesViewModel,
@@ -288,6 +300,7 @@ fun PredefinedRoutinesDialog(
         val program = showConfirm!!
         AlertDialog(
             onDismissRequest = { showConfirm = null },
+            shape = MaterialTheme.shapes.large,
             title = { Text(program.program) },
             text = {
                 Column {
@@ -316,18 +329,30 @@ fun PredefinedRoutinesDialog(
     } else {
         AlertDialog(
             onDismissRequest = onDismiss,
+            shape = MaterialTheme.shapes.large,
             title = { Text("Cargar rutinas predefinidas") },
             text = {
                 LazyColumn(Modifier.height(400.dp)) {
                     items(programs) { program ->
-                        ListItem(
-                            headlineContent = { Text(program.program) },
-                            supportingContent = {
-                                Text("${program.routines.size} días · ${Labels.method(program.method)}",
-                                    style = MaterialTheme.typography.bodySmall)
-                            },
-                            modifier = Modifier.clickable { showConfirm = program }
-                        )
+                        ElevatedCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                                .clickable { showConfirm = program },
+                            shape = MaterialTheme.shapes.medium
+                        ) {
+                            Row(
+                                Modifier.fillMaxWidth().padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(program.program, style = MaterialTheme.typography.titleSmall)
+                                    Text("${program.routines.size} días · ${Labels.method(program.method)}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
                     }
                 }
             },

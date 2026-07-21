@@ -40,7 +40,7 @@ import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.*
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun HistoryScreen(
     onSettings: () -> Unit,
@@ -70,6 +70,12 @@ fun HistoryScreen(
         topBar = {
             TopAppBar(
                 windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ),
                 title = {
                     Text(when (view) {
                         HistoryView.SUMMARY -> if (selectedExercise != null) "Progreso: ${selectedExercise!!.name}" else "Historial"
@@ -115,8 +121,12 @@ fun HistoryScreen(
                     )
                 } else {
                     Column(Modifier.padding(padding)) {
-                        Card(
-                            Modifier.fillMaxWidth().padding(16.dp).clickable { viewModel.showWorkoutList() }
+                        ElevatedCard(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp).clickable { viewModel.showWorkoutList() },
+                            shape = MaterialTheme.shapes.large,
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer
+                            )
                         ) {
                             Column(Modifier.padding(16.dp)) {
                                 Text("Resumen", style = MaterialTheme.typography.titleMedium)
@@ -160,6 +170,8 @@ fun HistoryScreen(
                     buildList<LocalDate?> {
                         repeat(startDow - 1) { add(null) }
                         for (d in 1..daysInMonth) add(currentMonth.atDay(d))
+                        val remainder = size % 7
+                        if (remainder != 0) repeat(7 - remainder) { add(null) }
                     }
                 }
 
@@ -264,7 +276,11 @@ fun HistoryScreen(
                     // --- Selected day header ---
                     if (selectedDay != null) {
                         item {
-                            HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+                            HorizontalDivider(
+                                Modifier.padding(horizontal = 16.dp),
+                                thickness = 2.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant
+                            )
                             Spacer(Modifier.height(4.dp))
                             Text(
                                 "${selectedDay!!.dayOfMonth} de ${selectedDay!!.month.getDisplayName(TextStyle.FULL, localeES)}",
@@ -277,11 +293,12 @@ fun HistoryScreen(
                     // --- Workout cards for selected day ---
                     if (selectedDay != null) {
                         items(dayWorkouts, key = { it.id }) { workout ->
-                            Card(
-                                Modifier
+                            ElevatedCard(
+                                modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    .clickable { viewModel.selectWorkout(workout) }
+                                    .clickable { viewModel.selectWorkout(workout) },
+                                shape = MaterialTheme.shapes.largeIncreased
                             ) {
                                 Column(Modifier.padding(16.dp)) {
                                     Text(
@@ -335,8 +352,9 @@ fun HistoryScreen(
                         val mg = sets.firstOrNull()?.muscleGroup ?: ""
                         val firstExerciseId = sets.firstOrNull()?.set?.exerciseId ?: 0L
                         item(key = "ex-$exerciseName") {
-                            Card(
+                            ElevatedCard(
                                 Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
+                                shape = MaterialTheme.shapes.large,
                                 colors = CardDefaults.cardColors(
                                     containerColor = MaterialTheme.colorScheme.primaryContainer
                                 )
@@ -359,8 +377,10 @@ fun HistoryScreen(
                         items(sets, key = { "set-${it.set.id}" }) { s ->
                             var showEditDialog by remember { mutableStateOf(false) }
 
-                            Card(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp)
-                                .clickable { showEditDialog = true }
+                            ElevatedCard(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp)
+                                    .clickable { showEditDialog = true },
+                                shape = MaterialTheme.shapes.medium
                             ) {
                                 Row(
                                     Modifier.fillMaxWidth().padding(12.dp),
@@ -453,6 +473,7 @@ fun HistoryScreen(
     if (showDeleteConfirm && selectedWorkout != null) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
+            shape = MaterialTheme.shapes.large,
             title = { Text("¿Eliminar entrenamiento?") },
             text = { Text("Se borrarán todas las series registradas en este entrenamiento.") },
             confirmButton = {
@@ -469,6 +490,7 @@ fun HistoryScreen(
     if (showDeleteConfirm2 && selectedWorkout != null) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm2 = false },
+            shape = MaterialTheme.shapes.large,
             title = { Text("¿Estás seguro?") },
             text = { Text("Esta acción es irreversible. No podrás recuperar este entrenamiento.") },
             confirmButton = {
@@ -493,7 +515,13 @@ fun ExerciseProgressionView(
 ) {
     LazyColumn(modifier.padding(16.dp)) {
         item {
-            Card(Modifier.fillMaxWidth()) {
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                )
+            ) {
                 Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.EmojiEvents, null, tint = Color(0xFFFFC107))
@@ -520,7 +548,10 @@ fun ExerciseProgressionView(
 
             history.reversed().forEach { s ->
                 item {
-                    Card(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                        shape = MaterialTheme.shapes.medium
+                    ) {
                         Row(Modifier.padding(12.dp)) {
                             val label = if (s.set.setType == "bilbo") "Bilbo" else "Trabajo"
                             Text("$label: ${s.set.reps} reps \u00D7 ${String.format("%.1f", s.set.weightKg)} kg" +
@@ -536,6 +567,7 @@ fun ExerciseProgressionView(
 
 // ponytail: inline edit dialogs for history workout detail
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun EditSetDialog(
     set: WorkoutSet,
@@ -549,6 +581,7 @@ fun EditSetDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.large,
         title = { Text("Editar serie") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -605,6 +638,7 @@ fun EditSetDialog(
     )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AddSetDialog(
     onDismiss: () -> Unit,
@@ -617,6 +651,7 @@ fun AddSetDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.large,
         title = { Text("Añadir serie") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -673,6 +708,7 @@ fun AddSetDialog(
     )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AddExerciseToWorkoutDialog(
     exercises: List<Exercise>,
@@ -681,6 +717,7 @@ fun AddExerciseToWorkoutDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.large,
         title = { Text("Añadir ejercicio") },
         text = {
             if (exercises.isEmpty()) {
@@ -688,11 +725,25 @@ fun AddExerciseToWorkoutDialog(
             } else {
                 LazyColumn {
                     items(exercises) { ex ->
-                        ListItem(
-                            headlineContent = { Text(ex.name) },
-                            supportingContent = { Text(Labels.muscleGroup(ex.muscleGroup)) },
-                            modifier = Modifier.clickable { onAdd(ex.id) }
-                        )
+                        ElevatedCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                                .clickable { onAdd(ex.id) },
+                            shape = MaterialTheme.shapes.medium
+                        ) {
+                            Row(
+                                Modifier.fillMaxWidth().padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(ex.name, style = MaterialTheme.typography.titleSmall)
+                                    Text(Labels.muscleGroup(ex.muscleGroup),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
                     }
                 }
             }

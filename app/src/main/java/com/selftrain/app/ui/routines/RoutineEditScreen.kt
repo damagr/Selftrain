@@ -24,7 +24,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.selftrain.app.data.model.Exercise
 import com.selftrain.app.util.Labels
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun RoutineEditScreen(
     routineId: Long,
@@ -46,6 +46,11 @@ fun RoutineEditScreen(
             TopAppBar(
                 windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
                 title = { Text(routine?.name ?: "Editar Rutina") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ),
                 actions = {
                     IconButton(onClick = { viewModel.save(onSaved) }) {
                         Icon(Icons.Default.Check, "Guardar")
@@ -82,11 +87,12 @@ fun RoutineEditScreen(
                     val isFirst = index == 0
                     val isLast = index == exercises.size - 1
 
-                    Card(
-                        Modifier
+                    ElevatedCard(
+                        modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 2.dp)
-                            .animateItem()
+                            .animateItem(),
+                        shape = MaterialTheme.shapes.largeIncreased
                     ) {
                         Row(
                             Modifier.fillMaxWidth().padding(12.dp),
@@ -182,6 +188,7 @@ fun RoutineEditScreen(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
+            shape = MaterialTheme.shapes.large,
             title = { Text("¿Eliminar rutina?") },
             text = { Text("¿Seguro que quieres eliminar \"${routine?.name}\"? Esta acción no se puede deshacer.") },
             confirmButton = {
@@ -199,7 +206,7 @@ fun RoutineEditScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ExercisePickerDialog(
     exercises: List<Exercise>,
@@ -228,6 +235,12 @@ fun ExercisePickerDialog(
                             Icon(Icons.Default.Close, "Cerrar")
                         }
                     },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ),
                     actions = {
                         if (selectedIds.isNotEmpty()) {
                             Text(
@@ -287,19 +300,43 @@ fun ExercisePickerDialog(
                             }
                             items(exs) { ex ->
                                 val isSelected = ex.id in selectedIds
-                                ListItem(
-                                    headlineContent = { Text(ex.name) },
-                                    supportingContent = {
-                                        Text(buildString {
-                                            if (ex.equipment.isNotEmpty()) {
-                                                append(Labels.equipment(ex.equipment))
-                                                append(" · ")
+                                ElevatedCard(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 2.dp)
+                                        .clickable {
+                                            if (singleSelect) {
+                                                selectedIds.clear()
+                                                selectedIds.add(ex.id)
+                                            } else {
+                                                if (isSelected) selectedIds.remove(ex.id)
+                                                else selectedIds.add(ex.id)
                                             }
-                                            append(Labels.category(ex.category))
-                                            if (ex.isBilboEligible) append(" · Bilbo")
-                                        })
-                                    },
-                                    trailingContent = {
+                                        },
+                                    shape = MaterialTheme.shapes.medium,
+                                    colors = if (isSelected) CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                                    ) else CardDefaults.cardColors()
+                                ) {
+                                    Row(
+                                        Modifier.fillMaxWidth().padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(Modifier.weight(1f)) {
+                                            Text(ex.name, style = MaterialTheme.typography.titleSmall)
+                                            Text(
+                                                buildString {
+                                                    if (ex.equipment.isNotEmpty()) {
+                                                        append(Labels.equipment(ex.equipment))
+                                                        append(" · ")
+                                                    }
+                                                    append(Labels.category(ex.category))
+                                                    if (ex.isBilboEligible) append(" · Bilbo")
+                                                },
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
                                         if (singleSelect) {
                                             RadioButton(
                                                 selected = isSelected,
@@ -317,17 +354,8 @@ fun ExercisePickerDialog(
                                                 }
                                             )
                                         }
-                                    },
-                                    modifier = Modifier.clickable {
-                                        if (singleSelect) {
-                                            selectedIds.clear()
-                                            selectedIds.add(ex.id)
-                                        } else {
-                                            if (isSelected) selectedIds.remove(ex.id)
-                                            else selectedIds.add(ex.id)
-                                        }
                                     }
-                                )
+                                }
                             }
                         }
                     }

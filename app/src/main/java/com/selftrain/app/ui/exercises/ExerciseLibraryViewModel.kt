@@ -19,8 +19,16 @@ class ExerciseLibraryViewModel @Inject constructor(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
 
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
     init {
-        viewModelScope.launch { exerciseRepo.seedIfEmpty() }
+        viewModelScope.launch {
+            exerciseRepo.seedIfEmpty()
+            // Wait for Room to emit the initial query result
+            exerciseRepo.exercises.first()
+            _isLoading.value = false
+        }
     }
 
     fun addExercise(name: String, muscleGroup: String, category: String, isBilboEligible: Boolean, equipment: String) {

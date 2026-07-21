@@ -62,6 +62,15 @@ class RoutinesViewModel @Inject constructor(
         }
     }
 
+    fun createChildRoutine(parentId: Long, name: String, onCreated: (Long) -> Unit) {
+        viewModelScope.launch {
+            val children = routineRepo.getAllList().filter { it.parentId == parentId }
+            val nextOrder = children.size
+            val id = routineRepo.insert(Routine(name = name, method = children.firstOrNull()?.method ?: "bilbo", parentId = parentId, order = nextOrder))
+            onCreated(id)
+        }
+    }
+
     fun deleteRoutine(routine: Routine) {
         viewModelScope.launch {
             // ponytail: also delete children if this is a parent

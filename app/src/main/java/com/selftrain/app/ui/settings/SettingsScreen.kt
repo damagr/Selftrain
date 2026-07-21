@@ -17,7 +17,9 @@ import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -102,7 +104,7 @@ class SettingsViewModel @Inject constructor(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
@@ -142,13 +144,27 @@ fun SettingsScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, "Volver")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             )
         }
     ) { padding ->
         Column(Modifier.padding(padding).padding(16.dp).verticalScroll(rememberScrollState())) {
+            // Version at the top right
+            Spacer(Modifier.height(4.dp))
+            Text("SelfTrain v${BuildConfig.VERSION_NAME}",
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.End,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(16.dp))
+
             // Export
-            Card(Modifier.fillMaxWidth()) {
+            ElevatedCard(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                 Column(Modifier.padding(16.dp)) {
                     Text("Exportar datos", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
@@ -156,13 +172,19 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(12.dp))
-                    Button(
-                        onClick = { exportLauncher.launch("selftrain_backup.json") },
-                        enabled = !viewModel.isExporting
-                    ) {
-                        Icon(Icons.Filled.FileDownload, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Exportar backup")
+                    if (viewModel.isExporting) {
+                        ContainedLoadingIndicator(
+                            containerShape = MaterialTheme.shapes.medium,
+                            polygons = LoadingIndicatorDefaults.IndeterminateIndicatorPolygons
+                        )
+                    } else {
+                        Button(
+                            onClick = { exportLauncher.launch("selftrain_backup.json") }
+                        ) {
+                            Icon(Icons.Filled.FileDownload, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Exportar backup")
+                        }
                     }
                 }
             }
@@ -170,7 +192,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
 
             // Import
-            Card(Modifier.fillMaxWidth()) {
+            ElevatedCard(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                 Column(Modifier.padding(16.dp)) {
                     Text("Importar datos", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
@@ -178,13 +200,19 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(12.dp))
-                    OutlinedButton(
-                        onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) },
-                        enabled = !viewModel.isImporting
-                    ) {
-                        Icon(Icons.Filled.FileUpload, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Importar backup")
+                    if (viewModel.isImporting) {
+                        ContainedLoadingIndicator(
+                            containerShape = MaterialTheme.shapes.medium,
+                            polygons = LoadingIndicatorDefaults.IndeterminateIndicatorPolygons
+                        )
+                    } else {
+                        OutlinedButton(
+                            onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) }
+                        ) {
+                            Icon(Icons.Filled.FileUpload, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Importar backup")
+                        }
                     }
                 }
             }
@@ -192,7 +220,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
 
             // Backup folder
-            Card(Modifier.fillMaxWidth()) {
+            ElevatedCard(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                 Column(Modifier.padding(16.dp)) {
                     Text("Carpeta de backups automáticos", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
@@ -223,7 +251,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
 
             // Recover deleted exercises
-            Card(Modifier.fillMaxWidth()) {
+            ElevatedCard(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                 Column(Modifier.padding(16.dp)) {
                     Text("Recuperar ejercicios borrados", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
@@ -247,7 +275,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
 
             // Check for updates
-            Card(Modifier.fillMaxWidth()) {
+            ElevatedCard(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
                 Column(Modifier.padding(16.dp)) {
                     Text("Actualización", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
@@ -263,16 +291,13 @@ fun SettingsScreen(
                 }
             }
 
-            Spacer(Modifier.weight(1f))
-
-            // About
-            Text("SelfTrain v${BuildConfig.VERSION_NAME}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(2.dp))
-            Text("Icono: Freepik — Flaticon",
+            Spacer(Modifier.height(16.dp))
+            Text("Créditos: Freepik \u2014 Flaticon",
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.End,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(16.dp))
         }
     }
 
@@ -280,6 +305,7 @@ fun SettingsScreen(
     showImportConfirm?.let { uri ->
         AlertDialog(
             onDismissRequest = { showImportConfirm = null },
+            shape = MaterialTheme.shapes.large,
             title = { Text("¿Importar datos?") },
             text = { Text("Esto reemplazará todos tus datos actuales con los del archivo de backup. ¿Continuar?") },
             confirmButton = {
@@ -302,17 +328,28 @@ fun SettingsScreen(
     if (showRecoveryDialog) {
         AlertDialog(
             onDismissRequest = { showRecoveryDialog = false },
+            shape = MaterialTheme.shapes.large,
             title = { Text("Ejercicios borrados") },
             text = {
                 if (deletedExercises.isEmpty()) {
                     Text("No hay ejercicios borrados.")
                 } else {
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         deletedExercises.forEach { ex ->
-                            ListItem(
-                                headlineContent = { Text(ex.name) },
-                                supportingContent = { Text(Labels.equipment(ex.equipment)) },
-                                trailingContent = {
+                            ElevatedCard(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = MaterialTheme.shapes.medium
+                            ) {
+                                Row(
+                                    Modifier.fillMaxWidth().padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(ex.name, style = MaterialTheme.typography.titleSmall)
+                                        Text(Labels.equipment(ex.equipment),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
                                     TextButton(onClick = {
                                         viewModel.restoreExercise(ex.id)
                                         context.toast("${ex.name} recuperado")
@@ -320,7 +357,7 @@ fun SettingsScreen(
                                         Text("Recuperar")
                                     }
                                 }
-                            )
+                            }
                         }
                     }
                 }
