@@ -21,10 +21,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.selftrain.app.data.model.Exercise
 import com.selftrain.app.util.Labels
-import com.selftrain.app.ui.SelfTrainFab
-import com.selftrain.app.ui.SelfTrainListItem
-import com.selftrain.app.util.ThemeMode
-import com.selftrain.app.util.rememberThemeMode
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -81,7 +77,7 @@ fun ExerciseLibraryScreen(
             )
         },
         floatingActionButton = {
-            SelfTrainFab(onClick = { showCreateDialog = true }) {
+            FloatingActionButton(onClick = { showCreateDialog = true }) {
                 Icon(Icons.Default.Add, "Añadir ejercicio")
             }
         },
@@ -100,7 +96,7 @@ fun ExerciseLibraryScreen(
                     )
                 }
                 items(exs, key = { it.id }) { ex ->
-                    SelfTrainListItem(
+                    ListItem(
                         headlineContent = { Text(ex.name) },
                         supportingContent = {
                             Text(buildString {
@@ -169,7 +165,6 @@ fun CreateExerciseDialog(
     onDismiss: () -> Unit,
     onCreate: (name: String, muscleGroup: String, category: String, isBilbo: Boolean, equipment: String) -> Unit
 ) {
-    val themeMode by rememberThemeMode()
     var name by remember { mutableStateOf("") }
     val muscleGroups = listOf("pecho", "piernas", "espalda", "hombros", "brazos", "core")
     var selectedMuscle by remember { mutableStateOf(muscleGroups[0]) }
@@ -182,134 +177,106 @@ fun CreateExerciseDialog(
     var selectedEquipment by remember { mutableStateOf(equipments[0]) }
     var equipExpanded by remember { mutableStateOf(false) }
 
-    val formContent = @Composable {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.verticalScroll(rememberScrollState())
-        ) {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Nombre") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // Muscle group
-            ExposedDropdownMenuBox(expanded = muscleExpanded, onExpandedChange = { muscleExpanded = it }) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.fillMaxHeight(0.85f),
+        title = { Text("Nuevo Ejercicio") },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
                 OutlinedTextField(
-                    value = Labels.muscleGroup(selectedMuscle),
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Grupo muscular") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(muscleExpanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nombre") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                ExposedDropdownMenu(expanded = muscleExpanded, onDismissRequest = { muscleExpanded = false }) {
-                    muscleGroups.forEach { mg ->
-                        DropdownMenuItem(
-                            text = { Text(Labels.muscleGroup(mg)) },
-                            onClick = { selectedMuscle = mg; muscleExpanded = false }
-                        )
-                    }
-                }
-            }
 
-            // Category
-            ExposedDropdownMenuBox(expanded = catExpanded, onExpandedChange = { catExpanded = it }) {
-                OutlinedTextField(
-                    value = Labels.category(selectedCategory),
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Categoría") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(catExpanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth()
-                )
-                ExposedDropdownMenu(expanded = catExpanded, onDismissRequest = { catExpanded = false }) {
-                    categories.forEach { cat ->
-                        DropdownMenuItem(
-                            text = { Text(Labels.category(cat)) },
-                            onClick = { selectedCategory = cat; catExpanded = false }
-                        )
-                    }
-                }
-            }
-
-            // Bilbo toggle (only for compound)
-            if (selectedCategory == "compound") {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("¿Aplica método Bilbo?")
-                    Switch(checked = isBilbo, onCheckedChange = { isBilbo = it })
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            // Equipment
-            ExposedDropdownMenuBox(expanded = equipExpanded, onExpandedChange = { equipExpanded = it }) {
-                OutlinedTextField(
-                    value = Labels.equipment(selectedEquipment),
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Equipamiento") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(equipExpanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth()
-                )
-                ExposedDropdownMenu(expanded = equipExpanded, onDismissRequest = { equipExpanded = false }) {
-                    equipments.forEach { eq ->
-                        DropdownMenuItem(
-                            text = { Text(Labels.equipment(eq)) },
-                            onClick = { selectedEquipment = eq; equipExpanded = false }
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    if (themeMode == ThemeMode.MODERN) {
-        ModalBottomSheet(
-            onDismissRequest = onDismiss,
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        ) {
-            Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
-                Text("Nuevo Ejercicio", style = MaterialTheme.typography.headlineSmall)
-                Spacer(Modifier.height(16.dp))
-                formContent()
-                Spacer(Modifier.height(24.dp))
-                Button(
-                    onClick = {
-                        if (name.isNotBlank()) {
-                            onCreate(name.trim(), selectedMuscle, selectedCategory, isBilbo, selectedEquipment)
+                // Muscle group
+                ExposedDropdownMenuBox(expanded = muscleExpanded, onExpandedChange = { muscleExpanded = it }) {
+                    OutlinedTextField(
+                        value = Labels.muscleGroup(selectedMuscle),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Grupo muscular") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(muscleExpanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(expanded = muscleExpanded, onDismissRequest = { muscleExpanded = false }) {
+                        muscleGroups.forEach { mg ->
+                            DropdownMenuItem(
+                                text = { Text(Labels.muscleGroup(mg)) },
+                                onClick = { selectedMuscle = mg; muscleExpanded = false }
+                            )
                         }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = name.isNotBlank()
-                ) {
-                    Text("Añadir")
+                    }
                 }
-                Spacer(Modifier.height(32.dp))
-            }
-        }
-    } else {
-        AlertDialog(
-            onDismissRequest = onDismiss,
-            modifier = Modifier.fillMaxHeight(0.85f),
-            title = { Text("Nuevo Ejercicio") },
-            text = { formContent() },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (name.isNotBlank()) {
-                            onCreate(name.trim(), selectedMuscle, selectedCategory, isBilbo, selectedEquipment)
+
+                // Category
+                ExposedDropdownMenuBox(expanded = catExpanded, onExpandedChange = { catExpanded = it }) {
+                    OutlinedTextField(
+                        value = Labels.category(selectedCategory),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Categoría") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(catExpanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(expanded = catExpanded, onDismissRequest = { catExpanded = false }) {
+                        categories.forEach { cat ->
+                            DropdownMenuItem(
+                                text = { Text(Labels.category(cat)) },
+                                onClick = { selectedCategory = cat; catExpanded = false }
+                            )
                         }
-                    },
-                    enabled = name.isNotBlank()
-                ) {
-                    Text("Añadir")
+                    }
                 }
-            },
-            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
-        )
-    }
+
+                // Bilbo toggle (only for compound)
+                if (selectedCategory == "compound") {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("¿Aplica método Bilbo?")
+                        Switch(checked = isBilbo, onCheckedChange = { isBilbo = it })
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                // Equipment
+                ExposedDropdownMenuBox(expanded = equipExpanded, onExpandedChange = { equipExpanded = it }) {
+                    OutlinedTextField(
+                        value = Labels.equipment(selectedEquipment),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Equipamiento") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(equipExpanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(expanded = equipExpanded, onDismissRequest = { equipExpanded = false }) {
+                        equipments.forEach { eq ->
+                            DropdownMenuItem(
+                                text = { Text(Labels.equipment(eq)) },
+                                onClick = { selectedEquipment = eq; equipExpanded = false }
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (name.isNotBlank()) {
+                        onCreate(name.trim(), selectedMuscle, selectedCategory, isBilbo, selectedEquipment)
+                    }
+                },
+                enabled = name.isNotBlank()
+            ) {
+                Text("Añadir")
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
 }

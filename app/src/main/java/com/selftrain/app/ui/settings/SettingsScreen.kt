@@ -17,7 +17,6 @@ import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -28,11 +27,7 @@ import com.selftrain.app.data.model.Exercise
 import com.selftrain.app.data.repository.ExerciseRepository
 import com.selftrain.app.util.BackupManager
 import com.selftrain.app.util.Labels
-import com.selftrain.app.util.ThemeMode
-import com.selftrain.app.util.rememberThemePreferences
 import com.selftrain.app.BuildConfig
-import com.selftrain.app.ui.SelfTrainCard
-import com.selftrain.app.ui.SelfTrainTopAppBar
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -117,7 +112,6 @@ fun SettingsScreen(
     val context = LocalContext.current
     var showImportConfirm by remember { mutableStateOf<Uri?>(null) }
     var showRecoveryDialog by remember { mutableStateOf(false) }
-    var showRestartNotice by remember { mutableStateOf(false) }
     val deletedExercises by viewModel.deletedExercises.collectAsState()
     val backupFolderDisplay by viewModel.backupFolderDisplay.collectAsState()
 
@@ -141,7 +135,8 @@ fun SettingsScreen(
 
     Scaffold(
         topBar = {
-            SelfTrainTopAppBar(
+            TopAppBar(
+                windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
                 title = { Text("Ajustes") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -153,7 +148,7 @@ fun SettingsScreen(
     ) { padding ->
         Column(Modifier.padding(padding).padding(16.dp).verticalScroll(rememberScrollState())) {
             // Export
-            SelfTrainCard(Modifier.fillMaxWidth()) {
+            Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Text("Exportar datos", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
@@ -175,7 +170,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
 
             // Import
-            SelfTrainCard(Modifier.fillMaxWidth()) {
+            Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Text("Importar datos", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
@@ -197,7 +192,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
 
             // Backup folder
-            SelfTrainCard(Modifier.fillMaxWidth()) {
+            Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Text("Carpeta de backups automáticos", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
@@ -227,40 +222,8 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // Theme toggle
-            val themePrefs = rememberThemePreferences()
-            val currentMode by themePrefs.mode.collectAsState()
-            SelfTrainCard(Modifier.fillMaxWidth()) {
-                Row(
-                    Modifier.fillMaxWidth().padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Interfaz moderna", style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            if (currentMode == ThemeMode.MODERN) "Tema dinámico con colores adaptativos"
-                            else "Activa el diseño renovado con Material You",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = currentMode == ThemeMode.MODERN,
-                        onCheckedChange = {
-                            themePrefs.toggle()
-                            if (currentMode != ThemeMode.MODERN) {
-                                showRestartNotice = true
-                            }
-                        }
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-
             // Recover deleted exercises
-            SelfTrainCard(Modifier.fillMaxWidth()) {
+            Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Text("Recuperar ejercicios borrados", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
@@ -284,7 +247,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
 
             // Check for updates
-            SelfTrainCard(Modifier.fillMaxWidth()) {
+            Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Text("Actualización", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
@@ -365,23 +328,6 @@ fun SettingsScreen(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { showRecoveryDialog = false }) { Text("Cerrar") }
-            }
-        )
-    }
-
-    // Restart notice on MODERN toggle
-    if (showRestartNotice) {
-        AlertDialog(
-            onDismissRequest = { showRestartNotice = false },
-            title = { Text("Modo moderno activado") },
-            text = {
-                Text("Reinicia la aplicación para aplicar todos los cambios visuales correctamente.\n\n" +
-                    "Si no reinicias, algunos elementos pueden no mostrarse con el diseño actualizado.")
-            },
-            confirmButton = {
-                TextButton(onClick = { showRestartNotice = false }) {
-                    Text("Entendido")
-                }
             }
         )
     }

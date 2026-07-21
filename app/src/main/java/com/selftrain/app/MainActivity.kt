@@ -29,9 +29,6 @@ import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.List
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.animation.*
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -148,66 +145,30 @@ fun SelfTrainMain() {
         }
     }
 
-    val themePrefs = com.selftrain.app.util.rememberThemePreferences()
-    val themeMode by themePrefs.mode.collectAsState()
-
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
             if (showBottomBar) {
-                if (themeMode == com.selftrain.app.util.ThemeMode.MODERN) {
-                    NavigationBar(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        tonalElevation = 3.dp
-                    ) {
-                        bottomNavItems.forEach { item ->
-                            val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
-                            NavigationBarItem(
-                                icon = {
-                                    Icon(
-                                        if (selected) item.selectedIcon else item.unselectedIcon,
-                                        contentDescription = item.label
-                                    )
-                                },
-                                label = { Text(item.label) },
-                                selected = selected,
-                                onClick = {
-                                    navController.navigate(item.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                },
-                                colors = NavigationBarItemDefaults.colors(
-                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                                    selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    selectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer
+                NavigationBar {
+                    bottomNavItems.forEach { item ->
+                        val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
+                        NavigationBarItem(
+                            icon = {
+                                Icon(
+                                    if (selected) item.selectedIcon else item.unselectedIcon,
+                                    contentDescription = item.label
                                 )
-                            )
-                        }
-                    }
-                } else {
-                    NavigationBar {
-                        bottomNavItems.forEach { item ->
-                            val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
-                            NavigationBarItem(
-                                icon = {
-                                    Icon(
-                                        if (selected) item.selectedIcon else item.unselectedIcon,
-                                        contentDescription = item.label
-                                    )
-                                },
-                                label = { Text(item.label) },
-                                selected = selected,
-                                onClick = {
-                                    navController.navigate(item.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
+                            },
+                            label = { Text(item.label) },
+                            selected = selected,
+                            onClick = {
+                                navController.navigate(item.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                            )
-                        }
+                            }
+                        )
                     }
                 }
             }
@@ -216,43 +177,7 @@ fun SelfTrainMain() {
         NavHost(
             navController = navController,
             startDestination = "routines",
-            modifier = Modifier.padding(innerPadding),
-            enterTransition = {
-                when (themeMode) {
-                    com.selftrain.app.util.ThemeMode.CLASSIC -> fadeIn(animationSpec = tween(200))
-                    com.selftrain.app.util.ThemeMode.MODERN -> fadeIn(animationSpec = spring(dampingRatio = 0.8f)) + slideInHorizontally(
-                        animationSpec = spring(dampingRatio = 0.8f),
-                        initialOffsetX = { it / 4 }
-                    )
-                }
-            },
-            exitTransition = {
-                when (themeMode) {
-                    com.selftrain.app.util.ThemeMode.CLASSIC -> fadeOut(animationSpec = tween(200))
-                    com.selftrain.app.util.ThemeMode.MODERN -> fadeOut(animationSpec = tween(200)) + slideOutHorizontally(
-                        animationSpec = spring(dampingRatio = 0.8f),
-                        targetOffsetX = { -it / 4 }
-                    )
-                }
-            },
-            popEnterTransition = {
-                when (themeMode) {
-                    com.selftrain.app.util.ThemeMode.CLASSIC -> fadeIn(animationSpec = tween(200))
-                    com.selftrain.app.util.ThemeMode.MODERN -> fadeIn(animationSpec = spring(dampingRatio = 0.8f)) + slideInHorizontally(
-                        animationSpec = spring(dampingRatio = 0.8f),
-                        initialOffsetX = { -it / 4 }
-                    )
-                }
-            },
-            popExitTransition = {
-                when (themeMode) {
-                    com.selftrain.app.util.ThemeMode.CLASSIC -> fadeOut(animationSpec = tween(200))
-                    com.selftrain.app.util.ThemeMode.MODERN -> fadeOut(animationSpec = tween(200)) + slideOutHorizontally(
-                        animationSpec = spring(dampingRatio = 0.8f),
-                        targetOffsetX = { it / 4 }
-                    )
-                }
-            }
+            modifier = Modifier.padding(innerPadding)
         ) {
             composable("routines") {
                 RoutinesScreen(

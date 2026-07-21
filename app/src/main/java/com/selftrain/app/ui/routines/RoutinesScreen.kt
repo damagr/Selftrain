@@ -18,13 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.selftrain.app.data.model.Routine
-import com.selftrain.app.ui.SelfTrainCard
-import com.selftrain.app.ui.SelfTrainFab
-import com.selftrain.app.ui.SelfTrainListItem
-import com.selftrain.app.ui.SelfTrainTopAppBar
 import com.selftrain.app.util.Labels
-import com.selftrain.app.util.ThemeMode
-import com.selftrain.app.util.rememberThemeMode
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,8 +38,9 @@ fun RoutinesScreen(
 
     Scaffold(
         topBar = {
-            SelfTrainTopAppBar(
+            TopAppBar(
                 title = { Text("Mis Rutinas") },
+                windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
                 actions = {
                     TextButton(onClick = { showPredefinedDialog = true }) {
                         Text("Cargar rutinas", style = MaterialTheme.typography.labelSmall)
@@ -57,7 +52,7 @@ fun RoutinesScreen(
             )
         },
         floatingActionButton = {
-            SelfTrainFab(onClick = { showCreateDialog = true }) {
+            FloatingActionButton(onClick = { showCreateDialog = true }) {
                 Icon(Icons.Default.Add, "Nueva rutina")
             }
         }
@@ -80,7 +75,7 @@ fun RoutinesScreen(
                     val (routine, children) = groups[index]
                     if (children.isNotEmpty()) {
                         // Parent — tap to navigate
-                        SelfTrainCard(
+                        Card(
                             Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -103,7 +98,7 @@ fun RoutinesScreen(
                         }
                     } else {
                         // Standalone routine
-                        RoutineSelfTrainCard(
+                        RoutineCard(
                             routine = routine,
                             index = index,
                             total = groups.size,
@@ -169,7 +164,7 @@ fun RoutinesScreen(
 }
 
 @Composable
-fun RoutineSelfTrainCard(
+fun RoutineCard(
     routine: Routine,
     index: Int,
     total: Int,
@@ -178,7 +173,7 @@ fun RoutineSelfTrainCard(
     onMove: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    SelfTrainCard(
+    Card(
         modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
     ) {
         Row(
@@ -220,89 +215,64 @@ fun CreateRoutineDialog(
     onDismiss: () -> Unit,
     onCreate: (name: String, method: String) -> Unit
 ) {
-    val themeMode by rememberThemeMode()
     var name by remember { mutableStateOf("") }
     val methods = listOf("bilbo", "full_body", "ppl")
     val methodLabels = methods.map { Labels.method(it) }
     var selectedMethod by remember { mutableStateOf("bilbo") }
     var expanded by remember { mutableStateOf(false) }
 
-    val formContent = @Composable {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Nombre") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // Method selector dropdown
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = it }
-            ) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Nueva Rutina") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
-                    value = Labels.method(selectedMethod),
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Método") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nombre") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                ExposedDropdownMenu(
+
+                // Method selector dropdown
+                ExposedDropdownMenuBox(
                     expanded = expanded,
-                    onDismissRequest = { expanded = false }
+                    onExpandedChange = { expanded = it }
                 ) {
-                    methods.forEachIndexed { index, method ->
-                        DropdownMenuItem(
-                            text = { Text(methodLabels[index]) },
-                            onClick = {
-                                selectedMethod = method
-                                expanded = false
-                            }
-                        )
+                    OutlinedTextField(
+                        value = Labels.method(selectedMethod),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Método") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        methods.forEachIndexed { index, method ->
+                            DropdownMenuItem(
+                                text = { Text(methodLabels[index]) },
+                                onClick = {
+                                    selectedMethod = method
+                                    expanded = false
+                                }
+                            )
+                        }
                     }
                 }
             }
-        }
-    }
-
-    if (themeMode == ThemeMode.MODERN) {
-        ModalBottomSheet(
-            onDismissRequest = onDismiss,
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        ) {
-            Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
-                Text("Nueva Rutina", style = MaterialTheme.typography.headlineSmall)
-                Spacer(Modifier.height(16.dp))
-                formContent()
-                Spacer(Modifier.height(24.dp))
-                Button(
-                    onClick = { if (name.isNotBlank()) onCreate(name.trim(), selectedMethod) },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = name.isNotBlank()
-                ) {
-                    Text("Crear")
-                }
-                Spacer(Modifier.height(32.dp))
+        },
+        confirmButton = {
+            TextButton(onClick = { if (name.isNotBlank()) onCreate(name.trim(), selectedMethod) }) {
+                Text("Crear")
             }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
         }
-    } else {
-        AlertDialog(
-            onDismissRequest = onDismiss,
-            title = { Text("Nueva Rutina") },
-            text = { formContent() },
-            confirmButton = {
-                TextButton(onClick = { if (name.isNotBlank()) onCreate(name.trim(), selectedMethod) }) {
-                    Text("Crear")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = onDismiss) { Text("Cancelar") }
-            }
-        )
-    }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -344,57 +314,26 @@ fun PredefinedRoutinesDialog(
             }
         )
     } else {
-        val themeMode by rememberThemeMode()
-
-        val listContent = @Composable {
-            LazyColumn {
-                items(programs) { program ->
-                    SelfTrainListItem(
-                        headlineContent = { Text(program.program) },
-                        supportingContent = {
-                            Text("${program.routines.size} días · ${Labels.method(program.method)}",
-                                style = MaterialTheme.typography.bodySmall)
-                        },
-                        modifier = Modifier.clickable { showConfirm = program }
-                    )
-                }
-            }
-        }
-
-        if (themeMode == ThemeMode.MODERN) {
-            ModalBottomSheet(
-                onDismissRequest = onDismiss,
-                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-            ) {
-                Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
-                    Text("Cargar rutinas predefinidas", style = MaterialTheme.typography.headlineSmall)
-                    Spacer(Modifier.height(16.dp))
-                    listContent()
-                    Spacer(Modifier.height(32.dp))
-                }
-            }
-        } else {
-            AlertDialog(
-                onDismissRequest = onDismiss,
-                title = { Text("Cargar rutinas predefinidas") },
-                text = {
-                    LazyColumn(Modifier.height(400.dp)) {
-                        items(programs) { program ->
-                            SelfTrainListItem(
-                                headlineContent = { Text(program.program) },
-                                supportingContent = {
-                                    Text("${program.routines.size} días · ${Labels.method(program.method)}",
-                                        style = MaterialTheme.typography.bodySmall)
-                                },
-                                modifier = Modifier.clickable { showConfirm = program }
-                            )
-                        }
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Cargar rutinas predefinidas") },
+            text = {
+                LazyColumn(Modifier.height(400.dp)) {
+                    items(programs) { program ->
+                        ListItem(
+                            headlineContent = { Text(program.program) },
+                            supportingContent = {
+                                Text("${program.routines.size} días · ${Labels.method(program.method)}",
+                                    style = MaterialTheme.typography.bodySmall)
+                            },
+                            modifier = Modifier.clickable { showConfirm = program }
+                        )
                     }
-                },
-                confirmButton = {
-                    TextButton(onClick = onDismiss) { Text("Cancelar") }
                 }
-            )
-        }
+            },
+            confirmButton = {
+                TextButton(onClick = onDismiss) { Text("Cancelar") }
+            }
+        )
     }
 }
