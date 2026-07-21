@@ -66,13 +66,19 @@ fun ProgramDaysScreen(
                 Text("No hay días en este programa", style = MaterialTheme.typography.bodyLarge)
             }
         } else {
-            LazyColumn(Modifier.padding(padding)) {
+            LazyColumn(
+                Modifier.padding(padding),
+                contentPadding = PaddingValues(top = 8.dp)
+            ) {
                 items(children, key = { it.id }) { child ->
                     ElevatedCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 4.dp),
-                        shape = MaterialTheme.shapes.largeIncreased
+                        shape = MaterialTheme.shapes.largeIncreased,
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
                     ) {
                         Row(
                             Modifier.fillMaxWidth().padding(12.dp),

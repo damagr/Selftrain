@@ -118,7 +118,10 @@ fun ExerciseLibraryScreen(
                                     onClick = {},
                                     onLongClick = { showDeleteConfirm = ex }
                                 ),
-                            shape = MaterialTheme.shapes.medium
+                            shape = MaterialTheme.shapes.medium,
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
                         ) {
                             Row(
                                 Modifier.fillMaxWidth().padding(12.dp),

@@ -134,7 +134,7 @@ fun TrainScreen(
                             Text(
                                 "${currentIndex + 1} de $totalExercises",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
 
@@ -149,7 +149,10 @@ fun TrainScreen(
                     // Jump button
                     OutlinedButton(
                         onClick = { showJumpDialog = true },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     ) {
                         Icon(Icons.Default.List, null, Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
@@ -507,7 +510,12 @@ fun ExerciseSetContent(
         // Logged sets
         if (sets.isNotEmpty()) {
             item {
-                ElevatedCard(shape = MaterialTheme.shapes.medium) {
+                ElevatedCard(
+                    shape = MaterialTheme.shapes.medium,
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
                     Column(Modifier.padding(12.dp)) {
                         Text("Series de hoy:", style = MaterialTheme.typography.labelSmall)
                         Spacer(Modifier.height(4.dp))
@@ -615,7 +623,12 @@ fun ExerciseSetContent(
 
         // Input section with animated transition
         item {
-            ElevatedCard(shape = MaterialTheme.shapes.medium) {
+            ElevatedCard(
+                shape = MaterialTheme.shapes.medium,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
                 Column(Modifier.padding(12.dp)) {
                     if (appliesBilbo) {
                         AnimatedVisibility(

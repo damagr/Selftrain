@@ -48,7 +48,9 @@ fun RoutinesScreen(
                 ),
                 actions = {
                     TextButton(onClick = { showPredefinedDialog = true }) {
-                        Text("Cargar rutinas", style = MaterialTheme.typography.labelSmall)
+                        Text("Cargar rutinas",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
                     IconButton(onClick = onSettings) {
                         Icon(Icons.Default.Settings, "Ajustes")
@@ -75,7 +77,10 @@ fun RoutinesScreen(
                 Text("No hay rutinas aún.\nToca + para crear una.", style = MaterialTheme.typography.bodyLarge)
             }
         } else {
-            LazyColumn(Modifier.padding(padding)) {
+            LazyColumn(
+                Modifier.padding(padding),
+                contentPadding = PaddingValues(top = 8.dp)
+            ) {
                 items(groups.size) { index ->
                     val (routine, children) = groups[index]
                     if (children.isNotEmpty()) {

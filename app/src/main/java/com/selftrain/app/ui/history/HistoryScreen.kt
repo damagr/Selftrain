@@ -149,11 +149,25 @@ fun HistoryScreen(
                         } else {
                             LazyColumn {
                                 items(exercises) { ex ->
-                                    ListItem(
-                                        headlineContent = { Text(ex.name) },
-                                        supportingContent = { Text(Labels.muscleGroup(ex.muscleGroup)) },
-                                        modifier = Modifier.clickable { viewModel.selectExercise(ex) }
-                                    )
+                                    ElevatedCard(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                                            .clickable { viewModel.selectExercise(ex) },
+                                        shape = MaterialTheme.shapes.medium,
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                        )
+                                    ) {
+                                        Row(Modifier.fillMaxWidth().padding(12.dp)) {
+                                            Column(Modifier.weight(1f)) {
+                                                Text(ex.name, style = MaterialTheme.typography.titleSmall)
+                                                Text(Labels.muscleGroup(ex.muscleGroup),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
