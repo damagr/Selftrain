@@ -23,6 +23,8 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.selftrain.app.data.model.Exercise
 import com.selftrain.app.util.Labels
+import com.selftrain.app.util.ThemeMode
+import com.selftrain.app.util.rememberThemeMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -207,37 +209,111 @@ fun ExercisePickerDialog(
     onSelectMany: (List<Exercise>) -> Unit,
     singleSelect: Boolean = false
 ) {
+    val themeMode by rememberThemeMode()
     val selectedIds = remember { mutableStateListOf<Long>() }
     var query by remember { mutableStateOf("") }
     val filtered = if (query.isBlank()) exercises
         else exercises.filter { it.name.contains(query, ignoreCase = true) }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
-        )
-    ) {
-        Scaffold(modifier = Modifier.fillMaxSize(),
-            topBar = {
-                TopAppBar(
-                    title = { Text(if (singleSelect) "Reemplazar Ejercicio" else "Añadir Ejercicios") },
-                    navigationIcon = {
-                        IconButton(onClick = onDismiss) {
-                            Icon(Icons.Default.Close, "Cerrar")
+    val listContent = @Composable {
+        Column(Modifier.fillMaxSize()) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = { Text("Buscar ejercicio...") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                trailingIcon = {
+                    if (query.isNotEmpty()) {
+                        IconButton(onClick = { query = "" }) {
+                            Icon(Icons.Default.Close, "Limpiar")
                         }
-                    },
-                    actions = {
-                        if (selectedIds.isNotEmpty()) {
+                    }
+                }
+            )
+            if (filtered.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Sin resultados")
+                }
+            } else {
+                LazyColumn(Modifier.weight(1f)) {
+                    val grouped = filtered.groupBy { it.muscleGroup }
+                    for ((group, exs) in grouped) {
+                        item {
                             Text(
-                                "${selectedIds.size}",
-                                style = MaterialTheme.typography.bodySmall,
+                                Labels.muscleGroup(group),
+                                style = MaterialTheme.typography.titleSmall,
+                                modifier = Modifier.padding(top = 12.dp, bottom = 4.dp, start = 16.dp),
                                 color = MaterialTheme.colorScheme.primary
                             )
-                            Spacer(Modifier.width(8.dp))
                         }
-                        IconButton(
+                        items(exs) { ex ->
+                            val isSelected = ex.id in selectedIds
+                            ListItem(
+                                headlineContent = { Text(ex.name) },
+                                supportingContent = {
+                                    Text(buildString {
+                                        if (ex.equipment.isNotEmpty()) {
+                                            append(Labels.equipment(ex.equipment))
+                                            append(" · ")
+                                        }
+                                        append(Labels.category(ex.category))
+                                        if (ex.isBilboEligible) append(" · Bilbo")
+                                    })
+                                },
+                                trailingContent = {
+                                    if (singleSelect) {
+                                        RadioButton(
+                                            selected = isSelected,
+                                            onClick = {
+                                                selectedIds.clear()
+                                                selectedIds.add(ex.id)
+                                            }
+                                        )
+                                    } else {
+                                        Checkbox(
+                                            checked = isSelected,
+                                            onCheckedChange = {
+                                                if (isSelected) selectedIds.remove(ex.id)
+                                                else selectedIds.add(ex.id)
+                                            }
+                                        )
+                                    }
+                                },
+                                modifier = Modifier.clickable {
+                                    if (singleSelect) {
+                                        selectedIds.clear()
+                                        selectedIds.add(ex.id)
+                                    } else {
+                                        if (isSelected) selectedIds.remove(ex.id)
+                                        else selectedIds.add(ex.id)
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (themeMode == ThemeMode.MODERN) {
+        ModalBottomSheet(
+            onDismissRequest = onDismiss,
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ) {
+            Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        if (singleSelect) "Reemplazar Ejercicio" else "Añadir Ejercicios",
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                    if (selectedIds.isNotEmpty()) {
+                        TextButton(
                             onClick = {
                                 val selected = if (singleSelect) {
                                     exercises.filter { it.id in selectedIds }
@@ -245,89 +321,135 @@ fun ExercisePickerDialog(
                                     filtered.filter { it.id in selectedIds }
                                 }
                                 if (selected.isNotEmpty()) onSelectMany(selected)
-                            },
-                            enabled = selectedIds.isNotEmpty()
-                        ) {
-                            Icon(Icons.Default.Check, "Aceptar")
-                        }
-                    }
-                )
-            }
-        ) { padding ->
-            Column(Modifier.padding(padding).fillMaxSize()) {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    placeholder = { Text("Buscar ejercicio...") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                    trailingIcon = {
-                        if (query.isNotEmpty()) {
-                            IconButton(onClick = { query = "" }) {
-                                Icon(Icons.Default.Close, "Limpiar")
                             }
+                        ) {
+                            Text("Aceptar (${selectedIds.size})")
                         }
                     }
-                )
-                if (filtered.isEmpty()) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Sin resultados")
-                    }
-                } else {
-                    LazyColumn(Modifier.weight(1f)) {
-                        val grouped = filtered.groupBy { it.muscleGroup }
-                        for ((group, exs) in grouped) {
-                            item {
+                }
+                listContent()
+                Spacer(Modifier.height(32.dp))
+            }
+        }
+    } else {
+        Dialog(
+            onDismissRequest = onDismiss,
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false
+            )
+        ) {
+            Scaffold(modifier = Modifier.fillMaxSize(),
+                topBar = {
+                    TopAppBar(
+                        title = { Text(if (singleSelect) "Reemplazar Ejercicio" else "Añadir Ejercicios") },
+                        windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
+                        navigationIcon = {
+                            IconButton(onClick = onDismiss) {
+                                Icon(Icons.Default.Close, "Cerrar")
+                            }
+                        },
+                        actions = {
+                            if (selectedIds.isNotEmpty()) {
                                 Text(
-                                    Labels.muscleGroup(group),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp, start = 16.dp),
+                                    "${selectedIds.size}",
+                                    style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.primary
                                 )
+                                Spacer(Modifier.width(8.dp))
                             }
-                            items(exs) { ex ->
-                                val isSelected = ex.id in selectedIds
-                                ListItem(
-                                    headlineContent = { Text(ex.name) },
-                                    supportingContent = {
-                                        Text(buildString {
-                                            if (ex.equipment.isNotEmpty()) {
-                                                append(Labels.equipment(ex.equipment))
-                                                append(" · ")
-                                            }
-                                            append(Labels.category(ex.category))
-                                            if (ex.isBilboEligible) append(" · Bilbo")
-                                        })
-                                    },
-                                    trailingContent = {
-                                        if (singleSelect) {
-                                            RadioButton(
-                                                selected = isSelected,
-                                                onClick = {
-                                                    selectedIds.clear()
-                                                    selectedIds.add(ex.id)
-                                                }
-                                            )
-                                        } else {
-                                            Checkbox(
-                                                checked = isSelected,
-                                                onCheckedChange = {
-                                                    if (isSelected) selectedIds.remove(ex.id)
-                                                    else selectedIds.add(ex.id)
-                                                }
-                                            )
-                                        }
-                                    },
-                                    modifier = Modifier.clickable {
-                                        if (singleSelect) {
-                                            selectedIds.clear()
-                                            selectedIds.add(ex.id)
-                                        } else {
-                                            if (isSelected) selectedIds.remove(ex.id)
-                                            else selectedIds.add(ex.id)
-                                        }
+                            IconButton(
+                                onClick = {
+                                    val selected = if (singleSelect) {
+                                        exercises.filter { it.id in selectedIds }
+                                    } else {
+                                        filtered.filter { it.id in selectedIds }
                                     }
-                                )
+                                    if (selected.isNotEmpty()) onSelectMany(selected)
+                                },
+                                enabled = selectedIds.isNotEmpty()
+                            ) {
+                                Icon(Icons.Default.Check, "Aceptar")
+                            }
+                        }
+                    )
+                }
+            ) { padding ->
+                Column(Modifier.padding(padding).fillMaxSize()) {
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        placeholder = { Text("Buscar ejercicio...") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                        trailingIcon = {
+                            if (query.isNotEmpty()) {
+                                IconButton(onClick = { query = "" }) {
+                                    Icon(Icons.Default.Close, "Limpiar")
+                                }
+                            }
+                        }
+                    )
+                    if (filtered.isEmpty()) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("Sin resultados")
+                        }
+                    } else {
+                        LazyColumn(Modifier.weight(1f)) {
+                            val grouped = filtered.groupBy { it.muscleGroup }
+                            for ((group, exs) in grouped) {
+                                item {
+                                    Text(
+                                        Labels.muscleGroup(group),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        modifier = Modifier.padding(top = 12.dp, bottom = 4.dp, start = 16.dp),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                items(exs) { ex ->
+                                    val isSelected = ex.id in selectedIds
+                                    ListItem(
+                                        headlineContent = { Text(ex.name) },
+                                        supportingContent = {
+                                            Text(buildString {
+                                                if (ex.equipment.isNotEmpty()) {
+                                                    append(Labels.equipment(ex.equipment))
+                                                    append(" · ")
+                                                }
+                                                append(Labels.category(ex.category))
+                                                if (ex.isBilboEligible) append(" · Bilbo")
+                                            })
+                                        },
+                                        trailingContent = {
+                                            if (singleSelect) {
+                                                RadioButton(
+                                                    selected = isSelected,
+                                                    onClick = {
+                                                        selectedIds.clear()
+                                                        selectedIds.add(ex.id)
+                                                    }
+                                                )
+                                            } else {
+                                                Checkbox(
+                                                    checked = isSelected,
+                                                    onCheckedChange = {
+                                                        if (isSelected) selectedIds.remove(ex.id)
+                                                        else selectedIds.add(ex.id)
+                                                    }
+                                                )
+                                            }
+                                        },
+                                        modifier = Modifier.clickable {
+                                            if (singleSelect) {
+                                                selectedIds.clear()
+                                                selectedIds.add(ex.id)
+                                            } else {
+                                                if (isSelected) selectedIds.remove(ex.id)
+                                                else selectedIds.add(ex.id)
+                                            }
+                                        }
+                                    )
+                                }
                             }
                         }
                     }

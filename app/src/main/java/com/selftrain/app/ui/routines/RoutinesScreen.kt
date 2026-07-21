@@ -341,26 +341,57 @@ fun PredefinedRoutinesDialog(
             }
         )
     } else {
-        AlertDialog(
-            onDismissRequest = onDismiss,
-            title = { Text("Cargar rutinas predefinidas") },
-            text = {
-                LazyColumn(Modifier.height(400.dp)) {
-                    items(programs) { program ->
-                        ListItem(
-                            headlineContent = { Text(program.program) },
-                            supportingContent = {
-                                Text("${program.routines.size} días · ${Labels.method(program.method)}",
-                                    style = MaterialTheme.typography.bodySmall)
-                            },
-                            modifier = Modifier.clickable { showConfirm = program }
-                        )
-                    }
+        val themeMode by rememberThemeMode()
+
+        val listContent = @Composable {
+            LazyColumn {
+                items(programs) { program ->
+                    ListItem(
+                        headlineContent = { Text(program.program) },
+                        supportingContent = {
+                            Text("${program.routines.size} días · ${Labels.method(program.method)}",
+                                style = MaterialTheme.typography.bodySmall)
+                        },
+                        modifier = Modifier.clickable { showConfirm = program }
+                    )
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = onDismiss) { Text("Cancelar") }
             }
-        )
+        }
+
+        if (themeMode == ThemeMode.MODERN) {
+            ModalBottomSheet(
+                onDismissRequest = onDismiss,
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            ) {
+                Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+                    Text("Cargar rutinas predefinidas", style = MaterialTheme.typography.headlineSmall)
+                    Spacer(Modifier.height(16.dp))
+                    listContent()
+                    Spacer(Modifier.height(32.dp))
+                }
+            }
+        } else {
+            AlertDialog(
+                onDismissRequest = onDismiss,
+                title = { Text("Cargar rutinas predefinidas") },
+                text = {
+                    LazyColumn(Modifier.height(400.dp)) {
+                        items(programs) { program ->
+                            ListItem(
+                                headlineContent = { Text(program.program) },
+                                supportingContent = {
+                                    Text("${program.routines.size} días · ${Labels.method(program.method)}",
+                                        style = MaterialTheme.typography.bodySmall)
+                                },
+                                modifier = Modifier.clickable { showConfirm = program }
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = onDismiss) { Text("Cancelar") }
+                }
+            )
+        }
     }
 }

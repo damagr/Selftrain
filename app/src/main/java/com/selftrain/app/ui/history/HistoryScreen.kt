@@ -32,6 +32,8 @@ import com.selftrain.app.data.model.Workout
 import com.selftrain.app.data.db.SetWithExercise
 import com.selftrain.app.data.model.WorkoutSet
 import com.selftrain.app.util.Labels
+import com.selftrain.app.util.ThemeMode
+import com.selftrain.app.util.rememberThemeMode
 import java.text.SimpleDateFormat
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -536,170 +538,249 @@ fun ExerciseProgressionView(
 
 // ponytail: inline edit dialogs for history workout detail
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditSetDialog(
     set: WorkoutSet,
     onDismiss: () -> Unit,
     onSave: (reps: Int, weight: Float, rir: Int) -> Unit
 ) {
+    val themeMode by rememberThemeMode()
     var reps by remember { mutableStateOf(set.reps.toString()) }
     var weight by remember { mutableStateOf(String.format("%.1f", set.weightKg)) }
     var rir by remember { mutableStateOf(if (set.rir > 0) set.rir.toString() else "") }
     var setType by remember { mutableStateOf(set.setType) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Editar serie") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = setType == "bilbo",
-                        onClick = { setType = "bilbo" },
-                        label = { Text("Bilbo") }
-                    )
-                    FilterChip(
-                        selected = setType == "work",
-                        onClick = { setType = "work" },
-                        label = { Text("Trabajo") }
-                    )
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = reps,
-                        onValueChange = { reps = it.filter { c -> c.isDigit() } },
-                        label = { Text("Reps") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = weight,
-                        onValueChange = { weight = it.filter { c -> c.isDigit() || c == '.' } },
-                        label = { Text("Peso (kg)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                }
+    val formContent = @Composable {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = setType == "bilbo",
+                    onClick = { setType = "bilbo" },
+                    label = { Text("Bilbo") }
+                )
+                FilterChip(
+                    selected = setType == "work",
+                    onClick = { setType = "work" },
+                    label = { Text("Trabajo") }
+                )
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
-                    value = rir,
-                    onValueChange = { rir = it.filter { c -> c.isDigit() } },
-                    label = { Text("RIR") },
+                    value = reps,
+                    onValueChange = { reps = it.filter { c -> c.isDigit() } },
+                    label = { Text("Reps") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = weight,
+                    onValueChange = { weight = it.filter { c -> c.isDigit() || c == '.' } },
+                    label = { Text("Peso (kg)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.weight(1f),
                     singleLine = true
                 )
             }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                val r = reps.toIntOrNull() ?: return@TextButton
-                val w = weight.toFloatOrNull() ?: return@TextButton
-                val ri = rir.toIntOrNull() ?: 0
-                onSave(r, w, ri)
-            }) { Text("Guardar") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
+            OutlinedTextField(
+                value = rir,
+                onValueChange = { rir = it.filter { c -> c.isDigit() } },
+                label = { Text("RIR") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true
+            )
         }
-    )
+    }
+
+    if (themeMode == ThemeMode.MODERN) {
+        ModalBottomSheet(
+            onDismissRequest = onDismiss,
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ) {
+            Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+                Text("Editar serie", style = MaterialTheme.typography.headlineSmall)
+                Spacer(Modifier.height(16.dp))
+                formContent()
+                Spacer(Modifier.height(24.dp))
+                Button(
+                    onClick = {
+                        val r = reps.toIntOrNull() ?: return@Button
+                        val w = weight.toFloatOrNull() ?: return@Button
+                        val ri = rir.toIntOrNull() ?: 0
+                        onSave(r, w, ri)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Guardar")
+                }
+                Spacer(Modifier.height(32.dp))
+            }
+        }
+    } else {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Editar serie") },
+            text = { formContent() },
+            confirmButton = {
+                TextButton(onClick = {
+                    val r = reps.toIntOrNull() ?: return@TextButton
+                    val w = weight.toFloatOrNull() ?: return@TextButton
+                    val ri = rir.toIntOrNull() ?: 0
+                    onSave(r, w, ri)
+                }) { Text("Guardar") }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) { Text("Cancelar") }
+            }
+        )
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddSetDialog(
     onDismiss: () -> Unit,
     onAdd: (setType: String, reps: Int, weight: Float, rir: Int) -> Unit
 ) {
+    val themeMode by rememberThemeMode()
     var reps by remember { mutableStateOf("") }
     var weight by remember { mutableStateOf("") }
     var rir by remember { mutableStateOf("") }
     var setType by remember { mutableStateOf("work") }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Añadir serie") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = setType == "bilbo",
-                        onClick = { setType = "bilbo" },
-                        label = { Text("Bilbo") }
-                    )
-                    FilterChip(
-                        selected = setType == "work",
-                        onClick = { setType = "work" },
-                        label = { Text("Trabajo") }
-                    )
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = reps,
-                        onValueChange = { reps = it.filter { c -> c.isDigit() } },
-                        label = { Text("Reps") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = weight,
-                        onValueChange = { weight = it.filter { c -> c.isDigit() || c == '.' } },
-                        label = { Text("Peso (kg)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                }
+    val formContent = @Composable {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = setType == "bilbo",
+                    onClick = { setType = "bilbo" },
+                    label = { Text("Bilbo") }
+                )
+                FilterChip(
+                    selected = setType == "work",
+                    onClick = { setType = "work" },
+                    label = { Text("Trabajo") }
+                )
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
-                    value = rir,
-                    onValueChange = { rir = it.filter { c -> c.isDigit() } },
-                    label = { Text("RIR") },
+                    value = reps,
+                    onValueChange = { reps = it.filter { c -> c.isDigit() } },
+                    label = { Text("Reps") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = weight,
+                    onValueChange = { weight = it.filter { c -> c.isDigit() || c == '.' } },
+                    label = { Text("Peso (kg)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.weight(1f),
                     singleLine = true
                 )
             }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                val r = reps.toIntOrNull() ?: return@TextButton
-                val w = weight.toFloatOrNull() ?: return@TextButton
-                val ri = rir.toIntOrNull() ?: 0
-                onAdd(setType, r, w, ri)
-            }) { Text("Añadir") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
+            OutlinedTextField(
+                value = rir,
+                onValueChange = { rir = it.filter { c -> c.isDigit() } },
+                label = { Text("RIR") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true
+            )
         }
-    )
+    }
+
+    if (themeMode == ThemeMode.MODERN) {
+        ModalBottomSheet(
+            onDismissRequest = onDismiss,
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ) {
+            Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+                Text("Añadir serie", style = MaterialTheme.typography.headlineSmall)
+                Spacer(Modifier.height(16.dp))
+                formContent()
+                Spacer(Modifier.height(24.dp))
+                Button(
+                    onClick = {
+                        val r = reps.toIntOrNull() ?: return@Button
+                        val w = weight.toFloatOrNull() ?: return@Button
+                        val ri = rir.toIntOrNull() ?: 0
+                        onAdd(setType, r, w, ri)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Añadir")
+                }
+                Spacer(Modifier.height(32.dp))
+            }
+        }
+    } else {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Añadir serie") },
+            text = { formContent() },
+            confirmButton = {
+                TextButton(onClick = {
+                    val r = reps.toIntOrNull() ?: return@TextButton
+                    val w = weight.toFloatOrNull() ?: return@TextButton
+                    val ri = rir.toIntOrNull() ?: 0
+                    onAdd(setType, r, w, ri)
+                }) { Text("Añadir") }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) { Text("Cancelar") }
+            }
+        )
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddExerciseToWorkoutDialog(
     exercises: List<Exercise>,
     onDismiss: () -> Unit,
     onAdd: (Long) -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Añadir ejercicio") },
-        text = {
-            if (exercises.isEmpty()) {
-                Text("Todos los ejercicios ya están en este entrenamiento.")
-            } else {
-                LazyColumn {
-                    items(exercises) { ex ->
-                        ListItem(
-                            headlineContent = { Text(ex.name) },
-                            supportingContent = { Text(Labels.muscleGroup(ex.muscleGroup)) },
-                            modifier = Modifier.clickable { onAdd(ex.id) }
-                        )
-                    }
+    val themeMode by rememberThemeMode()
+
+    val listContent = @Composable {
+        if (exercises.isEmpty()) {
+            Text("Todos los ejercicios ya están en este entrenamiento.")
+        } else {
+            LazyColumn {
+                items(exercises) { ex ->
+                    ListItem(
+                        headlineContent = { Text(ex.name) },
+                        supportingContent = { Text(Labels.muscleGroup(ex.muscleGroup)) },
+                        modifier = Modifier.clickable { onAdd(ex.id) }
+                    )
                 }
             }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
         }
-    )
+    }
+
+    if (themeMode == ThemeMode.MODERN) {
+        ModalBottomSheet(
+            onDismissRequest = onDismiss,
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ) {
+            Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+                Text("Añadir ejercicio", style = MaterialTheme.typography.headlineSmall)
+                Spacer(Modifier.height(16.dp))
+                listContent()
+                Spacer(Modifier.height(32.dp))
+            }
+        }
+    } else {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Añadir ejercicio") },
+            text = { listContent() },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = onDismiss) { Text("Cancelar") }
+            }
+        )
+    }
 }

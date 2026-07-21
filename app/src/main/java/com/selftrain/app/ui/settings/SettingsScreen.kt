@@ -115,6 +115,7 @@ fun SettingsScreen(
     val context = LocalContext.current
     var showImportConfirm by remember { mutableStateOf<Uri?>(null) }
     var showRecoveryDialog by remember { mutableStateOf(false) }
+    var showRestartNotice by remember { mutableStateOf(false) }
     val deletedExercises by viewModel.deletedExercises.collectAsState()
     val backupFolderDisplay by viewModel.backupFolderDisplay.collectAsState()
 
@@ -245,7 +246,12 @@ fun SettingsScreen(
                     }
                     Switch(
                         checked = currentMode == ThemeMode.MODERN,
-                        onCheckedChange = { themePrefs.toggle() }
+                        onCheckedChange = {
+                            themePrefs.toggle()
+                            if (currentMode != ThemeMode.MODERN) {
+                                showRestartNotice = true
+                            }
+                        }
                     )
                 }
             }
@@ -358,6 +364,23 @@ fun SettingsScreen(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { showRecoveryDialog = false }) { Text("Cerrar") }
+            }
+        )
+    }
+
+    // Restart notice on MODERN toggle
+    if (showRestartNotice) {
+        AlertDialog(
+            onDismissRequest = { showRestartNotice = false },
+            title = { Text("Modo moderno activado") },
+            text = {
+                Text("Reinicia la aplicación para aplicar todos los cambios visuales correctamente.\n\n" +
+                    "Si no reinicias, algunos elementos pueden no mostrarse con el diseño actualizado.")
+            },
+            confirmButton = {
+                TextButton(onClick = { showRestartNotice = false }) {
+                    Text("Entendido")
+                }
             }
         )
     }
