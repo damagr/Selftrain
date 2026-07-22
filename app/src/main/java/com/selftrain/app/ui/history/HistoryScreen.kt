@@ -71,10 +71,10 @@ fun HistoryScreen(
             TopAppBar(
                 windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
                 ),
                 title = {
                     Text(when (view) {
@@ -248,7 +248,7 @@ fun HistoryScreen(
                                                     MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape
                                                 )
                                                 hasWorkout -> Modifier.background(
-                                                    MaterialTheme.colorScheme.primaryContainer, CircleShape
+                                                    MaterialTheme.colorScheme.surfaceVariant, CircleShape
                                                 )
                                                 else -> Modifier
                                             }
@@ -272,7 +272,7 @@ fun HistoryScreen(
                                                     style = MaterialTheme.typography.bodyMedium,
                                                     fontWeight = if (hasWorkout) FontWeight.Bold else FontWeight.Normal,
                                                     color = when {
-                                                        hasWorkout -> MaterialTheme.colorScheme.onPrimaryContainer
+                                                        hasWorkout -> MaterialTheme.colorScheme.primary
                                                         isToday -> MaterialTheme.colorScheme.primary
                                                         else -> MaterialTheme.colorScheme.onSurfaceVariant
                                                     }
@@ -370,14 +370,14 @@ fun HistoryScreen(
                                 Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
                                 shape = MaterialTheme.shapes.large,
                                 colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                                    containerColor = MaterialTheme.colorScheme.surface
                                 )
                             ) {
                                 Column(Modifier.padding(12.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(Icons.Default.FitnessCenter, null,
                                             Modifier.size(20.dp),
-                                            tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                                            tint = MaterialTheme.colorScheme.onSurface)
                                         Spacer(Modifier.width(8.dp))
                                         Text(exerciseName, style = MaterialTheme.typography.titleMedium)
                                     }

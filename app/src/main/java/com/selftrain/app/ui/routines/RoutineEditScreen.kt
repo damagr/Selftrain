@@ -51,9 +51,9 @@ fun RoutineEditScreen(
                 windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
                 title = { Text(routine?.name ?: "Editar Rutina") },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
                 ),
                 actions = {
                     IconButton(onClick = { viewModel.save(onSaved) }) {
@@ -131,7 +131,7 @@ fun RoutineEditScreen(
                                 )
                                 if (ex.isBilboEligible) {
                                     Text("Bilbo", style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary)
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
 
@@ -240,18 +240,18 @@ fun ExercisePickerDialog(
                             Icon(Icons.Default.Close, "Cerrar")
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    ),
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                ),
                     actions = {
                         if (selectedIds.isNotEmpty()) {
                             Text(
                                 "${selectedIds.size}",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(Modifier.width(8.dp))
                         }
@@ -300,7 +300,7 @@ fun ExercisePickerDialog(
                                     Labels.muscleGroup(group),
                                     style = MaterialTheme.typography.titleSmall,
                                     modifier = Modifier.padding(top = 12.dp, bottom = 4.dp, start = 16.dp),
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                             items(exs) { ex ->

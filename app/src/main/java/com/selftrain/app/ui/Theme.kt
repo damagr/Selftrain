@@ -1,12 +1,9 @@
 package com.selftrain.app.ui
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -178,54 +175,42 @@ private val AppTypography = Typography(
 )
 
 /*
- * Fallback colors when dynamic color (Material You) is unavailable:
- * Android <12 or user disabled it.
- * Green replaced with pastel blue for a calmer, fitness-friendly palette.
+ * High-energy dark palette for Selftrain.
+ *
+ *   background  #0B0B0F — near-black foundation
+ *   surface     #17171D — dark card/sheet
+ *   primary     #D4FF3D — lime accent, used ONLY on key interactive elements
+ *                         (CTA buttons, active progress, selected tab)
+ *   secondary   #FF4B4B — red for alerts / high-intensity states
+ *
+ * No Material You dynamic color. This palette is fixed.
+ * Default is always dark — no light scheme.
  */
-private val LightFallback = lightColorScheme(
-    primary = Color(0xFF64B5F6),
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFFBBDEFB),
-    onPrimaryContainer = Color(0xFF003258),
-    secondary = Color(0xFF1565C0),
-    onSecondary = Color.White,
-    secondaryContainer = Color(0xFFBBDEFB),
-    onSecondaryContainer = Color(0xFF001D36),
-    background = Color(0xFFF5F5F5),
-    onBackground = Color(0xFF1C1B1F),
-    surface = Color.White,
-    onSurface = Color(0xFF1C1B1F),
-    surfaceVariant = Color(0xFFE7E0EC),
-    onSurfaceVariant = Color(0xFF49454F),
-    error = Color(0xFFC62828),
-    onError = Color.White,
-    errorContainer = Color(0xFFF9DEDC),
-    onErrorContainer = Color(0xFF410E0B),
-    outline = Color(0xFF79747E),
-    outlineVariant = Color(0xFFCAC4D0),
-)
-
-private val DarkFallback = darkColorScheme(
-    primary = Color(0xFF64B5F6),
-    onPrimary = Color(0xFF003258),
-    primaryContainer = Color(0xFF004881),
-    onPrimaryContainer = Color(0xFFBBDEFB),
-    secondary = Color(0xFF42A5F5),
-    onSecondary = Color(0xFF001D36),
-    secondaryContainer = Color(0xFF003258),
-    onSecondaryContainer = Color(0xFFBBDEFB),
-    background = Color(0xFF121212),
-    onBackground = Color(0xFFE6E1E5),
-    surface = Color(0xFF1E1E1E),
-    onSurface = Color(0xFFE6E1E5),
-    surfaceVariant = Color(0xFF49454F),
-    onSurfaceVariant = Color(0xFFCAC4D0),
-    error = Color(0xFFEF5350),
-    onError = Color(0xFF601410),
-    errorContainer = Color(0xFF8C1D18),
-    onErrorContainer = Color(0xFFF9DEDC),
-    outline = Color(0xFF938F99),
-    outlineVariant = Color(0xFF49454F),
+private val FitnessDarkColorScheme = darkColorScheme(
+    primary = Color(0xFFD4FF3D),
+    onPrimary = Color(0xFF0B0B0F),
+    primaryContainer = Color(0xFF1A2A00),
+    onPrimaryContainer = Color(0xFFD4FF3D),
+    secondary = Color(0xFFD4FF3D),
+    onSecondary = Color(0xFF0B0B0F),
+    secondaryContainer = Color(0xFF1A2A00),
+    onSecondaryContainer = Color(0xFFD4FF3D),
+    background = Color(0xFF0B0B0F),
+    onBackground = Color(0xFFF5F5F5),
+    surface = Color(0xFF17171D),
+    onSurface = Color(0xFFF5F5F5),
+    surfaceVariant = Color(0xFF1E1E28),
+    onSurfaceVariant = Color(0xFFB0B0B0),
+    error = Color(0xFFD4FF3D),
+    onError = Color(0xFF0B0B0F),
+    errorContainer = Color(0xFF1A2A00),
+    onErrorContainer = Color(0xFFD4FF3D),
+    outline = Color(0xFF3D3D45),
+    outlineVariant = Color(0xFF2A2A34),
+    inverseSurface = Color(0xFFF5F5F5),
+    inverseOnSurface = Color(0xFF0B0B0F),
+    inversePrimary = Color(0xFF1A2A00),
+    surfaceTint = Color(0xFFD4FF3D),
 )
 
 private val AppShapes = Shapes(
@@ -242,30 +227,10 @@ private val AppShapes = Shapes(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SelfTrainTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val context = LocalContext.current
-    val dynamicColor = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-    val colorScheme = when {
-        dynamicColor && darkTheme -> dynamicDarkColorScheme(context)
-        dynamicColor && !darkTheme -> dynamicLightColorScheme(context)
-        darkTheme -> DarkFallback
-        else -> expressiveLightColorScheme().copy(
-            primary = LightFallback.primary,
-            onPrimary = LightFallback.onPrimary,
-            primaryContainer = LightFallback.primaryContainer,
-            onPrimaryContainer = LightFallback.onPrimaryContainer,
-            secondary = LightFallback.secondary,
-            onSecondary = LightFallback.onSecondary,
-            secondaryContainer = LightFallback.secondaryContainer,
-            onSecondaryContainer = LightFallback.onSecondaryContainer,
-            error = LightFallback.error,
-        )
-    }
-
     MaterialExpressiveTheme(
-        colorScheme = colorScheme,
+        colorScheme = FitnessDarkColorScheme,
         typography = AppTypography,
         shapes = AppShapes,
         motionScheme = MotionScheme.expressive()

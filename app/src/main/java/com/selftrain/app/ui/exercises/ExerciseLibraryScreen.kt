@@ -57,9 +57,9 @@ fun ExerciseLibraryScreen(
                     titleContentColor = MaterialTheme.colorScheme.onErrorContainer,
                     actionIconContentColor = MaterialTheme.colorScheme.onErrorContainer
                 ) else TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
                 ),
                 title = {
                     Column {
@@ -109,7 +109,7 @@ fun ExerciseLibraryScreen(
                         Text(
                             Labels.muscleGroup(group),
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         )
                     }

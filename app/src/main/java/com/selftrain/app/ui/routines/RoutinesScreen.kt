@@ -42,9 +42,9 @@ fun RoutinesScreen(
                 title = { Text("Mis Rutinas") },
                 windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
                 ),
                 actions = {
                     TextButton(onClick = { showPredefinedDialog = true }) {

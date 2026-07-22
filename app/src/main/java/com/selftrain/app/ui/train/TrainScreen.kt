@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import kotlinx.coroutines.delay
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -25,7 +26,7 @@ import com.selftrain.app.util.Labels
 import com.selftrain.app.util.RestTimerService
 import com.selftrain.app.util.getExerciseGifUrl
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun TrainScreen(
     routineId: Long,
@@ -90,73 +91,77 @@ fun TrainScreen(
             )
         }
     ) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize()) {
+        LazyColumn(
+            Modifier.padding(padding).fillMaxSize().imeNestedScroll().imePadding()
+        ) {
             // Navigation header
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                shape = MaterialTheme.shapes.large,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-            ) {
-                Column(Modifier.padding(12.dp)) {
-                    // Exercise nav bar
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(
-                            onClick = { viewModel.setCurrentExercise(currentIndex - 1) },
-                            enabled = currentIndex > 0
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                    shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+                        // Exercise nav bar
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.ChevronLeft, "Anterior")
-                        }
+                            IconButton(
+                                onClick = { viewModel.setCurrentExercise(currentIndex - 1) },
+                                enabled = currentIndex > 0
+                            ) {
+                                Icon(Icons.Default.ChevronLeft, "Anterior")
+                            }
 
-                        // Exercise name + info button + position
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    currentEx?.exercise?.name ?: "",
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                if (currentEx?.exercise?.name?.let { getExerciseGifUrl(it) } != null) {
-                                    IconButton(
-                                        onClick = { showGifDialog = true },
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Info,
-                                            contentDescription = "Ver demostración",
-                                            modifier = Modifier.size(18.dp)
-                                        )
+                            // Exercise name + info button + position
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        currentEx?.exercise?.name ?: "",
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                    if (currentEx?.exercise?.name?.let { getExerciseGifUrl(it) } != null) {
+                                        IconButton(
+                                            onClick = { showGifDialog = true },
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Info,
+                                                contentDescription = "Ver demostración",
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
                                     }
                                 }
+                                Text(
+                                    "${currentIndex + 1} de $totalExercises",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
                             }
-                            Text(
-                                "${currentIndex + 1} de $totalExercises",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+
+                            IconButton(
+                                onClick = { viewModel.setCurrentExercise(currentIndex + 1) },
+                                enabled = currentIndex < totalExercises - 1
+                            ) {
+                                Icon(Icons.Default.ChevronRight, "Siguiente")
+                            }
+                        }
+
+                        // Jump button
+                        OutlinedButton(
+                            onClick = { showJumpDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                             )
-                        }
-
-                        IconButton(
-                            onClick = { viewModel.setCurrentExercise(currentIndex + 1) },
-                            enabled = currentIndex < totalExercises - 1
                         ) {
-                            Icon(Icons.Default.ChevronRight, "Siguiente")
+                            Icon(Icons.Default.List, null, Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Saltar a otro ejercicio")
                         }
-                    }
-
-                    // Jump button
-                    OutlinedButton(
-                        onClick = { showJumpDialog = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    ) {
-                        Icon(Icons.Default.List, null, Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Saltar a otro ejercicio")
                     }
                 }
             }
@@ -164,44 +169,46 @@ fun TrainScreen(
             // Previous best session (PRs) — collapsible
             currentEx?.let { ex ->
                 if (ex.lastSessionSets.isNotEmpty()) {
-                    var prExpanded by remember { mutableStateOf(true) }
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                        shape = MaterialTheme.shapes.medium,
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer
-                        )
-                    ) {
-                        Column(Modifier.padding(12.dp)) {
-                            Row(
-                                Modifier.fillMaxWidth().clickable { prExpanded = !prExpanded },
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("Tu mejor sesión anterior",
-                                    style = MaterialTheme.typography.titleSmall)
-                                Icon(
-                                    if (prExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                    contentDescription = if (prExpanded) "Colapsar" else "Expandir",
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            AnimatedVisibility(
-                                visible = prExpanded,
-                                enter = fadeIn(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) +
-                                    expandVertically(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()),
-                                exit = fadeOut(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) +
-                                    shrinkVertically(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec())
-                            ) {
-                                Column {
-                                    Spacer(Modifier.height(4.dp))
-                                    ex.lastSessionSets.forEach { s ->
-                                        val label = if (s.set.setType == "bilbo") "Bilbo" else "Trabajo"
-                                        Text(
-                                            "$label: ${s.set.reps} reps \u00D7 ${String.format("%.1f", s.set.weightKg)} kg" +
-                                                if (s.set.rir > 0) " (RIR ${s.set.rir})" else "",
-                                            style = MaterialTheme.typography.bodyMedium
-                                        )
+                    item {
+                        var prExpanded by remember { mutableStateOf(true) }
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                            shape = MaterialTheme.shapes.medium,
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer
+                            )
+                        ) {
+                            Column(Modifier.padding(12.dp)) {
+                                Row(
+                                    Modifier.fillMaxWidth().clickable { prExpanded = !prExpanded },
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("Tu mejor sesión anterior",
+                                        style = MaterialTheme.typography.titleSmall)
+                                    Icon(
+                                        if (prExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                        contentDescription = if (prExpanded) "Colapsar" else "Expandir",
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                AnimatedVisibility(
+                                    visible = prExpanded,
+                                    enter = fadeIn(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) +
+                                        expandVertically(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()),
+                                    exit = fadeOut(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) +
+                                        shrinkVertically(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec())
+                                ) {
+                                    Column {
+                                        Spacer(Modifier.height(4.dp))
+                                        ex.lastSessionSets.forEach { s ->
+                                            val label = if (s.set.setType == "bilbo") "Bilbo" else "Trabajo"
+                                            Text(
+                                                "$label: ${s.set.reps} reps \u00D7 ${String.format("%.1f", s.set.weightKg)} kg" +
+                                                    if (s.set.rir > 0) " (RIR ${s.set.rir})" else "",
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -211,7 +218,7 @@ fun TrainScreen(
             }
 
             // Rest timer (shared across exercises)
-            RestTimer()
+            item { RestTimer() }
 
             // Current exercise sets + input
             currentEx?.let { ex ->
@@ -219,10 +226,7 @@ fun TrainScreen(
                     ex.exercise.isBilboEligible,
                     state.routine?.method ?: ""
                 )
-
-                ExerciseSetContent(
-                    exerciseName = ex.exercise.name,
-                    muscleGroup = ex.exercise.muscleGroup,
+                exerciseSetItems(
                     appliesBilbo = appliesBilbo,
                     sets = ex.sets,
                     suggestion = currentSuggestion,
@@ -258,7 +262,7 @@ fun TrainScreen(
                                 },
                             shape = MaterialTheme.shapes.medium,
                             colors = if (isCurrent) CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer
+                                containerColor = MaterialTheme.colorScheme.surface
                             ) else CardDefaults.cardColors()
                         ) {
                             Row(
@@ -276,7 +280,7 @@ fun TrainScreen(
                                 }
                                 if (isCurrent) {
                                     Icon(Icons.Default.Check, "Actual",
-                                        tint = MaterialTheme.colorScheme.primary)
+                                        tint = MaterialTheme.colorScheme.onSurface)
                                 }
                             }
                         }
@@ -432,7 +436,7 @@ fun TrainScreen(
                     // Personal records
                     if (summary.personalRecords.isNotEmpty()) {
                         Text("¡Nuevos récords!", style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary)
+                            color = MaterialTheme.colorScheme.onSurface)
                         summary.personalRecords.forEach { pr: PersonalRecord ->
                             Text(
                                 "${pr.exerciseName}: %,.1f → %,.1f kg (1RM)".format(
@@ -470,10 +474,7 @@ fun TrainScreen(
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-fun ExerciseSetContent(
-    exerciseName: String,
-    muscleGroup: String,
+private fun LazyListScope.exerciseSetItems(
     appliesBilbo: Boolean,
     sets: List<WorkoutSet>,
     suggestion: PerExerciseSuggestion,
@@ -490,138 +491,21 @@ fun ExerciseSetContent(
         suggestion.workProgression != BilboProgression.WorkProgression.MAINTAIN
     val bilboDone = sets.any { it.setType == "bilbo" }
 
-    LazyColumn(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // Exercise info
-        item {
-            if (appliesBilbo) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Whatshot, null, tint = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.width(4.dp))
-                    Text("Serie Bilbo + series de trabajo",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary)
-                }
+    // Exercise info
+    item {
+        if (appliesBilbo) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Whatshot, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.width(4.dp))
+                Text("Serie Bilbo + series de trabajo",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface)
             }
         }
+    }
 
-        // Logged sets
-        if (sets.isNotEmpty()) {
-            item {
-                ElevatedCard(
-                    shape = MaterialTheme.shapes.medium,
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Column(Modifier.padding(12.dp)) {
-                        Text("Series de hoy:", style = MaterialTheme.typography.labelSmall)
-                        Spacer(Modifier.height(4.dp))
-                        sets.forEachIndexed { i, set ->
-                            val label = if (appliesBilbo && i == 0) "Bilbo" else "Set ${if (appliesBilbo) i else i + 1}"
-                            Row(
-                                Modifier.fillMaxWidth().padding(vertical = 1.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text("$label: ${set.reps} reps \u00D7 ${String.format("%.1f", set.weightKg)} kg",
-                                    style = MaterialTheme.typography.bodyMedium)
-                                if (set.setType == "bilbo") {
-                                    Text("RIR ${set.rir}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Bilbo 50+ progression hint
-        val lastSet = sets.lastOrNull()
-        if (lastSet?.setType == "bilbo" && lastSet.reps >= 50) {
-            item {
-                ElevatedCard(
-                    shape = MaterialTheme.shapes.medium,
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                ) {
-                    Column(Modifier.padding(12.dp)) {
-                        Text("¡50 reps alcanzadas!", style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            "Próxima sesión: sube peso un ${if (lastSet.rir == 0) "15" else "10"}% y resetea a 15-20 reps",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-            }
-        }
-
-        // Between-sessions progression hint
-        if (hasBetweenHint) {
-            item {
-                val isIncrease = suggestion.workProgression == BilboProgression.WorkProgression.INCREASE
-                ElevatedCard(
-                    shape = MaterialTheme.shapes.medium,
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (isIncrease) MaterialTheme.colorScheme.primaryContainer
-                                        else MaterialTheme.colorScheme.errorContainer
-                    )
-                ) {
-                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            if (isIncrease) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                            null,
-                            tint = if (isIncrease) MaterialTheme.colorScheme.onPrimaryContainer
-                                   else MaterialTheme.colorScheme.onErrorContainer
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            if (isIncrease) "Subir peso \u2014 hiciste >10 reps la sesi\u00F3n anterior"
-                            else "Bajar peso \u2014 hiciste <8 reps la sesi\u00F3n anterior",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (isIncrease) MaterialTheme.colorScheme.onPrimaryContainer
-                                    else MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-                }
-            }
-        }
-
-        // Intra-session advice
-        intraAdjustment?.let { (progression, suggestedWeight) ->
-            item {
-                val isIncrease = progression == BilboProgression.WorkProgression.INCREASE
-                val lastReps = lastWorkSet?.reps ?: 0
-                ElevatedCard(
-                    shape = MaterialTheme.shapes.medium,
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (isIncrease) MaterialTheme.colorScheme.primaryContainer
-                                        else MaterialTheme.colorScheme.errorContainer
-                    )
-                ) {
-                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            if (isIncrease) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                            null,
-                            tint = if (isIncrease) MaterialTheme.colorScheme.onPrimaryContainer
-                                   else MaterialTheme.colorScheme.onErrorContainer
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            if (isIncrease) "Sube a ~${String.format(java.util.Locale.US, "%.1f", suggestedWeight)} kg (hiciste $lastReps, >10)"
-                            else "Baja a ~${String.format(java.util.Locale.US, "%.1f", suggestedWeight)} kg (hiciste $lastReps, <8)",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (isIncrease) MaterialTheme.colorScheme.onPrimaryContainer
-                                    else MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-                }
-            }
-        }
-
-        // Input section with animated transition
+    // Logged sets
+    if (sets.isNotEmpty()) {
         item {
             ElevatedCard(
                 shape = MaterialTheme.shapes.medium,
@@ -630,47 +514,153 @@ fun ExerciseSetContent(
                 )
             ) {
                 Column(Modifier.padding(12.dp)) {
-                    if (appliesBilbo) {
-                        AnimatedVisibility(
-                            visible = !bilboDone,
-                            enter = fadeIn(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) +
-                                expandVertically(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()),
-                            exit = fadeOut(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) +
-                                shrinkVertically(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec())
+                    Text("Series de hoy:", style = MaterialTheme.typography.labelSmall)
+                    Spacer(Modifier.height(4.dp))
+                    sets.forEachIndexed { i, set ->
+                        val label = if (appliesBilbo && i == 0) "Bilbo" else "Set ${if (appliesBilbo) i else i + 1}"
+                        Row(
+                            Modifier.fillMaxWidth().padding(vertical = 1.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            BilboSetInput(
-                                exerciseKey = exerciseKey, sets = sets,
-                                suggestion = suggestion, onLog = onLogBilboSet,
-                                onDeleteLastSet = onDeleteLastSet
-                            )
+                            Text("$label: ${set.reps} reps \u00D7 ${String.format("%.1f", set.weightKg)} kg",
+                                style = MaterialTheme.typography.bodyMedium)
+                            if (set.setType == "bilbo") {
+                                Text("RIR ${set.rir}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
-                        AnimatedVisibility(
-                            visible = bilboDone,
-                            enter = fadeIn(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) +
-                                expandVertically(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()),
-                            exit = fadeOut(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) +
-                                shrinkVertically(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec())
-                        ) {
-                            WorkSetInput(
-                                exerciseKey = exerciseKey, sets = sets,
-                                suggestion = suggestion, onLog = onLogWorkSet,
-                                onDeleteLastSet = onDeleteLastSet
-                            )
-                        }
-                    } else {
+                    }
+                }
+            }
+        }
+    }
+
+    // Bilbo 50+ progression hint
+    val lastSet = sets.lastOrNull()
+    if (lastSet?.setType == "bilbo" && lastSet.reps >= 50) {
+        item {
+            ElevatedCard(
+                shape = MaterialTheme.shapes.medium,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(Modifier.padding(12.dp)) {
+                    Text("¡50 reps alcanzadas!", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        "Próxima sesión: sube peso un ${if (lastSet.rir == 0) "15" else "10"}% y resetea a 15-20 reps",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
+    }
+
+    // Between-sessions progression hint
+    if (hasBetweenHint) {
+        item {
+            val isIncrease = suggestion.workProgression == BilboProgression.WorkProgression.INCREASE
+            ElevatedCard(
+                shape = MaterialTheme.shapes.medium,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            ) {
+                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        if (isIncrease) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        if (isIncrease) "Subir peso \u2014 hiciste >10 reps la sesi\u00F3n anterior"
+                        else "Bajar peso \u2014 hiciste <8 reps la sesi\u00F3n anterior",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+    }
+
+    // Intra-session advice
+    intraAdjustment?.let { (progression, suggestedWeight) ->
+        item {
+            val isIncrease = progression == BilboProgression.WorkProgression.INCREASE
+            val lastReps = lastWorkSet?.reps ?: 0
+            ElevatedCard(
+                shape = MaterialTheme.shapes.medium,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            ) {
+                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        if (isIncrease) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        if (isIncrease) "Sube a ~${String.format(java.util.Locale.US, "%.1f", suggestedWeight)} kg (hiciste $lastReps, >10)"
+                        else "Baja a ~${String.format(java.util.Locale.US, "%.1f", suggestedWeight)} kg (hiciste $lastReps, <8)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+    }
+
+    // Input section with animated transition
+    item {
+        ElevatedCard(
+            shape = MaterialTheme.shapes.medium,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Column(Modifier.padding(12.dp)) {
+                if (appliesBilbo) {
+                    AnimatedVisibility(
+                        visible = !bilboDone,
+                        enter = fadeIn(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) +
+                            expandVertically(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()),
+                        exit = fadeOut(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) +
+                            shrinkVertically(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec())
+                    ) {
+                        BilboSetInput(
+                            exerciseKey = exerciseKey, sets = sets,
+                            suggestion = suggestion, onLog = onLogBilboSet,
+                            onDeleteLastSet = onDeleteLastSet
+                        )
+                    }
+                    AnimatedVisibility(
+                        visible = bilboDone,
+                        enter = fadeIn(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) +
+                            expandVertically(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()),
+                        exit = fadeOut(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()) +
+                            shrinkVertically(animationSpec = MaterialTheme.motionScheme.fastSpatialSpec())
+                    ) {
                         WorkSetInput(
                             exerciseKey = exerciseKey, sets = sets,
                             suggestion = suggestion, onLog = onLogWorkSet,
                             onDeleteLastSet = onDeleteLastSet
                         )
                     }
+                } else {
+                    WorkSetInput(
+                        exerciseKey = exerciseKey, sets = sets,
+                        suggestion = suggestion, onLog = onLogWorkSet,
+                        onDeleteLastSet = onDeleteLastSet
+                    )
                 }
             }
         }
-
-        // Bottom spacer
-        item { Spacer(Modifier.height(16.dp)) }
     }
+
+    // Bottom spacer
+    item { Spacer(Modifier.height(16.dp)) }
 }
 
 @Composable
@@ -700,7 +690,7 @@ fun BilboSetInput(
 
     Column {
         Text("Registrar serie Bilbo", style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary)
+            color = MaterialTheme.colorScheme.onSurface)
         Text("Explosivo en la subida, controlado en la bajada",
             style = MaterialTheme.typography.bodySmall)
         if (!suggestion.hasHistory) {
@@ -987,7 +977,7 @@ fun RestTimer() {
         Card(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             shape = MaterialTheme.shapes.medium,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Text(
                 "¡Descanso terminado!",
