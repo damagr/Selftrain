@@ -6,6 +6,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -19,8 +20,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.selftrain.app.data.model.Exercise
 import com.selftrain.app.util.Labels
+import com.selftrain.app.util.getExerciseGifUrl
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -33,6 +36,7 @@ fun ExerciseLibraryScreen(
     val errorMessage by viewModel.errorMessage.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf<Exercise?>(null) }
+    var showGifExercise by remember { mutableStateOf<Exercise?>(null) }
     var deleteMode by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
@@ -114,10 +118,10 @@ fun ExerciseLibraryScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 4.dp)
-                                .combinedClickable(
-                                    onClick = {},
-                                    onLongClick = { showDeleteConfirm = ex }
-                                ),
+                                        .combinedClickable(
+                                            onClick = { showGifExercise = ex },
+                                            onLongClick = { showDeleteConfirm = ex }
+                                        ),
                             shape = MaterialTheme.shapes.medium,
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -153,6 +157,34 @@ fun ExerciseLibraryScreen(
                 }
             }
         }
+    }
+
+    // Exercise GIF demonstration dialog
+    showGifExercise?.let { ex ->
+        val gifUrl = getExerciseGifUrl(ex.name)
+        AlertDialog(
+            onDismissRequest = { showGifExercise = null },
+            shape = MaterialTheme.shapes.large,
+            title = { Text(ex.name) },
+            text = {
+                if (gifUrl != null) {
+                    AsyncImage(
+                        model = gifUrl,
+                        contentDescription = "Demostración de ${ex.name}",
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                } else {
+                    Text("No hay demostración disponible para este ejercicio.")
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showGifExercise = null }) {
+                    Text("Cerrar")
+                }
+            }
+        )
     }
 
     if (showCreateDialog) {

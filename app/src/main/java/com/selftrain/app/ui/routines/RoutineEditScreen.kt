@@ -12,17 +12,21 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.selftrain.app.data.model.Exercise
 import com.selftrain.app.util.Labels
+import com.selftrain.app.util.getExerciseGifUrl
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -215,6 +219,7 @@ fun ExercisePickerDialog(
     singleSelect: Boolean = false
 ) {
     val selectedIds = remember { mutableStateListOf<Long>() }
+    var showGifExercise by remember { mutableStateOf<Exercise?>(null) }
     var query by remember { mutableStateOf("") }
     val filtered = if (query.isBlank()) exercises
         else exercises.filter { it.name.contains(query, ignoreCase = true) }
@@ -354,12 +359,49 @@ fun ExercisePickerDialog(
                                                 }
                                             )
                                         }
+                                        IconButton(
+                                            onClick = { showGifExercise = ex },
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.PlayArrow,
+                                                "Ver demostración",
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
+            }
+            // Exercise GIF demonstration dialog
+            showGifExercise?.let { ex ->
+                val gifUrl = getExerciseGifUrl(ex.name)
+                AlertDialog(
+                    onDismissRequest = { showGifExercise = null },
+                    shape = MaterialTheme.shapes.large,
+                    title = { Text(ex.name) },
+                    text = {
+                        if (gifUrl != null) {
+                            AsyncImage(
+                                model = gifUrl,
+                                contentDescription = "Demostración de ${ex.name}",
+                                modifier = Modifier.fillMaxWidth().heightIn(max = 280.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        } else {
+                            Text("No hay demostración disponible para este ejercicio.")
+                        }
+                    },
+                    confirmButton = {},
+                    dismissButton = {
+                        TextButton(onClick = { showGifExercise = null }) {
+                            Text("Cerrar")
+                        }
+                    }
+                )
             }
         }
     }
