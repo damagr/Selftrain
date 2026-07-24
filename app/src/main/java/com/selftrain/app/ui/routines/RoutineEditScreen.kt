@@ -378,7 +378,7 @@ fun ExercisePickerDialog(
             }
             // Exercise GIF demonstration dialog
             showGifExercise?.let { ex ->
-                val gifUrl = getExerciseGifUrl(ex.name)
+                val gifUrl = ex.gifUrl ?: getExerciseGifUrl(ex.name)
                 AlertDialog(
                     onDismissRequest = { showGifExercise = null },
                     shape = MaterialTheme.shapes.large,

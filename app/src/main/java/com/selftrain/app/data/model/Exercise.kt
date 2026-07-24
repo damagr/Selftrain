@@ -11,5 +11,6 @@ data class Exercise(
     val category: String,            // "compound" or "isolation"
     val isBilboEligible: Boolean,    // true for compound exercises
     val isDeleted: Boolean = false,  // ponytail: soft-delete, no undo table
-    val equipment: String = ""       // "barbell", "dumbbell", "cable", "machine", "bodyweight"
+    val equipment: String = "",      // "barbell", "dumbbell", "cable", "machine", "bodyweight"
+    val gifUrl: String? = null       // CDN URL, resolved from GifMapper on creation
 )

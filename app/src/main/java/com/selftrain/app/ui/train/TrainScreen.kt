@@ -128,7 +128,7 @@ fun TrainScreen(
                                         currentEx?.exercise?.name ?: "",
                                         style = MaterialTheme.typography.titleMedium
                                     )
-                                    if (currentEx?.exercise?.name?.let { getExerciseGifUrl(it) } != null) {
+                                    if (currentEx?.exercise?.gifUrl != null) {
                                         IconButton(
                                             onClick = { showGifDialog = true },
                                             modifier = Modifier.size(32.dp)
@@ -307,7 +307,7 @@ fun TrainScreen(
 
     // Exercise GIF demonstration dialog
     if (showGifDialog) {
-        val gifUrl = currentEx?.exercise?.name?.let { getExerciseGifUrl(it) }
+        val gifUrl = currentEx?.exercise?.gifUrl ?: currentEx?.exercise?.name?.let { getExerciseGifUrl(it) }
         AlertDialog(
             onDismissRequest = { showGifDialog = false },
             shape = MaterialTheme.shapes.large,

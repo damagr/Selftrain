@@ -74,4 +74,31 @@ private val gifMap: Map<String, String> by lazy {
     )
 }
 
+data class GifMatch(val name: String, val url: String, val score: Float)
+
 fun getExerciseGifUrl(exerciseName: String): String? = gifMap[exerciseName]
+
+/**
+ * Word-level matching. Divide input y keys del map en palabras.
+ * score = palabras_comunes / max(palabras_input, palabras_key)
+ * Devuelve top 6 matches con score >= 0.3.
+ */
+fun findMatchingGifs(exerciseName: String): List<GifMatch> {
+    val inputWords = exerciseName.lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }
+    if (inputWords.isEmpty()) return emptyList()
+
+    return gifMap.entries.mapNotNull { (key, url) ->
+        val keyWords = key.lowercase().split(Regex("\\s+"))
+        val common = inputWords.intersect(keyWords.toSet()).size
+        val score = common.toFloat() / maxOf(inputWords.size, keyWords.size)
+        if (score >= 0.3f) GifMatch(key, url, score) else null
+    }.sortedByDescending { it.score }.take(6)
+}
+
+/**
+ * Best single match vía word-level (score >= 0.7) o null.
+ */
+fun findMatchingGifUrl(exerciseName: String): String? {
+    val matches = findMatchingGifs(exerciseName)
+    return matches.firstOrNull { it.score >= 0.7f }?.url
+}

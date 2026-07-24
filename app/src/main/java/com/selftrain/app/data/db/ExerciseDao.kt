@@ -44,4 +44,16 @@ interface ExerciseDao {
 
     @Query("UPDATE exercises SET isDeleted = 0 WHERE id = :id")
     suspend fun restore(id: Long)
+
+    @Query("UPDATE exercises SET name = :name, gifUrl = :gifUrl WHERE id = :id")
+    suspend fun updateNameAndGif(id: Long, name: String, gifUrl: String?)
+
+    @Query("""
+        SELECT DISTINCT exerciseId FROM (
+            SELECT exerciseId FROM routine_exercises
+            UNION
+            SELECT exerciseId FROM workout_sets
+        )
+    """)
+    suspend fun getUsedExerciseIds(): List<Long>
 }

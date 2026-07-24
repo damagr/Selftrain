@@ -22,6 +22,9 @@ class ExerciseLibraryViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _usedExerciseIds = MutableStateFlow<Set<Long>>(emptySet())
+    val usedExerciseIds: StateFlow<Set<Long>> = _usedExerciseIds.asStateFlow()
+
     init {
         viewModelScope.launch {
             exerciseRepo.seedIfEmpty()
@@ -29,9 +32,15 @@ class ExerciseLibraryViewModel @Inject constructor(
             exerciseRepo.exercises.first()
             _isLoading.value = false
         }
+        viewModelScope.launch {
+            // Refresh used IDs whenever exercises change
+            exerciseRepo.exercises.collect {
+                _usedExerciseIds.value = exerciseRepo.getUsedExerciseIds()
+            }
+        }
     }
 
-    fun addExercise(name: String, muscleGroup: String, category: String, isBilboEligible: Boolean, equipment: String) {
+    fun addExercise(name: String, muscleGroup: String, category: String, isBilboEligible: Boolean, equipment: String, gifUrl: String?) {
         viewModelScope.launch {
             exerciseRepo.addExercise(
                 Exercise(
@@ -39,7 +48,8 @@ class ExerciseLibraryViewModel @Inject constructor(
                     muscleGroup = muscleGroup,
                     category = category,
                     isBilboEligible = isBilboEligible,
-                    equipment = equipment
+                    equipment = equipment,
+                    gifUrl = gifUrl
                 )
             )
         }
@@ -52,6 +62,17 @@ class ExerciseLibraryViewModel @Inject constructor(
             } catch (e: IllegalStateException) {
                 val (routines, sets) = exerciseRepo.getUsageCount(exercise.id)
                 _errorMessage.value = "No se puede eliminar: usado en $routines rutinas y $sets entrenos"
+            }
+        }
+    }
+
+    fun updateExercise(exercise: Exercise, newName: String, gifUrl: String?) {
+        viewModelScope.launch {
+            try {
+                exerciseRepo.updateExercise(exercise, newName, gifUrl)
+            } catch (e: IllegalStateException) {
+                val (routines, sets) = exerciseRepo.getUsageCount(exercise.id)
+                _errorMessage.value = "No se puede editar: usado en $routines rutinas y $sets entrenos"
             }
         }
     }

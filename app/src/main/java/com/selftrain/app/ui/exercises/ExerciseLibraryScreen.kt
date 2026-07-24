@@ -2,6 +2,7 @@ package com.selftrain.app.ui.exercises
 
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,7 +13,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,7 +26,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.selftrain.app.data.model.Exercise
+import com.selftrain.app.util.GifMatch
 import com.selftrain.app.util.Labels
+import com.selftrain.app.util.findMatchingGifs
+import com.selftrain.app.util.findMatchingGifUrl
 import com.selftrain.app.util.getExerciseGifUrl
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -34,10 +41,19 @@ fun ExerciseLibraryScreen(
     val exercises by viewModel.exercises.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val usedIds by viewModel.usedExerciseIds.collectAsState()
+
+    val isUsed = remember(usedIds) { { id: Long -> id in usedIds } }
     var showCreateDialog by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf<Exercise?>(null) }
     var showGifExercise by remember { mutableStateOf<Exercise?>(null) }
+    var editExercise by remember { mutableStateOf<Exercise?>(null) }
+    var pendingEdit by remember { mutableStateOf<Pair<Exercise, String>?>(null) }
     var deleteMode by remember { mutableStateOf(false) }
+    var editMode by remember { mutableStateOf(false) }
+
+    // GIF picker flow: (matches, onPick callback)
+    var gifPickerState by remember { mutableStateOf<Pair<List<GifMatch>, (String?) -> Unit>?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
@@ -52,15 +68,23 @@ fun ExerciseLibraryScreen(
         topBar = {
             TopAppBar(
                 windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
-                colors = if (deleteMode) TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onErrorContainer,
-                    actionIconContentColor = MaterialTheme.colorScheme.onErrorContainer
-                ) else TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
-                ),
+                colors = when {
+                    deleteMode -> TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        titleContentColor = MaterialTheme.colorScheme.onErrorContainer,
+                        actionIconContentColor = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    editMode -> TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        titleContentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                        actionIconContentColor = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                    else -> TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                    )
+                },
                 title = {
                     Column {
                         Text("Biblioteca de Ejercicios")
@@ -68,11 +92,23 @@ fun ExerciseLibraryScreen(
                             Text("Modo borrado — selecciona un ejercicio para eliminarlo",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error)
+                        } else if (editMode) {
+                            Text("Modo edición — selecciona un ejercicio para editarlo",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.tertiary)
                         }
                     }
                 },
                 actions = {
-                    IconButton(onClick = { deleteMode = !deleteMode }) {
+                    IconButton(onClick = { editMode = !editMode; if (editMode) deleteMode = false }) {
+                        Icon(
+                            Icons.Default.Edit,
+                            "Modo edición",
+                            tint = if (editMode) MaterialTheme.colorScheme.tertiary
+                                   else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    IconButton(onClick = { deleteMode = !deleteMode; if (deleteMode) editMode = false }) {
                         Icon(
                             Icons.Default.Delete,
                             "Modo borrado",
@@ -120,7 +156,7 @@ fun ExerciseLibraryScreen(
                                 .padding(horizontal = 16.dp, vertical = 4.dp)
                                         .combinedClickable(
                                             onClick = { showGifExercise = ex },
-                                            onLongClick = { showDeleteConfirm = ex }
+                                            onLongClick = { if (!isUsed(ex.id)) showDeleteConfirm = ex }
                                         ),
                             shape = MaterialTheme.shapes.medium,
                             colors = CardDefaults.cardColors(
@@ -145,10 +181,43 @@ fun ExerciseLibraryScreen(
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
+                                    if ((editMode || deleteMode) && isUsed(ex.id)) {
+                                        Text(
+                                            if (editMode) "En uso — no se puede editar"
+                                            else "En uso — no se puede eliminar",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                                        )
+                                    }
                                 }
-                                if (deleteMode) {
-                                    IconButton(onClick = { showDeleteConfirm = ex }) {
-                                        Icon(Icons.Default.Delete, "Eliminar", tint = MaterialTheme.colorScheme.error)
+                                if (editMode) {
+                                    val used = isUsed(ex.id)
+                                    IconButton(
+                                        onClick = { editExercise = ex },
+                                        enabled = !used
+                                    ) {
+                                        Icon(Icons.Default.Edit, "Editar",
+                                            tint = if (used) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                                                   else MaterialTheme.colorScheme.tertiary)
+                                    }
+                                } else if (deleteMode) {
+                                    val used = isUsed(ex.id)
+                                    IconButton(
+                                        onClick = { showDeleteConfirm = ex },
+                                        enabled = !used
+                                    ) {
+                                        Icon(Icons.Default.Delete, "Eliminar",
+                                            tint = if (used) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                                                   else MaterialTheme.colorScheme.error)
+                                    }
+                                } else {
+                                    IconButton(
+                                        onClick = { showGifExercise = ex },
+                                        enabled = ex.gifUrl != null
+                                    ) {
+                                        Icon(Icons.Default.PlayArrow, "Ver demostración",
+                                            tint = if (ex.gifUrl != null) MaterialTheme.colorScheme.primary
+                                                   else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f))
                                     }
                                 }
                             }
@@ -161,7 +230,7 @@ fun ExerciseLibraryScreen(
 
     // Exercise GIF demonstration dialog
     showGifExercise?.let { ex ->
-        val gifUrl = getExerciseGifUrl(ex.name)
+        val gifUrl = ex.gifUrl ?: getExerciseGifUrl(ex.name)
         AlertDialog(
             onDismissRequest = { showGifExercise = null },
             shape = MaterialTheme.shapes.large,
@@ -190,9 +259,22 @@ fun ExerciseLibraryScreen(
     if (showCreateDialog) {
         CreateExerciseDialog(
             onDismiss = { showCreateDialog = false },
-            onCreate = { name, muscleGroup, category, bilbo, equipment ->
-                viewModel.addExercise(name, muscleGroup, category, bilbo, equipment)
+            onCreate = { name, muscleGroup, category, bilbo, equipment, matches ->
                 showCreateDialog = false
+                when {
+                    matches.isEmpty() -> {
+                        viewModel.addExercise(name, muscleGroup, category, bilbo, equipment, null)
+                        Toast.makeText(context, "No se encontró GIF para este ejercicio", Toast.LENGTH_SHORT).show()
+                    }
+                    matches.size == 1 -> {
+                        viewModel.addExercise(name, muscleGroup, category, bilbo, equipment, matches[0].url)
+                    }
+                    else -> {
+                        gifPickerState = matches to { chosenUrl ->
+                            viewModel.addExercise(name, muscleGroup, category, bilbo, equipment, chosenUrl)
+                        }
+                    }
+                }
             }
         )
     }
@@ -218,13 +300,74 @@ fun ExerciseLibraryScreen(
             }
         )
     }
+
+    editExercise?.let { ex ->
+        EditExerciseDialog(
+            exercise = ex,
+            onDismiss = { editExercise = null },
+            onSave = { newName, matches ->
+                editExercise = null
+                when {
+                    matches.isEmpty() && ex.gifUrl != null -> {
+                        // old had GIF, new has none → warning
+                        pendingEdit = ex to newName
+                    }
+                    matches.isEmpty() -> {
+                        viewModel.updateExercise(ex, newName, null)
+                    }
+                    matches.size == 1 -> {
+                        viewModel.updateExercise(ex, newName, matches[0].url)
+                    }
+                    else -> {
+                        gifPickerState = matches to { chosenUrl ->
+                            viewModel.updateExercise(ex, newName, chosenUrl)
+                        }
+                    }
+                }
+            }
+        )
+    }
+
+    pendingEdit?.let { (ex, newName) ->
+        AlertDialog(
+            onDismissRequest = { pendingEdit = null },
+            shape = MaterialTheme.shapes.large,
+            title = { Text("Atención") },
+            text = {
+                Text("Al cambiar el nombre se perderá la demostración en GIF asociada a este ejercicio. ¿Quieres continuar?")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.updateExercise(ex, newName, null)
+                    pendingEdit = null
+                }) {
+                    Text("Continuar", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingEdit = null }) { Text("Cancelar") }
+            }
+        )
+    }
+
+    // GIF picker: show when multiple matches
+    gifPickerState?.let { (matches, onPick) ->
+        GifPickerDialog(
+            matches = matches,
+            onDismiss = { gifPickerState = null },
+            onSelect = { match ->
+                gifPickerState = null
+                onPick(match?.url)
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CreateExerciseDialog(
     onDismiss: () -> Unit,
-    onCreate: (name: String, muscleGroup: String, category: String, isBilbo: Boolean, equipment: String) -> Unit
+    onCreate: (name: String, muscleGroup: String, category: String, isBilbo: Boolean, equipment: String, matches: List<GifMatch>) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     val muscleGroups = listOf("pecho", "piernas", "espalda", "hombros", "brazos", "core")
@@ -237,6 +380,10 @@ fun CreateExerciseDialog(
     val equipments = listOf("barbell", "dumbbell", "cable", "machine", "bodyweight")
     var selectedEquipment by remember { mutableStateOf(equipments[0]) }
     var equipExpanded by remember { mutableStateOf(false) }
+
+    val matches = remember(name) {
+        if (name.isBlank()) emptyList() else findMatchingGifs(name.trim())
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -255,6 +402,8 @@ fun CreateExerciseDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                GifFeedbackText(matches)
 
                 // Muscle group
                 ExposedDropdownMenuBox(expanded = muscleExpanded, onExpandedChange = { muscleExpanded = it }) {
@@ -331,7 +480,7 @@ fun CreateExerciseDialog(
             TextButton(
                 onClick = {
                     if (name.isNotBlank()) {
-                        onCreate(name.trim(), selectedMuscle, selectedCategory, isBilbo, selectedEquipment)
+                        onCreate(name.trim(), selectedMuscle, selectedCategory, isBilbo, selectedEquipment, matches)
                     }
                 },
                 enabled = name.isNotBlank()
@@ -340,5 +489,130 @@ fun CreateExerciseDialog(
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun EditExerciseDialog(
+    exercise: Exercise,
+    onDismiss: () -> Unit,
+    onSave: (newName: String, matches: List<GifMatch>) -> Unit
+) {
+    var name by remember { mutableStateOf(exercise.name) }
+
+    val matches = remember(name) {
+        if (name.isBlank()) emptyList() else findMatchingGifs(name.trim())
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.large,
+        title = { Text("Editar Ejercicio") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nombre") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    "Grupo: ${Labels.muscleGroup(exercise.muscleGroup)} · ${Labels.category(exercise.category)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                GifFeedbackText(matches)
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (name.isNotBlank() && name.trim() != exercise.name) {
+                        onSave(name.trim(), matches)
+                    } else {
+                        onDismiss()
+                    }
+                },
+                enabled = name.isNotBlank() && name.trim() != exercise.name
+            ) {
+                Text("Guardar")
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
+}
+
+@Composable
+private fun GifFeedbackText(matches: List<GifMatch>) {
+    when {
+        matches.isEmpty() -> Text(
+            "🎬 Demo: No disponible",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+        )
+        matches.size == 1 -> Text(
+            "🎬 Demo: ${matches[0].name}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary
+        )
+        else -> Text(
+            "🎬 Demo: ${matches.size} coincidencias — selecciona al guardar",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.tertiary
+        )
+    }
+}
+
+@Composable
+private fun GifPickerDialog(
+    matches: List<GifMatch>,
+    onDismiss: () -> Unit,
+    onSelect: (GifMatch?) -> Unit
+) {
+    var selected by remember { mutableStateOf<GifMatch?>(matches.first()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.large,
+        title = { Text("Selecciona la demostración") },
+        text = {
+            Column {
+                matches.forEach { match ->
+                    Row(
+                        Modifier.fillMaxWidth().clickable { selected = match }.padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selected == match,
+                            onClick = { selected = match }
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(match.name, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                Row(
+                    Modifier.fillMaxWidth().clickable { selected = null }.padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = selected == null,
+                        onClick = { selected = null }
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Ninguno", style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSelect(selected) }) { Text("Aceptar") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
     )
 }
