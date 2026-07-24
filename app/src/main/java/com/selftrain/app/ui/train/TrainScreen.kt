@@ -3,9 +3,12 @@ package com.selftrain.app.ui.train
 import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.focus.onFocusChanged
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -73,6 +76,8 @@ fun TrainScreen(
     var showJumpDialog by remember { mutableStateOf(false) }
     var showGifDialog by remember { mutableStateOf(false) }
     var showBackConfirm by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    val scrollScope = rememberCoroutineScope()
 
     BackHandler { showBackConfirm = true }
 
@@ -92,7 +97,8 @@ fun TrainScreen(
         }
     ) { padding ->
         LazyColumn(
-            Modifier.padding(padding).fillMaxSize().imeNestedScroll().imePadding()
+            state = listState,
+            modifier = Modifier.padding(padding).fillMaxSize().imeNestedScroll().imePadding()
         ) {
             // Navigation header
             item {
@@ -227,6 +233,11 @@ fun TrainScreen(
                     state.routine?.method ?: ""
                 )
                 exerciseSetItems(
+                    scrollToInput = { scrollScope.launch {
+                        delay(400)
+                        val last = listState.layoutInfo.totalItemsCount - 1
+                        if (last >= 0) listState.animateScrollToItem(last)
+                    }},
                     appliesBilbo = appliesBilbo,
                     sets = ex.sets,
                     suggestion = currentSuggestion,
@@ -475,6 +486,7 @@ fun TrainScreen(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private fun LazyListScope.exerciseSetItems(
+    scrollToInput: () -> Unit = {},
     appliesBilbo: Boolean,
     sets: List<WorkoutSet>,
     suggestion: PerExerciseSuggestion,
@@ -632,7 +644,8 @@ private fun LazyListScope.exerciseSetItems(
                         BilboSetInput(
                             exerciseKey = exerciseKey, sets = sets,
                             suggestion = suggestion, onLog = onLogBilboSet,
-                            onDeleteLastSet = onDeleteLastSet
+                            onDeleteLastSet = onDeleteLastSet,
+                            onFieldFocused = scrollToInput
                         )
                     }
                     AnimatedVisibility(
@@ -645,14 +658,16 @@ private fun LazyListScope.exerciseSetItems(
                         WorkSetInput(
                             exerciseKey = exerciseKey, sets = sets,
                             suggestion = suggestion, onLog = onLogWorkSet,
-                            onDeleteLastSet = onDeleteLastSet
+                            onDeleteLastSet = onDeleteLastSet,
+                            onFieldFocused = scrollToInput
                         )
                     }
                 } else {
                     WorkSetInput(
                         exerciseKey = exerciseKey, sets = sets,
                         suggestion = suggestion, onLog = onLogWorkSet,
-                        onDeleteLastSet = onDeleteLastSet
+                        onDeleteLastSet = onDeleteLastSet,
+                        onFieldFocused = scrollToInput
                     )
                 }
             }
@@ -669,7 +684,8 @@ fun BilboSetInput(
     sets: List<WorkoutSet>,
     suggestion: PerExerciseSuggestion,
     onLog: (reps: Int, weight: Float, rir: Int) -> Unit,
-    onDeleteLastSet: () -> Unit
+    onDeleteLastSet: () -> Unit,
+    onFieldFocused: () -> Unit = {}
 ) {
     val lastSetWeight = sets.lastOrNull()?.weightKg
     var reps by remember(exerciseKey) { mutableStateOf("") }
@@ -709,7 +725,7 @@ fun BilboSetInput(
                 label = { Text("Reps") },
                 placeholder = if (!suggestion.hasHistory) {{ Text("Ej: 15") }} else null,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.weight(1f), singleLine = true
+                modifier = Modifier.weight(1f).onFocusChanged { if (it.isFocused) onFieldFocused() }, singleLine = true
             )
             OutlinedTextField(
                 value = weight,
@@ -717,7 +733,7 @@ fun BilboSetInput(
                 label = { Text("Peso (kg)") },
                 placeholder = if (!suggestion.hasHistory) {{ Text("Ej: 40") }} else null,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.weight(1f), singleLine = true
+                modifier = Modifier.weight(1f).onFocusChanged { if (it.isFocused) onFieldFocused() }, singleLine = true
             )
         }
         Spacer(Modifier.height(8.dp))
@@ -728,7 +744,7 @@ fun BilboSetInput(
             onValueChange = { rir = it.filter { c -> c.isDigit() } },
             label = { Text("RIR (Reps en Reserva)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth(), singleLine = true
+            modifier = Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) onFieldFocused() }, singleLine = true
         )
         Spacer(Modifier.height(8.dp))
 
@@ -765,7 +781,8 @@ fun WorkSetInput(
     sets: List<WorkoutSet>,
     suggestion: PerExerciseSuggestion,
     onLog: (reps: Int, weight: Float, rir: Int) -> Unit,
-    onDeleteLastSet: () -> Unit
+    onDeleteLastSet: () -> Unit,
+    onFieldFocused: () -> Unit = {}
 ) {
     val lastWorkSet = sets.lastOrNull { it.setType == "work" }
     val lastSetWeight = lastWorkSet?.weightKg
@@ -805,7 +822,7 @@ fun WorkSetInput(
                 label = { Text("Reps") },
                 placeholder = if (!suggestion.hasHistory) {{ Text("Ej: 10") }} else null,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.weight(1f), singleLine = true
+                modifier = Modifier.weight(1f).onFocusChanged { if (it.isFocused) onFieldFocused() }, singleLine = true
             )
             OutlinedTextField(
                 value = weight,
@@ -813,7 +830,7 @@ fun WorkSetInput(
                 label = { Text("Peso (kg)") },
                 placeholder = if (!suggestion.hasHistory) {{ Text("Ej: 60") }} else null,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.weight(1f), singleLine = true
+                modifier = Modifier.weight(1f).onFocusChanged { if (it.isFocused) onFieldFocused() }, singleLine = true
             )
         }
         Spacer(Modifier.height(8.dp))
@@ -824,7 +841,7 @@ fun WorkSetInput(
             onValueChange = { rir = it.filter { c -> c.isDigit() } },
             label = { Text("RIR (Reps en Reserva)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth(), singleLine = true
+            modifier = Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) onFieldFocused() }, singleLine = true
         )
         Spacer(Modifier.height(8.dp))
 

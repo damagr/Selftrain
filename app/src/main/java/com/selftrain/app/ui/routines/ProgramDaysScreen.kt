@@ -6,8 +6,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,6 +34,7 @@ fun ProgramDaysScreen(
     val children = allRoutines.filter { it.parentId == routineId }.sortedBy { it.order }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showAddDayDialog by remember { mutableStateOf(false) }
+    var isEditing by remember { mutableStateOf(false) }
 
     Scaffold(
         floatingActionButton = {
@@ -53,6 +57,12 @@ fun ProgramDaysScreen(
                     navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                 ),
                 actions = {
+                    IconButton(onClick = { isEditing = !isEditing }) {
+                        Icon(
+                            if (isEditing) Icons.Default.Check else Icons.Default.Edit,
+                            if (isEditing) "Terminar" else "Reordenar"
+                        )
+                    }
                     IconButton(onClick = { showDeleteConfirm = true }) {
                         Icon(Icons.Default.Delete, "Eliminar programa",
                             tint = MaterialTheme.colorScheme.error)
@@ -80,10 +90,25 @@ fun ProgramDaysScreen(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
                         )
                     ) {
+                        val dayIndex = children.indexOf(child)
                         Row(
                             Modifier.fillMaxWidth().padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            if (isEditing) {
+                                Column {
+                                    if (dayIndex > 0) {
+                                        IconButton(onClick = { viewModel.moveRoutine(dayIndex, -1, children) }, modifier = Modifier.size(28.dp)) {
+                                            Icon(Icons.Default.KeyboardArrowUp, "Subir", Modifier.size(18.dp))
+                                        }
+                                    }
+                                    if (dayIndex < children.size - 1) {
+                                        IconButton(onClick = { viewModel.moveRoutine(dayIndex, 1, children) }, modifier = Modifier.size(28.dp)) {
+                                            Icon(Icons.Default.KeyboardArrowDown, "Bajar", Modifier.size(18.dp))
+                                        }
+                                    }
+                                }
+                            }
                             Text(child.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
                             IconButton(onClick = { onStartWorkout(child.id) }) {
                                 Icon(Icons.Default.PlayArrow, "Empezar", tint = MaterialTheme.colorScheme.primary)

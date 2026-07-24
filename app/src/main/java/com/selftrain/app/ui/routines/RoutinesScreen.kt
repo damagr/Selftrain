@@ -7,8 +7,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -60,7 +58,7 @@ fun RoutinesScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { showCreateDialog = true }) {
-                Icon(Icons.Default.Add, "Nueva rutina")
+                Icon(Icons.Default.Add, "Nuevo programa")
             }
         }
     ) { padding ->
@@ -114,14 +112,8 @@ fun RoutinesScreen(
                         // Standalone routine
                         RoutineCard(
                             routine = routine,
-                            index = index,
-                            total = groups.size,
                             onStart = { onStartWorkout(routine.id) },
                             onEdit = { onEditRoutine(routine.id) },
-                            onMove = { direction ->
-                                viewModel.moveRoutine(index, direction,
-                                    groups.map { it.first })
-                            },
                             modifier = Modifier.animateItem()
                         )
                     }
@@ -135,7 +127,7 @@ fun RoutinesScreen(
             onDismiss = { showCreateDialog = false },
             onCreate = { name, method ->
                 showCreateDialog = false
-                viewModel.createRoutine(name = name, method = method) { id -> onEditRoutine(id) }
+                viewModel.createRoutine(name = name, method = method) { id -> onEnterProgram(id) }
             }
         )
     }
@@ -181,11 +173,8 @@ fun RoutinesScreen(
 @Composable
 fun RoutineCard(
     routine: Routine,
-    index: Int,
-    total: Int,
     onStart: () -> Unit,
     onEdit: () -> Unit,
-    onMove: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     ElevatedCard(
@@ -196,19 +185,6 @@ fun RoutineCard(
             modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Reorder buttons
-            Column {
-                if (index > 0) {
-                    IconButton(onClick = { onMove(-1) }, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.KeyboardArrowUp, "Subir", Modifier.size(18.dp))
-                    }
-                }
-                if (index < total - 1) {
-                    IconButton(onClick = { onMove(1) }, modifier = Modifier.size(28.dp)) {
-                        Icon(Icons.Default.KeyboardArrowDown, "Bajar", Modifier.size(18.dp))
-                    }
-                }
-            }
             Column(Modifier.weight(1f).padding(start = 8.dp)) {
                 Text(routine.name, style = MaterialTheme.typography.titleMedium)
                 Text("Método: ${Labels.method(routine.method)}",
@@ -240,7 +216,7 @@ fun CreateRoutineDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = MaterialTheme.shapes.large,
-        title = { Text("Nueva Rutina") },
+        title = { Text("Nuevo Programa") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
