@@ -213,10 +213,10 @@ fun ExerciseLibraryScreen(
                                 } else {
                                     IconButton(
                                         onClick = { showGifExercise = ex },
-                                        enabled = ex.gifUrl != null
+                                        enabled = ex.gifUrl != null || getExerciseGifUrl(ex.name) != null
                                     ) {
                                         Icon(Icons.Default.PlayArrow, "Ver demostración",
-                                            tint = if (ex.gifUrl != null) MaterialTheme.colorScheme.primary
+                                            tint = if (ex.gifUrl != null || getExerciseGifUrl(ex.name) != null) MaterialTheme.colorScheme.primary
                                                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f))
                                     }
                                 }
