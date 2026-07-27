@@ -82,18 +82,10 @@ class TrainViewModel @Inject constructor(
             val routine = routineRepo.getById(routineId) ?: return@launch
             val reList = routineRepo.getWithExercises(routineId)
 
-            // Get last completed workout for this routine (for PR display)
-            val lastCompleted = workoutRepo.getLastCompleted(routineId)
-
             val exercises = reList.map { re ->
                 val ex = exerciseRepo.getById(re.exerciseId) ?: return@launch
                 val allHistory = workoutRepo.getSetHistory(ex.id)
-                val lastSession = if (lastCompleted != null) {
-                    workoutRepo.getSetsForExercise(lastCompleted.id, ex.id)
-                        .map { set ->
-                            SetWithExercise(set, ex.name, ex.muscleGroup)
-                        }
-                } else emptyList()
+                val lastSession = workoutRepo.getLastExerciseSession(ex.id)
 
                 ExerciseWithSets(
                     exercise = ex,

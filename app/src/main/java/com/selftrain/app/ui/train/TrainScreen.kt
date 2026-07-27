@@ -76,6 +76,7 @@ fun TrainScreen(
     var showJumpDialog by remember { mutableStateOf(false) }
     var showGifDialog by remember { mutableStateOf(false) }
     var showBackConfirm by remember { mutableStateOf(false) }
+    var showUndoConfirm by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val scrollScope = rememberCoroutineScope()
 
@@ -172,7 +173,7 @@ fun TrainScreen(
                 }
             }
 
-            // Previous best session (PRs) — collapsible
+            // Last session for this exercise — collapsible
             currentEx?.let { ex ->
                 if (ex.lastSessionSets.isNotEmpty()) {
                     item {
@@ -190,7 +191,7 @@ fun TrainScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text("Tu mejor sesión anterior",
+                                    Text("Última sesión",
                                         style = MaterialTheme.typography.titleSmall)
                                     Icon(
                                         if (prExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
@@ -248,7 +249,7 @@ fun TrainScreen(
                     onLogWorkSet = { reps, weight, rir ->
                         viewModel.logSet(ex.exercise.id, "work", reps, weight, rir, false)
                     },
-                    onDeleteLastSet = { viewModel.deleteLastSet(ex.exercise.id) }
+                    onDeleteLastSet = { showUndoConfirm = true }
                 )
             }
         }
@@ -374,6 +375,29 @@ fun TrainScreen(
             dismissButton = {
                 TextButton(onClick = { showBackConfirm = false }) {
                     Text("Seguir entrenando")
+                }
+            }
+        )
+    }
+
+    // Undo last set confirmation dialog
+    if (showUndoConfirm) {
+        AlertDialog(
+            onDismissRequest = { showUndoConfirm = false },
+            shape = MaterialTheme.shapes.large,
+            title = { Text("¿Deshacer última serie?") },
+            text = { Text("Se eliminará la última serie registrada de este ejercicio.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showUndoConfirm = false
+                    viewModel.deleteLastSet(currentEx!!.exercise.id)
+                }) {
+                    Text("Deshacer")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUndoConfirm = false }) {
+                    Text("Cancelar")
                 }
             }
         )

@@ -74,6 +74,20 @@ interface WorkoutDao {
     suspend fun updateSet(workoutSet: WorkoutSet)
 
     @Query("""
+        SELECT ws.*, e.name as exerciseName, e.muscleGroup
+        FROM workout_sets ws
+        JOIN exercises e ON ws.exerciseId = e.id
+        WHERE ws.workoutId = (
+            SELECT w.id FROM workouts w
+            JOIN workout_sets ws2 ON ws2.workoutId = w.id
+            WHERE ws2.exerciseId = :exerciseId AND w.completed = 1
+            ORDER BY w.date DESC LIMIT 1
+        ) AND ws.exerciseId = :exerciseId
+        ORDER BY ws.id
+    """)
+    suspend fun getLastExerciseSession(exerciseId: Long): List<SetWithExercise>
+
+    @Query("""
         SELECT DISTINCT ws.exerciseId
         FROM workout_sets ws
         JOIN workouts w ON ws.workoutId = w.id
