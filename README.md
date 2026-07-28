@@ -56,7 +56,7 @@ Solo aplica a ejercicios compuestos (press, sentadilla, remo, peso muerto…). L
 - Añadir días a programas existentes; eliminar programa con todos sus hijos
 
 ### Biblioteca de ejercicios
-- **54 ejercicios pre-cargados** con grupo muscular, categoría (compuesto/aislamiento) y equipamiento (barra, mancuerna, cable, máquina, peso corporal)
+- **58 ejercicios pre-cargados** con grupo muscular, categoría (compuesto/aislamiento) y equipamiento (barra, mancuerna, cable, máquina, peso corporal)
 - **GIF demostrativo** de cada ejercicio cargado desde CDN
 - Crear ejercicios propios (nombre, grupo muscular, categoría, equipamiento)
 - **Eliminación suave** (soft delete): modo borrado con toggle en la barra superior; muestra conteo exacto de usos antes de borrar
