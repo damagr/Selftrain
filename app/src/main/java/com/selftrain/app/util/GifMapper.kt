@@ -71,6 +71,12 @@ private val gifMap: Map<String, String> by lazy {
         "Plancha abdominal" to "$base/abs/front-plank-with-twist.gif",
         "Crunch en polea" to "$base/abs/cable-kneeling-crunch.gif",
         "Elevación de piernas colgado" to "$base/abs/hanging-leg-raise.gif",
+
+        // Nuevos (Good morning + Patada de glúteo)
+        "Good morning" to "$base/hamstrings/barbell-good-morning.gif",
+        "Good morning en banco" to "$base/spine/hyperextension-on-bench.gif",
+        "Patada de glúteo" to "$base/glutes/cable-standing-hip-extension.gif",
+        "Patada de glúteo en máquina" to "$base/glutes/lever-hip-extension-v-2.gif",
     )
 }
 

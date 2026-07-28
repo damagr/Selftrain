@@ -57,5 +57,10 @@
 
   {"name": "Plancha abdominal", "muscleGroup": "core", "category": "isolation", "isBilboEligible": false, "equipment": "bodyweight"},
   {"name": "Crunch en polea", "muscleGroup": "core", "category": "isolation", "isBilboEligible": false, "equipment": "cable"},
-  {"name": "Elevación de piernas colgado", "muscleGroup": "core", "category": "isolation", "isBilboEligible": false, "equipment": "bodyweight"}
+  {"name": "Elevación de piernas colgado", "muscleGroup": "core", "category": "isolation", "isBilboEligible": false, "equipment": "bodyweight"},
+
+  {"name": "Good morning", "muscleGroup": "piernas", "category": "compound", "isBilboEligible": true, "equipment": "barbell"},
+  {"name": "Good morning en banco", "muscleGroup": "piernas", "category": "compound", "isBilboEligible": false, "equipment": "bodyweight"},
+  {"name": "Patada de glúteo", "muscleGroup": "piernas", "category": "isolation", "isBilboEligible": false, "equipment": "cable"},
+  {"name": "Patada de glúteo en máquina", "muscleGroup": "piernas", "category": "isolation", "isBilboEligible": false, "equipment": "machine"}
 ]
