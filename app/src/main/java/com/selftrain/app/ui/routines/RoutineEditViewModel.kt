@@ -32,7 +32,10 @@ class RoutineEditViewModel @Inject constructor(
             _routine.value = r
             val reList = routineRepo.getWithExercises(routineId)
             val ids = reList.map { it.exerciseId }
-            _exercises.value = if (ids.isNotEmpty()) exerciseRepo.getByIds(ids) else emptyList()
+            _exercises.value = if (ids.isNotEmpty()) {
+                val byId = exerciseRepo.getByIds(ids).associateBy { it.id }
+                ids.mapNotNull { byId[it] }
+            } else emptyList()
         }
     }
 
