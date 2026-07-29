@@ -26,20 +26,27 @@ class ExerciseRepository @Inject constructor(
     val exercises = dao.getAll()
 
     suspend fun seedIfEmpty() {
+        val json = context.assets.open("exercises.json").bufferedReader().readText()
+        val seedData: List<SeedExercise> = Gson().fromJson(json, object : TypeToken<List<SeedExercise>>() {}.type)
+
         if (dao.count() == 0) {
-            val json = context.assets.open("exercises.json").bufferedReader().readText()
-            val seedData: List<SeedExercise> = Gson().fromJson(json, object : TypeToken<List<SeedExercise>>() {}.type)
-            val exercises = seedData.map { seed ->
-                Exercise(
-                    name = seed.name, muscleGroup = seed.muscleGroup,
-                    category = seed.category, isBilboEligible = seed.isBilboEligible,
-                    equipment = seed.equipment,
-                    gifUrl = findMatchingGifUrl(seed.name)
-                )
-            }
-            dao.insertAll(exercises)
+            dao.insertAll(seedData.map { it.toExercise() })
+            return
+        }
+
+        val existing = dao.getAllList().map { it.name }.toSet()
+        val missing = seedData.filter { it.name !in existing }
+        if (missing.isNotEmpty()) {
+            dao.insertAll(missing.map { it.toExercise() })
         }
     }
+
+    private fun SeedExercise.toExercise() = Exercise(
+        name = name, muscleGroup = muscleGroup,
+        category = category, isBilboEligible = isBilboEligible,
+        equipment = equipment,
+        gifUrl = findMatchingGifUrl(name)
+    )
 
     suspend fun getById(id: Long) = dao.getById(id)
     suspend fun getByIds(ids: List<Long>) = dao.getByIds(ids)
