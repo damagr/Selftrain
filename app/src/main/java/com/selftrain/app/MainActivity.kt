@@ -269,8 +269,19 @@ fun SelfTrainMain() {
             shape = MaterialTheme.shapes.large,
             title = { Text("Nueva versión disponible") },
             text = {
-                Text("Versión ${release.tagName} disponible.\n" +
-                    "Se creará un backup de tus datos antes de actualizar. ¿Actualizar ahora?")
+                Column(Modifier.fillMaxWidth()) {
+                    Text("Versión ${release.tagName} disponible.")
+                    if (!release.body.isNullOrBlank()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            release.body.take(500),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    Text("Se creará un backup de tus datos antes de actualizar. ¿Actualizar ahora?")
+                }
             },
             confirmButton = {
                 TextButton(onClick = { viewModel.startUpdate(release) }) {

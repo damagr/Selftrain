@@ -123,11 +123,12 @@ fun TrainScreen(
                             }
 
                             // Exercise name + info button + position
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         currentEx?.exercise?.name ?: "",
-                                        style = MaterialTheme.typography.titleMedium
+                                        style = MaterialTheme.typography.titleMedium,
+                                        maxLines = 2
                                     )
                                     if (currentEx?.exercise?.gifUrl != null) {
                                         IconButton(

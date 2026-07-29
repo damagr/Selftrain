@@ -14,6 +14,7 @@ data class GitHubAsset(
 data class GitHubRelease(
     @SerializedName("tag_name") val tagName: String,
     @SerializedName("html_url") val htmlUrl: String,
+    @SerializedName("body") val body: String? = null,
     @SerializedName("assets") val assets: List<GitHubAsset> = emptyList()
 )
 

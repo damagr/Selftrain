@@ -78,6 +78,7 @@ class TrainViewModel @Inject constructor(
     val state: StateFlow<TrainState> = _state.asStateFlow()
 
     fun startWorkout(routineId: Long, existingWorkoutId: Long? = null) {
+        if (_state.value.routine != null && _state.value.workoutId != 0L) return
         viewModelScope.launch {
             val routine = routineRepo.getById(routineId) ?: return@launch
             val reList = routineRepo.getWithExercises(routineId)
