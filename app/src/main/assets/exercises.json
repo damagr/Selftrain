@@ -62,5 +62,7 @@
   {"name": "Good morning", "muscleGroup": "piernas", "category": "compound", "isBilboEligible": true, "equipment": "barbell"},
   {"name": "Good morning en banco", "muscleGroup": "piernas", "category": "compound", "isBilboEligible": false, "equipment": "bodyweight"},
   {"name": "Patada de glúteo", "muscleGroup": "piernas", "category": "isolation", "isBilboEligible": false, "equipment": "cable"},
-  {"name": "Patada de glúteo en máquina", "muscleGroup": "piernas", "category": "isolation", "isBilboEligible": false, "equipment": "machine"}
+  {"name": "Patada de glúteo en máquina", "muscleGroup": "piernas", "category": "isolation", "isBilboEligible": false, "equipment": "machine"},
+  {"name": "Aducción en máquina", "muscleGroup": "piernas", "category": "isolation", "isBilboEligible": false, "equipment": "machine"},
+  {"name": "Extensión de cuádriceps unilateral", "muscleGroup": "piernas", "category": "isolation", "isBilboEligible": false, "equipment": "machine"}
 ]

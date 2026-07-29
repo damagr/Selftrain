@@ -77,6 +77,10 @@ private val gifMap: Map<String, String> by lazy {
         "Good morning en banco" to "$base/spine/hyperextension-on-bench.gif",
         "Patada de glúteo" to "$base/glutes/cable-standing-hip-extension.gif",
         "Patada de glúteo en máquina" to "$base/glutes/lever-hip-extension-v-2.gif",
+
+        // Nuevos (Aducción + Extensión cuádriceps unilateral)
+        "Aducción en máquina" to "$base/adductors/lever-seated-hip-adduction.gif",
+        "Extensión de cuádriceps unilateral" to "$base/quads/lever-leg-extension.gif",
     )
 }
 

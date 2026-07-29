@@ -153,11 +153,12 @@
       {
         "name": "Tren inferior A",
         "exercises": [
-          "Sentadilla con barra",
-          "Peso muerto rumano",
+          "Prensa de piernas",
           "Extensión de cuádriceps",
           "Curl femoral tumbado",
-          "Elevación de gemelos de pie"
+          "Hip thrust con barra",
+          "Aducción en máquina",
+          "Good morning en banco"
         ]
       },
       {
@@ -173,10 +174,11 @@
       {
         "name": "Tren inferior B",
         "exercises": [
-          "Hip thrust con barra",
           "Prensa de piernas",
-          "Curl femoral tumbado",
-          "Zancadas con mancuernas",
+          "Extensión de cuádriceps unilateral",
+          "Curl femoral sentado",
+          "Patada de glúteo en máquina",
+          "Abducción en máquina",
           "Elevación de gemelos de pie"
         ]
       }
