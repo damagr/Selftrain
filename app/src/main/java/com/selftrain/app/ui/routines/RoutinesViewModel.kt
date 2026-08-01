@@ -7,12 +7,18 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.selftrain.app.data.model.Routine
+import com.selftrain.app.data.model.Exercise
 import com.selftrain.app.data.model.Workout
 import com.selftrain.app.data.repository.ExerciseRepository
 import com.selftrain.app.data.repository.RoutineRepository
 import com.selftrain.app.data.repository.WorkoutRepository
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.selftrain.app.util.RoutineShareCodec
+import com.selftrain.app.util.SharedDay
+import com.selftrain.app.util.SharedExercise
+import com.selftrain.app.util.SharedRoutine
+import com.selftrain.app.util.findMatchingGifUrl
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
@@ -118,6 +124,108 @@ class RoutinesViewModel @Inject constructor(
             onDone()
         }
     }
+
+    // --- QR share ---
+
+    fun buildSharePayload(routineId: Long, onDone: (SharedRoutine?) -> Unit) {
+        viewModelScope.launch {
+            val routine = routineRepo.getById(routineId) ?: return@launch onDone(null)
+            val children = routineRepo.getAllList().filter { it.parentId == routineId }.sortedBy { it.order }
+            val days = if (children.isEmpty()) {
+                listOf(SharedDay(name = routine.name, exercises = exercisesOf(routineId)))
+            } else {
+                children.map { SharedDay(name = it.name, exercises = exercisesOf(it.id)) }
+            }
+            onDone(SharedRoutine(name = routine.name, method = routine.method, notes = routine.notes, days = days))
+        }
+    }
+
+    private suspend fun exercisesOf(routineId: Long): List<SharedExercise> {
+        val links = routineRepo.getWithExercises(routineId) // ordenado por `order`
+        if (links.isEmpty()) return emptyList()
+        val byId = exerciseRepo.getByIds(links.map { it.exerciseId }).associateBy { it.id }
+        return links.mapNotNull { link ->
+            byId[link.exerciseId]?.let { ex ->
+                SharedExercise(ex.name, ex.muscleGroup, ex.category, ex.isBilboEligible, ex.equipment)
+            }
+        }
+    }
+
+    /** null = ok, String = error para toast */
+    fun importSharedRoutine(shared: SharedRoutine, onDone: (String?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val existing = exerciseRepo.getAllList().associateBy { it.name }
+                val resolved = mutableMapOf<String, Long>()
+                var nextOrder = routineRepo.getAllList().size
+                val exercises = shared.days.firstOrNull()?.exercises ?: emptyList()
+                if (shared.days.size <= 1) {
+                    // Rutina suelta
+                    val routineId = routineRepo.insert(Routine(name = shared.name, method = shared.method, notes = shared.notes, order = nextOrder++))
+                    exercises.forEachIndexed { i, se ->
+                        routineRepo.addExercise(routineId, resolveExerciseId(se, existing, resolved), i)
+                    }
+                } else {
+                    // Programa: padre + hijos
+                    val parentId = routineRepo.insert(Routine(name = shared.name, method = shared.method, notes = shared.notes, order = nextOrder++))
+                    for (day in shared.days) {
+                        val childId = routineRepo.insert(Routine(name = day.name, method = shared.method, order = nextOrder++, parentId = parentId))
+                        day.exercises.forEachIndexed { i, se ->
+                            routineRepo.addExercise(childId, resolveExerciseId(se, existing, resolved), i)
+                        }
+                    }
+                }
+                onDone(null)
+            } catch (e: Exception) {
+                onDone("Error al importar: ${e.message}")
+            }
+        }
+    }
+
+    private suspend fun resolveExerciseId(
+        se: SharedExercise,
+        existing: Map<String, Exercise>,
+        resolved: MutableMap<String, Long>
+    ): Long {
+        resolved[se.name]?.let { return it }
+        existing[se.name]?.let {
+            resolved[se.name] = it.id
+            return it.id
+        }
+        // Ejercicio nuevo: se crea en la biblioteca con su gif (mismo lookup que seedIfEmpty)
+        val id = exerciseRepo.addExercise(Exercise(
+            name = se.name,
+            muscleGroup = se.muscleGroup,
+            category = se.category,
+            isBilboEligible = se.isBilboEligible,
+            equipment = se.equipment,
+            gifUrl = findMatchingGifUrl(se.name)
+        ))
+        resolved[se.name] = id
+        return id
+    }
+
+    // --- estado de escaneo/import (vive aquí para el flujo escanear -> confirmar) ---
+    var pendingImport by mutableStateOf<SharedRoutine?>(null)
+    var importMessage by mutableStateOf<String?>(null)
+
+    fun onQrScanned(payload: String) {
+        val shared = RoutineShareCodec.decode(payload)
+        if (shared == null) importMessage = "QR no válido"
+        else pendingImport = shared
+    }
+
+    fun confirmImport() {
+        val shared = pendingImport ?: return
+        importSharedRoutine(shared) { error ->
+            importMessage = error ?: "Rutina importada"
+            pendingImport = null
+        }
+    }
+
+    fun cancelImport() { pendingImport = null }
+
+    fun clearImportMessage() { importMessage = null }
 
     // ponytail: crash recovery — check for unfinished workout on app launch
     suspend fun getUnfinishedWorkout() = workoutRepo.getUnfinishedWorkout()

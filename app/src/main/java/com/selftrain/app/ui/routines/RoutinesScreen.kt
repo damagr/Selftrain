@@ -1,5 +1,6 @@
 package com.selftrain.app.ui.routines
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,11 +9,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.QrCode2
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.selftrain.app.data.model.Routine
@@ -32,7 +36,19 @@ fun RoutinesScreen(
     val routines by viewModel.routines.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
     var showPredefinedDialog by remember { mutableStateOf(false) }
+    var shareRoutineId by remember { mutableStateOf<Long?>(null) }
+    var showScanDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    // Toast para resultados de import/escaneo (lectura directa: snapshot rastrea el State del VM)
+    val importMessage = viewModel.importMessage
+    LaunchedEffect(importMessage) {
+        importMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearImportMessage()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -49,6 +65,9 @@ fun RoutinesScreen(
                         Text("Cargar rutinas",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    }
+                    IconButton(onClick = { showScanDialog = true }) {
+                        Icon(Icons.Default.QrCodeScanner, "Escanear QR")
                     }
                     IconButton(onClick = onSettings) {
                         Icon(Icons.Default.Settings, "Ajustes")
@@ -105,6 +124,9 @@ fun RoutinesScreen(
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
+                                IconButton(onClick = { shareRoutineId = routine.id }) {
+                                    Icon(Icons.Default.QrCode2, "Compartir", tint = MaterialTheme.colorScheme.primary)
+                                }
                                 Icon(Icons.Default.PlayArrow, "Entrar", tint = MaterialTheme.colorScheme.primary)
                             }
                         }
@@ -114,6 +136,7 @@ fun RoutinesScreen(
                             routine = routine,
                             onStart = { onStartWorkout(routine.id) },
                             onEdit = { onEditRoutine(routine.id) },
+                            onShare = { shareRoutineId = routine.id },
                             modifier = Modifier.animateItem()
                         )
                     }
@@ -136,6 +159,39 @@ fun RoutinesScreen(
         PredefinedRoutinesDialog(
             viewModel = viewModel,
             onDismiss = { showPredefinedDialog = false }
+        )
+    }
+
+    // Compartir por QR
+    shareRoutineId?.let { id ->
+        val routine = routines.find { it.id == id }
+        if (routine != null) {
+            ShareRoutineDialog(
+                routineId = id,
+                routineName = routine.name,
+                viewModel = viewModel,
+                onDismiss = { shareRoutineId = null }
+            )
+        } else {
+            shareRoutineId = null
+        }
+    }
+
+    if (showScanDialog) {
+        ScanQrDialog(
+            onScanned = { payload ->
+                showScanDialog = false
+                viewModel.onQrScanned(payload)
+            },
+            onDismiss = { showScanDialog = false }
+        )
+    }
+
+    viewModel.pendingImport?.let { shared ->
+        ImportRoutineDialog(
+            shared = shared,
+            onConfirm = { viewModel.confirmImport() },
+            onDismiss = { viewModel.cancelImport() }
         )
     }
 
@@ -175,6 +231,7 @@ fun RoutineCard(
     routine: Routine,
     onStart: () -> Unit,
     onEdit: () -> Unit,
+    onShare: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     ElevatedCard(
@@ -190,6 +247,9 @@ fun RoutineCard(
                 Text("Método: ${Labels.method(routine.method)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            IconButton(onClick = onShare) {
+                Icon(Icons.Default.QrCode2, "Compartir", tint = MaterialTheme.colorScheme.primary)
             }
             IconButton(onClick = onStart) {
                 Icon(Icons.Default.PlayArrow, "Empezar", tint = MaterialTheme.colorScheme.primary)
