@@ -225,8 +225,8 @@ fun TrainScreen(
                 }
             }
 
-            // Rest timer (shared across exercises)
-            item { RestTimer() }
+            // Rest timer (shared across exercises) — default según tipo compound/isolation
+            item { RestTimer(category = state.exercises.getOrNull(currentIndex)?.exercise?.category) }
 
             // Current exercise sets + input
             currentEx?.let { ex ->
@@ -241,6 +241,7 @@ fun TrainScreen(
                         if (last >= 0) listState.animateScrollToItem(last)
                     }},
                     appliesBilbo = appliesBilbo,
+                    isDumbbell = ex.exercise.equipment == "dumbbell",
                     sets = ex.sets,
                     suggestion = currentSuggestion,
                     exerciseKey = ex.exercise.id.toString(),
@@ -513,6 +514,7 @@ fun TrainScreen(
 private fun LazyListScope.exerciseSetItems(
     scrollToInput: () -> Unit = {},
     appliesBilbo: Boolean,
+    isDumbbell: Boolean,
     sets: List<WorkoutSet>,
     suggestion: PerExerciseSuggestion,
     exerciseKey: String,
@@ -522,7 +524,9 @@ private fun LazyListScope.exerciseSetItems(
 ) {
     val lastWorkSet = sets.lastOrNull { it.setType == "work" }
     val intraAdjustment = lastWorkSet?.let {
-        BilboProgression.workSetAdjustment(it.reps, it.weightKg)
+        BilboProgression.workSetAdjustment(it.reps, it.rir, it.weightKg)?.let { (prog, w) ->
+            prog to (if (isDumbbell) BilboProgression.roundToDumbbellStep(w) else w)
+        }
     }
     val hasBetweenHint = suggestion.hasHistory && lastWorkSet == null &&
         suggestion.workProgression != BilboProgression.WorkProgression.MAINTAIN
@@ -610,8 +614,8 @@ private fun LazyListScope.exerciseSetItems(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        if (isIncrease) "Subir peso \u2014 hiciste >10 reps la sesi\u00F3n anterior"
-                        else "Bajar peso \u2014 hiciste <8 reps la sesi\u00F3n anterior",
+                        if (isIncrease) "Subir peso \u2014 hiciste >10 reps efectivas (reps+RIR) la sesi\u00F3n anterior"
+                        else "Bajar peso \u2014 hiciste <8 reps efectivas (reps+RIR) la sesi\u00F3n anterior",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -624,7 +628,7 @@ private fun LazyListScope.exerciseSetItems(
     intraAdjustment?.let { (progression, suggestedWeight) ->
         item {
             val isIncrease = progression == BilboProgression.WorkProgression.INCREASE
-            val lastReps = lastWorkSet?.reps ?: 0
+            val lastEffective = BilboProgression.effectiveReps(lastWorkSet?.reps ?: 0, lastWorkSet?.rir ?: 0)
             ElevatedCard(
                 shape = MaterialTheme.shapes.medium,
                 colors = CardDefaults.cardColors(
@@ -639,8 +643,8 @@ private fun LazyListScope.exerciseSetItems(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        if (isIncrease) "Sube a ~${String.format(java.util.Locale.US, "%.1f", suggestedWeight)} kg (hiciste $lastReps, >10)"
-                        else "Baja a ~${String.format(java.util.Locale.US, "%.1f", suggestedWeight)} kg (hiciste $lastReps, <8)",
+                        if (isIncrease) "Sube a ~${String.format(java.util.Locale.US, "%.1f", suggestedWeight)} kg (hiciste $lastEffective reps efectivas, >10)"
+                        else "Baja a ~${String.format(java.util.Locale.US, "%.1f", suggestedWeight)} kg (hiciste $lastEffective reps efectivas, <8)",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -896,14 +900,23 @@ fun WorkSetInput(
 }
 
 @Composable
-fun RestTimer() {
+fun RestTimer(category: String? = null) {
     val context = LocalContext.current
-    var totalSeconds by remember { mutableIntStateOf(90) }
-    var remaining by remember { mutableIntStateOf(90) }
+    var totalSeconds by remember { mutableIntStateOf(defaultRestSeconds(category)) }
+    var remaining by remember { mutableIntStateOf(defaultRestSeconds(category)) }
     var isRunning by remember { mutableStateOf(false) }
     var showTimer by remember { mutableStateOf(false) }
     var pausedRemaining by remember { mutableIntStateOf(0) }
     var showFinishedMessage by remember { mutableStateOf(false) }
+
+    // Ponytail: reset del default al cambiar de ejercicio, solo si el timer no corre
+    // (para no cortar un descanso en marcha). El ±30s manual sigue disponible.
+    LaunchedEffect(category) {
+        if (!isRunning) {
+            totalSeconds = defaultRestSeconds(category)
+            remaining = totalSeconds
+        }
+    }
 
     // Stop service when composable leaves composition (e.g. navigate away)
     DisposableEffect(Unit) {
@@ -1029,4 +1042,11 @@ fun RestTimer() {
             )
         }
     }
+}
+
+/** Default de descanso según tipo de ejercicio: compuestos 2-3min, aislamiento 90-120s */
+private fun defaultRestSeconds(category: String?): Int = when (category) {
+    "compound" -> 150
+    "isolation" -> 105
+    else -> 90
 }

@@ -39,6 +39,14 @@ class ExerciseRepository @Inject constructor(
         if (missing.isNotEmpty()) {
             dao.insertAll(missing.map { it.toExercise() })
         }
+
+        // ponytail: sync isBilboEligible de los que ya existen (migración de datos sin
+        // tocar schema — usuarios instalados tienen flags de la regla antigua "compound")
+        val byName = dao.getAllList().associateBy { it.name }
+        seedData.forEach { seed ->
+            byName[seed.name]?.takeIf { it.isBilboEligible != seed.isBilboEligible }
+                ?.let { dao.updateBilboEligible(it.id, seed.isBilboEligible) }
+        }
     }
 
     private fun SeedExercise.toExercise() = Exercise(

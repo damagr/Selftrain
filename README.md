@@ -15,7 +15,8 @@ App Android para registrar entrenamientos de gimnasio. Soporta **Método Bilbo**
 - **Sugerencias automáticas** de peso y reps basadas en el historial de la sesión anterior
 - **PRs de la mejor sesión anterior** visibles durante el entreno (card colapsable para no ocupar espacio)
 - **Series Bilbo + series de trabajo** con prellavereo inteligente del peso
-- **Progresión intra-sesión**: ajuste automático de peso según reps del set anterior (tarjeta verde +5% si reps >10, roja −10% si <8)
+- **Progresión intra-sesión**: ajuste automático de peso según reps efectivas del set anterior (tarjeta verde +5% si reps+RIR >10, roja −10% si reps+RIR <8)
+- **Redondeo de mancuernas**: las sugerencias de peso para ejercicios de mancuernas se redondean al paso de 2.5kg
 - **Temporizador de descanso** configurable (±30s, 30–300s) con:
   - **Servicio en primer plano** con notificación persistente y botones Pausa/Parar
   - **Aviso sonoro al terminar** (canal de alta prioridad con sonido+ vibración)
@@ -30,23 +31,23 @@ App Android para registrar entrenamientos de gimnasio. Soporta **Método Bilbo**
 ### Método Bilbo
 Sistema creado por Jesús María Varela Goicochea:
 - **1 serie Bilbo**: 15–50 reps al ~50% 1RM, concéntrica explosiva, excéntrica controlada, RIR 1–3
-- **3–4 series de trabajo**: 8–12 reps con ~40% más peso, descanso 90–120s
-- **Progresión automática**: al llegar a 50 reps limpias → +10% peso y reinicio a 15–20 reps
-- **Progresión entre sesiones**: al iniciar un ejercicio, muestra tarjeta con sugerencia de subir/bajar peso según las series de la sesión anterior
+- **3–4 series de trabajo**: 8–12 reps con ~40% más peso; descanso 2–3 min en compuestos, 90–120s en aislamiento
+- **Progresión automática**: al llegar a 50 reps limpias (sin contar RIR) → +10% peso y reinicio a 15–20 reps
+- **Progresión entre sesiones**: al iniciar un ejercicio, muestra tarjeta con sugerencia de subir/bajar peso según las reps efectivas (reps + RIR) de la sesión anterior
 
-Solo aplica a ejercicios compuestos (press, sentadilla, remo, peso muerto…). Los de aislamiento van directos a series de trabajo.
+**Ejercicios compatibles** (la Serie Bilbo se ofrece automáticamente): ejercicios de **press** en cualquier variante, **jalón**, **remo**, **curl de bíceps**, **extensiones de tríceps** y **curl femoral**. **Excluidos** de la Serie Bilbo (van directos a series de trabajo): **sentadilla, peso muerto, prensa e hip thrust** — con 15-50 repeticiones su demanda respiratoria impide alcanzar el RIR 1-3 requerido.
 
 ### Rutinas
-- **6 programas predefinidos** cargables con un toque (botón "Cargar rutinas"):
+- **6 programas predefinidos** cargables con un toque (botón "Cargar rutinas"): los tres últimos son variantes del Método Bilbo, distinguibles por el sufijo "— Bilbo":
 
 | Programa | Días | Método |
 |----------|------|--------|
 | PPL 5 Días | Push / Pull / Legs / Push / Pull | PPL |
 | PPL 3 Días | Push / Pull / Legs | PPL |
 | Full Body 3 Días | Día 1 / 2 / 3 | Full Body |
-| Bilbo Upper/Lower 4 Días | Upper A / B + Lower A / B | Bilbo |
-| Bilbo Full Body 3 Días | Día 1 / 2 / 3 | Bilbo |
-| Bilbo PPL 3 Días | Push / Pull / Legs | Bilbo |
+| PPL 5 Días — Bilbo | Push / Pull / Legs / Push / Pull | Bilbo |
+| PPL 3 Días — Bilbo | Push / Pull / Legs | Bilbo |
+| Full Body 3 Días — Bilbo | Día 1 / 2 / 3 | Bilbo |
 
 - **Jerarquía padre/hijo**: los programas se expanden para mostrar sus días; las rutinas sueltas conviven sin interferir
 - Crear rutinas personalizadas con selector de método (Bilbo / Full Body / PPL)
@@ -134,7 +135,7 @@ Kotlin + Jetpack Compose + Material 3 Expressive + Room + Hilt + Navigation Comp
 - **Google Fonts** — Oswald + Inter tipografía
 
 ### Tests
-- 24 tests unitarios (JUnit 4, solo JVM) en `app/src/test/`: lógica Bilbo (progresión, Epley 1RM, reglas de ajuste) y codec de rutinas compartidas (encode/decode con/sin compresión)
+- 27 tests unitarios (JUnit 4, solo JVM) en `app/src/test/`: lógica Bilbo (progresión, Epley 1RM, reglas de ajuste con RIR, redondeo mancuernas) y codec de rutinas compartidas (encode/decode con/sin compresión)
 
 ## Build
 

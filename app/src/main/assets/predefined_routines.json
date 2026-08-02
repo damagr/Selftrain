@@ -137,47 +137,97 @@
     ]
   },
   {
-    "program": "Bilbo Tren Superior/Inferior 4 Días",
+    "program": "PPL 5 Días — Bilbo",
     "method": "bilbo",
     "routines": [
       {
-        "name": "Tren superior A",
+        "name": "Empuje (Día 1)",
         "exercises": [
-          "Press banca con barra",
-          "Jalón al pecho",
-          "Elevaciones laterales",
+          "Press inclinado con mancuernas",
+          "Press banca con mancuernas",
+          "Aperturas en máquina",
+          "Elevación lateral en polea",
           "Extensiones de tríceps en polea",
-          "Curl con barra"
+          "Rotación externa en polea"
         ]
       },
       {
-        "name": "Tren inferior A",
+        "name": "Tirón (Día 2)",
+        "exercises": [
+          "Jalón al pecho",
+          "Remo en polea unilateral",
+          "Pullover en polea",
+          "Face pull",
+          "Curl bíceps banco scott",
+          "Curl martillo"
+        ]
+      },
+      {
+        "name": "Pierna (Día 3)",
         "exercises": [
           "Prensa de piernas",
           "Extensión de cuádriceps",
           "Curl femoral tumbado",
           "Hip thrust con barra",
-          "Aducción en máquina",
-          "Good morning en banco"
+          "Abducción en máquina",
+          "Elevación de gemelos de pie"
         ]
       },
       {
-        "name": "Tren superior B",
+        "name": "Empuje (Día 4)",
         "exercises": [
           "Press militar con mancuernas",
-          "Remo con barra",
+          "Press declinado en máquina",
+          "Cruce polea baja-arriba",
+          "Cruce polea alta-abajo",
+          "Press tríceps en cuerda"
+        ]
+      },
+      {
+        "name": "Tirón (Día 5)",
+        "exercises": [
+          "Remo en polea baja sentado",
+          "Jalón cerrado en polea",
+          "Pájaro en polea",
           "Face pull",
-          "Press francés",
+          "Curl bíceps en polea baja"
+        ]
+      }
+    ]
+  },
+  {
+    "program": "PPL 3 Días — Bilbo",
+    "method": "bilbo",
+    "routines": [
+      {
+        "name": "Empuje (Día 1)",
+        "exercises": [
+          "Press inclinado con mancuernas",
+          "Press banca con mancuernas",
+          "Aperturas en máquina",
+          "Elevación lateral en polea",
+          "Press militar con mancuernas",
+          "Extensiones de tríceps en polea"
+        ]
+      },
+      {
+        "name": "Tirón (Día 2)",
+        "exercises": [
+          "Jalón al pecho",
+          "Remo en polea unilateral",
+          "Pullover en polea",
+          "Face pull",
+          "Curl bíceps banco scott",
           "Curl martillo"
         ]
       },
       {
-        "name": "Tren inferior B",
+        "name": "Pierna (Día 3)",
         "exercises": [
           "Prensa de piernas",
-          "Extensión de cuádriceps unilateral",
-          "Curl femoral sentado",
-          "Patada de glúteo en máquina",
+          "Extensión de cuádriceps",
+          "Curl femoral tumbado",
+          "Hip thrust con barra",
           "Abducción en máquina",
           "Elevación de gemelos de pie"
         ]
@@ -185,73 +235,40 @@
     ]
   },
   {
-    "program": "Bilbo Full Body 3 Días",
+    "program": "Full Body 3 Días — Bilbo",
     "method": "bilbo",
     "routines": [
       {
         "name": "Día 1",
         "exercises": [
-          "Press banca con barra",
-          "Remo con barra",
-          "Sentadilla con barra",
-          "Extensiones de tríceps en polea",
-          "Curl con barra"
+          "Press inclinado con mancuernas",
+          "Jalón al pecho",
+          "Prensa de piernas",
+          "Curl femoral tumbado",
+          "Elevación lateral en polea",
+          "Curl bíceps en polea baja"
         ]
       },
       {
         "name": "Día 2",
         "exercises": [
-          "Press militar con mancuernas",
-          "Peso muerto convencional",
-          "Jalón al pecho",
+          "Press banca con mancuernas",
+          "Remo en polea unilateral",
+          "Hip thrust con barra",
+          "Extensión de cuádriceps",
           "Face pull",
-          "Elevación de gemelos de pie"
+          "Extensiones de tríceps en polea"
         ]
       },
       {
         "name": "Día 3",
         "exercises": [
-          "Press inclinado con mancuernas",
-          "Hip thrust con barra",
-          "Remo en polea baja sentado",
-          "Elevaciones laterales",
-          "Curl martillo"
-        ]
-      }
-    ]
-  },
-  {
-    "program": "Bilbo PPL 3 Días",
-    "method": "bilbo",
-    "routines": [
-      {
-        "name": "Empuje (Día 1)",
-        "exercises": [
-          "Press banca con barra",
-          "Press inclinado con mancuernas",
           "Press militar con mancuernas",
-          "Extensiones de tríceps en polea",
-          "Elevaciones laterales"
-        ]
-      },
-      {
-        "name": "Tirón (Día 2)",
-        "exercises": [
-          "Jalón al pecho",
-          "Remo con barra",
-          "Remo en polea baja sentado",
-          "Face pull",
-          "Curl con barra"
-        ]
-      },
-      {
-        "name": "Pierna (Día 3)",
-        "exercises": [
-          "Sentadilla con barra",
-          "Peso muerto rumano",
+          "Jalón cerrado en polea",
           "Prensa de piernas",
-          "Extensión de cuádriceps",
-          "Elevación de gemelos de pie"
+          "Elevación de gemelos de pie",
+          "Pájaro en polea",
+          "Curl martillo"
         ]
       }
     ]

@@ -48,6 +48,9 @@ interface ExerciseDao {
     @Query("UPDATE exercises SET name = :name, gifUrl = :gifUrl WHERE id = :id")
     suspend fun updateNameAndGif(id: Long, name: String, gifUrl: String?)
 
+    @Query("UPDATE exercises SET isBilboEligible = :isBilboEligible WHERE id = :id")
+    suspend fun updateBilboEligible(id: Long, isBilboEligible: Boolean)
+
     @Query("""
         SELECT DISTINCT exerciseId FROM (
             SELECT exerciseId FROM routine_exercises

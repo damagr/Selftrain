@@ -445,12 +445,10 @@ fun CreateExerciseDialog(
                     }
                 }
 
-                // Bilbo toggle (only for compound)
-                if (selectedCategory == "compound") {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("¿Aplica método Bilbo?")
-                        Switch(checked = isBilbo, onCheckedChange = { isBilbo = it })
-                    }
+                // Bilbo toggle (independiente de la categoría: curls/tríceps también aplican)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("¿Aplica método Bilbo?")
+                    Switch(checked = isBilbo, onCheckedChange = { isBilbo = it })
                 }
 
                 Spacer(Modifier.height(8.dp))

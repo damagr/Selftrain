@@ -1,5 +1,7 @@
 package com.selftrain.app.util
 
+import kotlin.math.roundToInt
+
 /**
  * Bilbo method progression calculator.
  *
@@ -13,10 +15,14 @@ package com.selftrain.app.util
  * Work set rules:
  * - 3-4 sets at 8-12 reps
  * - ~40% more weight than Bilbo set
- * - If all sets >12 reps → increase weight next session
- * - If first set <8 reps → decrease weight next session
+ * - Progression thresholds on EFFECTIVE reps (reps + RIR):
+ *   if effective <8 → decrease weight next session
+ *   if effective >10 → increase weight next session
  */
 object BilboProgression {
+
+    /** Effective reps = logged reps + RIR (7 reps RIR 1 = 8, 10 reps RIR 2 = 12) */
+    fun effectiveReps(reps: Int, rir: Int): Int = reps + rir
 
     /** Estimated Bilbo weight: ~50% of estimated 1RM */
     fun bilboWeight(estimated1RM: Float): Float = estimated1RM * 0.50f
@@ -38,7 +44,10 @@ object BilboProgression {
     fun increasedBilboWeight(currentBilboWeight: Float, rir: Int = 2): Float =
         if (rir == 0) currentBilboWeight * 1.15f else currentBilboWeight * 1.10f
 
-    /** Work set progression suggestion */
+    /**
+     * Work set progression suggestion.
+     * `workSetReps` son reps EFECTIVAS (reps + RIR) — el caller las calcula.
+     */
     enum class WorkProgression { INCREASE, MAINTAIN, DECREASE }
 
     fun workProgression(workSetReps: List<Int>): WorkProgression = when {
@@ -50,17 +59,24 @@ object BilboProgression {
 
     /**
      * Intra-session advice after each work set, based on the last logged set.
-     * Returns null when reps are in the maintain range (8..10).
+     * Thresholds on effective reps (reps + RIR).
+     * Returns null when effective reps are in the maintain range (8..10).
      *
      * ponytail: asymmetric factor is intentional — a miss (<8) needs a bigger reset
      * than the bump for exceeding range (>10). Upgrade path: per-exercise adaptive
      * factor if progression data shows 10% is too aggressive.
      */
-    fun workSetAdjustment(reps: Int, weightKg: Float): Pair<WorkProgression, Float>? = when {
-        reps < 8 -> WorkProgression.DECREASE to weightKg * 0.90f
-        reps > 10 -> WorkProgression.INCREASE to weightKg * 1.05f
-        else -> null
+    fun workSetAdjustment(reps: Int, rir: Int = 0, weightKg: Float): Pair<WorkProgression, Float>? {
+        val effective = effectiveReps(reps, rir)
+        return when {
+            effective < 8 -> WorkProgression.DECREASE to weightKg * 0.90f
+            effective > 10 -> WorkProgression.INCREASE to weightKg * 1.05f
+            else -> null
+        }
     }
+
+    /** Redondea a mancuernas (paso de 2.5kg): al múltiplo más cercano */
+    fun roundToDumbbellStep(kg: Float): Float = (kg / 2.5f).roundToInt() * 2.5f
 
     /** Epley formula for estimated 1RM */
     fun estimated1RM(weightKg: Float, reps: Int): Float {
@@ -69,9 +85,9 @@ object BilboProgression {
         return weightKg * (1.0f + reps / 30.0f)
     }
 
-    /** Must apply Bilbo to this exercise? */
-    fun appliesTo(exerciseIsCompound: Boolean, method: String): Boolean =
-        method.lowercase() == "bilbo" && exerciseIsCompound
+    /** Must apply Bilbo to this exercise? El flag isBilboEligible ya refleja la lista de movimientos */
+    fun appliesTo(isEligible: Boolean, method: String): Boolean =
+        method.lowercase() == "bilbo" && isEligible
 
     /** Suggested Bilbo weight from last work set data */
     fun suggestBilboFromWorkSets(lastWorkSetWeight: Float): Float =

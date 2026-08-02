@@ -76,27 +76,57 @@ class BilboProgressionTest {
         assertEquals(WorkProgression.MAINTAIN, BilboProgression.workProgression(listOf(8, 10)))
     }
 
-    // --- work set adjustment (intra-session) ---
+    // --- work set adjustment (intra-session, umbrales sobre reps+RIR) ---
 
     @Test fun workSetAdjustment_below8Decreases10percent() {
-        val (prog, w) = BilboProgression.workSetAdjustment(7, 20f)!!
+        val (prog, w) = BilboProgression.workSetAdjustment(7, 0, 20f)!!
         assertEquals(WorkProgression.DECREASE, prog)
         assertEquals(18f, w, 0.001f)
     }
 
     @Test fun workSetAdjustment_above10Increases5percent() {
-        val (prog, w) = BilboProgression.workSetAdjustment(12, 20f)!!
+        val (prog, w) = BilboProgression.workSetAdjustment(12, 0, 20f)!!
         assertEquals(WorkProgression.INCREASE, prog)
         assertEquals(21f, w, 0.001f)
-        val (p2, w2) = BilboProgression.workSetAdjustment(11, 20f)!!
+        val (p2, w2) = BilboProgression.workSetAdjustment(11, 0, 20f)!!
         assertEquals(WorkProgression.INCREASE, p2)
         assertEquals(21f, w2, 0.001f)
     }
 
     @Test fun workSetAdjustment_maintainRangeReturnsNull() {
-        assertNull(BilboProgression.workSetAdjustment(8, 20f))
-        assertNull(BilboProgression.workSetAdjustment(9, 20f))
-        assertNull(BilboProgression.workSetAdjustment(10, 20f))
+        assertNull(BilboProgression.workSetAdjustment(8, 0, 20f))
+        assertNull(BilboProgression.workSetAdjustment(9, 0, 20f))
+        assertNull(BilboProgression.workSetAdjustment(10, 0, 20f))
+    }
+
+    @Test fun workSetAdjustment_rirCountsTowardEffectiveReps() {
+        // 7 reps + RIR 1 = 8 efectivas → mantener, no bajar
+        assertNull(BilboProgression.workSetAdjustment(7, 1, 20f))
+        // 10 reps + RIR 2 = 12 efectivas → subir, no mantener
+        val (prog, w) = BilboProgression.workSetAdjustment(10, 2, 20f)!!
+        assertEquals(WorkProgression.INCREASE, prog)
+        assertEquals(21f, w, 0.001f)
+        // 6 reps + RIR 1 = 7 efectivas → bajar
+        val (p2, w2) = BilboProgression.workSetAdjustment(6, 1, 20f)!!
+        assertEquals(WorkProgression.DECREASE, p2)
+        assertEquals(18f, w2, 0.001f)
+    }
+
+    // --- effective reps (reps + RIR) ---
+
+    @Test fun effectiveReps_sumsRepsAndRir() {
+        assertEquals(8, BilboProgression.effectiveReps(7, 1))
+        assertEquals(12, BilboProgression.effectiveReps(10, 2))
+        assertEquals(10, BilboProgression.effectiveReps(10, 0))
+    }
+
+    // --- dumbbell rounding (paso de 2.5kg, al más cercano) ---
+
+    @Test fun roundToDumbbellStep_nearest25() {
+        assertEquals(22.5f, BilboProgression.roundToDumbbellStep(22.4f), 0.001f)
+        assertEquals(20f, BilboProgression.roundToDumbbellStep(20.4f), 0.001f)
+        assertEquals(25f, BilboProgression.roundToDumbbellStep(24.9f), 0.001f)
+        assertEquals(20f, BilboProgression.roundToDumbbellStep(20f), 0.001f)
     }
 
     // --- estimated 1RM (Epley) ---
