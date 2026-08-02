@@ -55,8 +55,15 @@ Solo aplica a ejercicios compuestos (press, sentadilla, remo, peso muerto…). L
 - Buscador en el selector de ejercicios (filtro en tiempo real)
 - Añadir días a programas existentes; eliminar programa con todos sus hijos
 
+### Compartir e importar rutinas (QR)
+- **Compartir por QR**: genera un QR de cualquier rutina o programa para importarla en otro dispositivo
+- **Escáner integrado** (CameraX + ML Kit): cámara a pantalla completa con guía de encuadre, tap-to-focus y zoom inicial; resolución alta para QRs densos
+- **Fallback sin cámara**: botón "Copiar código" al compartir y "Pegar código" al importar (portapapeles)
+- **Importación con confirmación**: muestra la rutina/días/ejercicios antes de importar; los ejercicios que no tengas se añaden a tu biblioteca (match por nombre)
+- Payload compacto: JSON plano o deflate+base64 para rutinas grandes; sin ids ni gifUrl (se recalculan al importar)
+
 ### Biblioteca de ejercicios
-- **58 ejercicios pre-cargados** con grupo muscular, categoría (compuesto/aislamiento) y equipamiento (barra, mancuerna, cable, máquina, peso corporal)
+- **60 ejercicios pre-cargados** con grupo muscular, categoría (compuesto/aislamiento) y equipamiento (barra, mancuerna, cable, máquina, peso corporal)
 - **GIF demostrativo** de cada ejercicio cargado desde CDN
 - Crear ejercicios propios (nombre, grupo muscular, categoría, equipamiento)
 - **Eliminación suave** (soft delete): modo borrado con toggle en la barra superior; muestra conteo exacto de usos antes de borrar
@@ -119,12 +126,15 @@ Kotlin + Jetpack Compose + Material 3 Expressive + Room + Hilt + Navigation Comp
 - **Hilt** — inyección de dependencias (con integración WorkManager)
 - **Navigation Compose** — navegación tipo single-activity
 - **Gson** — parsing de ejercicios semilla y backups JSON
+- **CameraX** — escáner de QR para importar rutinas
+- **ML Kit Barcode** — detección de QRs en el escáner
+- **ZXing** — generación de QRs para compartir rutinas
 - **WorkManager** — backup automático diario
 - **Material Icons Extended** — iconos Material
 - **Google Fonts** — Oswald + Inter tipografía
 
 ### Tests
-- 19 tests unitarios (JUnit 4, solo JVM) en `app/src/test/` para lógica Bilbo: progresión, Epley 1RM, reglas de ajuste
+- 24 tests unitarios (JUnit 4, solo JVM) en `app/src/test/`: lógica Bilbo (progresión, Epley 1RM, reglas de ajuste) y codec de rutinas compartidas (encode/decode con/sin compresión)
 
 ## Build
 
