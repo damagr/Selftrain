@@ -33,7 +33,6 @@ Sistema creado por Jesús María Varela Goicochea:
 - **1 serie Bilbo**: 15–50 reps al ~50% 1RM, concéntrica explosiva, excéntrica controlada, RIR 1–3
 - **3–4 series de trabajo**: 8–12 reps con ~40% más peso; descanso 2–3 min en compuestos, 90–120s en aislamiento
 - **Progresión automática**: al llegar a 50 reps limpias (sin contar RIR) → +10% peso y reinicio a 15–20 reps
-- **Progresión entre sesiones**: al iniciar un ejercicio, muestra tarjeta con sugerencia de subir/bajar peso según las reps efectivas (reps + RIR) de la sesión anterior
 
 **Ejercicios compatibles** (la Serie Bilbo se ofrece automáticamente): ejercicios de **press** en cualquier variante, **jalón**, **remo**, **curl de bíceps**, **extensiones de tríceps** y **curl femoral**. **Excluidos** de la Serie Bilbo (van directos a series de trabajo): **sentadilla, peso muerto, prensa e hip thrust** — con 15-50 repeticiones su demanda respiratoria impide alcanzar el RIR 1-3 requerido.
 

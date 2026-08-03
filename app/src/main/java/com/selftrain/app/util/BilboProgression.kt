@@ -15,9 +15,9 @@ import kotlin.math.roundToInt
  * Work set rules:
  * - 3-4 sets at 8-12 reps
  * - ~40% more weight than Bilbo set
- * - Progression thresholds on EFFECTIVE reps (reps + RIR):
- *   if effective <8 → decrease weight next session
- *   if effective >10 → increase weight next session
+ * - Intra-session guidance on EFFECTIVE reps (reps + RIR):
+ *   a set <8 effective → suggest lower weight for next set
+ *   a set >10 effective → suggest higher weight for next set
  */
 object BilboProgression {
 
@@ -44,18 +44,8 @@ object BilboProgression {
     fun increasedBilboWeight(currentBilboWeight: Float, rir: Int = 2): Float =
         if (rir == 0) currentBilboWeight * 1.15f else currentBilboWeight * 1.10f
 
-    /**
-     * Work set progression suggestion.
-     * `workSetReps` son reps EFECTIVAS (reps + RIR) — el caller las calcula.
-     */
+    /** Progression outcome for intra-session set advice (and tests) */
     enum class WorkProgression { INCREASE, MAINTAIN, DECREASE }
-
-    fun workProgression(workSetReps: List<Int>): WorkProgression = when {
-        workSetReps.isEmpty() -> WorkProgression.MAINTAIN
-        workSetReps.first() < 8 -> WorkProgression.DECREASE
-        workSetReps.all { it > 10 } -> WorkProgression.INCREASE
-        else -> WorkProgression.MAINTAIN
-    }
 
     /**
      * Intra-session advice after each work set, based on the last logged set.

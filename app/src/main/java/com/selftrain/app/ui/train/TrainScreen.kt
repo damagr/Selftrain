@@ -525,8 +525,6 @@ private fun LazyListScope.exerciseSetItems(
             prog to (if (isDumbbell) BilboProgression.roundToDumbbellStep(w) else w)
         }
     }
-    val hasBetweenHint = suggestion.hasHistory && lastWorkSet == null &&
-        suggestion.workProgression != BilboProgression.WorkProgression.MAINTAIN
     val bilboDone = sets.any { it.setType == "bilbo" }
 
     // Exercise info
@@ -587,34 +585,6 @@ private fun LazyListScope.exerciseSetItems(
                     Text(
                         "Próxima sesión: sube peso un ${if (lastSet.rir == 0) "15" else "10"}% y resetea a 15-20 reps",
                         style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-        }
-    }
-
-    // Between-sessions progression hint
-    if (hasBetweenHint) {
-        item {
-            val isIncrease = suggestion.workProgression == BilboProgression.WorkProgression.INCREASE
-            ElevatedCard(
-                shape = MaterialTheme.shapes.medium,
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            ) {
-                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        if (isIncrease) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        if (isIncrease) "Subir peso \u2014 hiciste >10 reps efectivas (reps+RIR) la sesi\u00F3n anterior"
-                        else "Bajar peso \u2014 hiciste <8 reps efectivas (reps+RIR) la sesi\u00F3n anterior",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }

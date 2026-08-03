@@ -57,25 +57,6 @@ class BilboProgressionTest {
         assertEquals(46f, BilboProgression.increasedBilboWeight(40f, rir = 0), 0.001f)
     }
 
-    // --- work progression (between sessions) ---
-
-    @Test fun workProgression_emptyIsMaintain() {
-        assertEquals(WorkProgression.MAINTAIN, BilboProgression.workProgression(emptyList()))
-    }
-
-    @Test fun workProgression_firstBelow8Decreases() {
-        assertEquals(WorkProgression.DECREASE, BilboProgression.workProgression(listOf(7, 10, 10)))
-    }
-
-    @Test fun workProgression_allAbove10Increases() {
-        assertEquals(WorkProgression.INCREASE, BilboProgression.workProgression(listOf(11, 12)))
-    }
-
-    @Test fun workProgression_mixedIsMaintain() {
-        assertEquals(WorkProgression.MAINTAIN, BilboProgression.workProgression(listOf(9, 12)))
-        assertEquals(WorkProgression.MAINTAIN, BilboProgression.workProgression(listOf(8, 10)))
-    }
-
     // --- work set adjustment (intra-session, umbrales sobre reps+RIR) ---
 
     @Test fun workSetAdjustment_below8Decreases10percent() {

@@ -26,8 +26,7 @@ data class PerExerciseSuggestion(
     val bilboWeight: Float = 0f,
     val workWeight: Float = 0f,
     val workReps: Int = 0,
-    val hasHistory: Boolean = false,
-    val workProgression: BilboProgression.WorkProgression = BilboProgression.WorkProgression.MAINTAIN
+    val hasHistory: Boolean = false
 )
 
 data class TrainState(
@@ -122,29 +121,20 @@ class TrainViewModel @Inject constructor(
                     } else {
                         history.filter { it.set.setType == "work" }.lastOrNull()?.set?.weightKg?.div(1.40f) ?: 0f
                     }
-                    // ponytail: pre-fill work weight with max from last session, not bilbo-derived
+                    // ponytail: pre-fill work weight with max from last session, not bilbo-derived.
+                    // No se ajusta entre sesiones (ni subir ni bajar): un día malo no dicta el peso del día siguiente,
+                    // el hint intra-sesión ya orienta sobre la marcha.
                     val lastWorkSets = ex.lastSessionSets.filter { it.set.setType == "work" }
-                    val workWeightFromLastSession = lastWorkSets.maxOfOrNull { it.set.weightKg }
-                    val baseWorkWeight = workWeightFromLastSession ?: (bilboWeightRaw * 1.40f)
-
-                    // Progresión sobre reps EFECTIVAS (reps + RIR): <8 → bajar, >10 → subir
-                    val lastWorkEffectiveReps = lastWorkSets.map { BilboProgression.effectiveReps(it.set.reps, it.set.rir) }
-                    val progression = BilboProgression.workProgression(lastWorkEffectiveReps)
-                    val adjustedWorkWeightRaw = when (progression) {
-                        BilboProgression.WorkProgression.INCREASE -> baseWorkWeight * 1.05f
-                        BilboProgression.WorkProgression.DECREASE -> baseWorkWeight * 0.90f
-                        BilboProgression.WorkProgression.MAINTAIN -> baseWorkWeight
-                    }
+                    val baseWorkWeight = lastWorkSets.maxOfOrNull { it.set.weightKg } ?: (bilboWeightRaw * 1.40f)
                     // mancuernas: pesos redondeados al paso de 2.5kg
                     val bilboWeight = if (isDumbbell) BilboProgression.roundToDumbbellStep(bilboWeightRaw) else bilboWeightRaw
-                    val adjustedWorkWeight = if (isDumbbell) BilboProgression.roundToDumbbellStep(adjustedWorkWeightRaw) else adjustedWorkWeightRaw
+                    val adjustedWorkWeight = if (isDumbbell) BilboProgression.roundToDumbbellStep(baseWorkWeight) else baseWorkWeight
                     PerExerciseSuggestion(
                         bilboReps = bilboReps,
                         bilboWeight = bilboWeight,
                         workWeight = adjustedWorkWeight,
                         workReps = 10,
-                        hasHistory = true,
-                        workProgression = progression
+                        hasHistory = true
                     )
                 }
             }
