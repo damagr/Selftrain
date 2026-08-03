@@ -145,17 +145,4 @@ class BilboProgressionTest {
         val got = BilboProgression.estimated1RM(100f, 10)
         assertTrue("expected ~133.33, got $got", abs(got - 133.3333f) < 0.01f)
     }
-
-    // --- appliesTo ---
-
-    @Test fun appliesTo_bilboCompoundTrue() {
-        assertTrue(BilboProgression.appliesTo(true, "bilbo"))
-        assertTrue(BilboProgression.appliesTo(true, "Bilbo"))
-    }
-
-    @Test fun appliesTo_otherwiseFalse() {
-        assertTrue(!BilboProgression.appliesTo(false, "bilbo"))   // isolation
-        assertTrue(!BilboProgression.appliesTo(true, "ppl"))      // non-bilbo method
-        assertTrue(!BilboProgression.appliesTo(true, "full body"))
-    }
 }

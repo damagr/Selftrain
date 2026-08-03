@@ -32,7 +32,8 @@ data class PredefinedProgram(
 )
 data class PredefinedRoutineData(
     val name: String,
-    val exercises: List<String>
+    val exercises: List<String>,
+    val bilboExercise: String? = null   // nombre del ejercicio marcado como Serie Bilbo (opcional)
 )
 
 @HiltViewModel
@@ -117,7 +118,7 @@ class RoutinesViewModel @Inject constructor(
                 for (exerciseName in routineData.exercises) {
                     val exercise = exerciseMap[exerciseName]
                     if (exercise != null) {
-                        routineRepo.addExercise(childId, exercise.id, exOrder++)
+                        routineRepo.addExercise(childId, exercise.id, exOrder++, exerciseName == routineData.bilboExercise)
                     }
                 }
             }
@@ -146,7 +147,7 @@ class RoutinesViewModel @Inject constructor(
         val byId = exerciseRepo.getByIds(links.map { it.exerciseId }).associateBy { it.id }
         return links.mapNotNull { link ->
             byId[link.exerciseId]?.let { ex ->
-                SharedExercise(ex.name, ex.muscleGroup, ex.category, ex.isBilboEligible, ex.equipment)
+                SharedExercise(ex.name, ex.muscleGroup, ex.category, ex.isBilboEligible, ex.equipment, isBilbo = link.isBilbo)
             }
         }
     }
@@ -163,7 +164,7 @@ class RoutinesViewModel @Inject constructor(
                     // Rutina suelta
                     val routineId = routineRepo.insert(Routine(name = shared.name, method = shared.method, notes = shared.notes, order = nextOrder++))
                     exercises.forEachIndexed { i, se ->
-                        routineRepo.addExercise(routineId, resolveExerciseId(se, existing, resolved), i)
+                        routineRepo.addExercise(routineId, resolveExerciseId(se, existing, resolved), i, se.isBilbo)
                     }
                 } else {
                     // Programa: padre + hijos
@@ -171,7 +172,7 @@ class RoutinesViewModel @Inject constructor(
                     for (day in shared.days) {
                         val childId = routineRepo.insert(Routine(name = day.name, method = shared.method, order = nextOrder++, parentId = parentId))
                         day.exercises.forEachIndexed { i, se ->
-                            routineRepo.addExercise(childId, resolveExerciseId(se, existing, resolved), i)
+                            routineRepo.addExercise(childId, resolveExerciseId(se, existing, resolved), i, se.isBilbo)
                         }
                     }
                 }

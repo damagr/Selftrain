@@ -28,7 +28,8 @@ data class SharedExercise(
     val muscleGroup: String,
     val category: String,
     val isBilboEligible: Boolean,
-    val equipment: String = ""
+    val equipment: String = "",
+    val isBilbo: Boolean = false
 )
 
 object RoutineShareCodec {

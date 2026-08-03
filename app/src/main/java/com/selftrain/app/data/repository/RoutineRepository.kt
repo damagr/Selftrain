@@ -19,9 +19,11 @@ class RoutineRepository @Inject constructor(
     suspend fun delete(routine: Routine) = dao.delete(routine)
     suspend fun getWithExercises(routineId: Long) = dao.getRoutineExercises(routineId)
 
-    suspend fun addExercise(routineId: Long, exerciseId: Long, order: Int) {
-        dao.addExercise(RoutineExercise(routineId = routineId, exerciseId = exerciseId, order = order))
+    suspend fun addExercise(routineId: Long, exerciseId: Long, order: Int, isBilbo: Boolean = false) {
+        dao.addExercise(RoutineExercise(routineId = routineId, exerciseId = exerciseId, order = order, isBilbo = isBilbo))
     }
+
+    suspend fun setBilbo(id: Long, isBilbo: Boolean) = dao.setBilbo(id, isBilbo)
 
     suspend fun clearExercises(routineId: Long) = dao.clearExercises(routineId)
     suspend fun removeExercise(id: Long) = dao.removeExercise(id)

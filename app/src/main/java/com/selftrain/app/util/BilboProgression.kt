@@ -85,10 +85,6 @@ object BilboProgression {
         return weightKg * (1.0f + reps / 30.0f)
     }
 
-    /** Must apply Bilbo to this exercise? El flag isBilboEligible ya refleja la lista de movimientos */
-    fun appliesTo(isEligible: Boolean, method: String): Boolean =
-        method.lowercase() == "bilbo" && isEligible
-
     /** Suggested Bilbo weight from last work set data */
     fun suggestBilboFromWorkSets(lastWorkSetWeight: Float): Float =
         lastWorkSetWeight / 1.40f  // work weight / 1.4 ≈ bilbo weight

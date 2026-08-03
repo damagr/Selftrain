@@ -17,7 +17,8 @@ data class ExerciseWithSets(
     val exercise: Exercise,
     val sets: List<WorkoutSet> = emptyList(),
     val previousHistory: List<SetWithExercise> = emptyList(),
-    val lastSessionSets: List<SetWithExercise> = emptyList()
+    val lastSessionSets: List<SetWithExercise> = emptyList(),
+    val isBilbo: Boolean = false   // es la Serie Bilbo de esta sesión
 )
 
 data class PerExerciseSuggestion(
@@ -83,7 +84,7 @@ class TrainViewModel @Inject constructor(
             val routine = routineRepo.getById(routineId) ?: return@launch
             val reList = routineRepo.getWithExercises(routineId)
 
-            val exercises = reList.map { re ->
+            var exercises = reList.map { re ->
                 val ex = exerciseRepo.getById(re.exerciseId) ?: return@launch
                 val allHistory = workoutRepo.getSetHistory(ex.id)
                 val lastSession = workoutRepo.getLastExerciseSession(ex.id)
@@ -91,8 +92,19 @@ class TrainViewModel @Inject constructor(
                 ExerciseWithSets(
                     exercise = ex,
                     previousHistory = allHistory,
-                    lastSessionSets = lastSession
+                    lastSessionSets = lastSession,
+                    isBilbo = re.isBilbo
                 )
+            }
+            // Backfill: rutina Bilbo sin marca → primera elegible (mínimo 1 Serie Bilbo por sesión)
+            if (routine.method.equals("bilbo", true) && exercises.none { it.isBilbo }) {
+                val first = exercises.firstOrNull { it.exercise.isBilboEligible }
+                if (first != null) {
+                    val idx = exercises.indexOfFirst { it.exercise.id == first.exercise.id }
+                    exercises = exercises.toMutableList().apply {
+                        set(idx, this[idx].copy(isBilbo = true))
+                    }
+                }
             }
 
             val suggestions = exercises.map { ex ->

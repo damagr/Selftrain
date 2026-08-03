@@ -142,6 +142,7 @@
     "routines": [
       {
         "name": "Empuje (Día 1)",
+        "bilboExercise": "Press inclinado con mancuernas",
         "exercises": [
           "Press inclinado con mancuernas",
           "Press banca con mancuernas",
@@ -153,6 +154,7 @@
       },
       {
         "name": "Tirón (Día 2)",
+        "bilboExercise": "Jalón al pecho",
         "exercises": [
           "Jalón al pecho",
           "Remo en polea unilateral",
@@ -164,6 +166,7 @@
       },
       {
         "name": "Pierna (Día 3)",
+        "bilboExercise": "Curl femoral tumbado",
         "exercises": [
           "Prensa de piernas",
           "Extensión de cuádriceps",
@@ -175,6 +178,7 @@
       },
       {
         "name": "Empuje (Día 4)",
+        "bilboExercise": "Press militar con mancuernas",
         "exercises": [
           "Press militar con mancuernas",
           "Press declinado en máquina",
@@ -185,6 +189,7 @@
       },
       {
         "name": "Tirón (Día 5)",
+        "bilboExercise": "Remo en polea baja sentado",
         "exercises": [
           "Remo en polea baja sentado",
           "Jalón cerrado en polea",
@@ -201,6 +206,7 @@
     "routines": [
       {
         "name": "Empuje (Día 1)",
+        "bilboExercise": "Press inclinado con mancuernas",
         "exercises": [
           "Press inclinado con mancuernas",
           "Press banca con mancuernas",
@@ -212,6 +218,7 @@
       },
       {
         "name": "Tirón (Día 2)",
+        "bilboExercise": "Jalón al pecho",
         "exercises": [
           "Jalón al pecho",
           "Remo en polea unilateral",
@@ -223,6 +230,7 @@
       },
       {
         "name": "Pierna (Día 3)",
+        "bilboExercise": "Curl femoral tumbado",
         "exercises": [
           "Prensa de piernas",
           "Extensión de cuádriceps",
@@ -240,6 +248,7 @@
     "routines": [
       {
         "name": "Día 1",
+        "bilboExercise": "Press inclinado con mancuernas",
         "exercises": [
           "Press inclinado con mancuernas",
           "Jalón al pecho",
@@ -251,6 +260,7 @@
       },
       {
         "name": "Día 2",
+        "bilboExercise": "Remo en polea unilateral",
         "exercises": [
           "Press banca con mancuernas",
           "Remo en polea unilateral",
@@ -262,6 +272,7 @@
       },
       {
         "name": "Día 3",
+        "bilboExercise": "Press militar con mancuernas",
         "exercises": [
           "Press militar con mancuernas",
           "Jalón cerrado en polea",

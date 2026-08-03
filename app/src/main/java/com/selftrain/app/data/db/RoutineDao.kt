@@ -55,4 +55,7 @@ interface RoutineDao {
 
     @Query("UPDATE routines SET `order` = :order WHERE id = :id")
     suspend fun updateOrder(id: Long, order: Int)
+
+    @Query("UPDATE routine_exercises SET isBilbo = :isBilbo WHERE id = :id")
+    suspend fun setBilbo(id: Long, isBilbo: Boolean)
 }

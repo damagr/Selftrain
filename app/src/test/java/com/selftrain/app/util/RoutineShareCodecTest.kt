@@ -13,7 +13,7 @@ class RoutineShareCodecTest {
         notes = "Semana 1",
         days = listOf(
             SharedDay("Día 1", listOf(
-                SharedExercise("Press banca con barra", "chest", "compound", true, "barbell"),
+                SharedExercise("Press banca con barra", "chest", "compound", true, "barbell", isBilbo = true),
                 SharedExercise("Press inclinado con mancuernas", "chest", "compound", true, "dumbbell")
             )),
             SharedDay("Día 2", listOf(

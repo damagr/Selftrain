@@ -17,5 +17,6 @@ data class RoutineExercise(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val routineId: Long,
     val exerciseId: Long,
-    val order: Int
+    val order: Int,
+    val isBilbo: Boolean = false   // es la Serie Bilbo de esta sesión (máx 1 por grupo muscular)
 )

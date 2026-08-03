@@ -1,5 +1,6 @@
 package com.selftrain.app.ui.routines
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -44,6 +46,16 @@ fun RoutineEditScreen(
     var replaceIndex by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(routineId) { viewModel.loadRoutine(routineId) }
+
+    // Toasts de validación (ej: falta Serie Bilbo, mismo grupo muscular)
+    val context = LocalContext.current
+    val validationMessage = viewModel.message
+    LaunchedEffect(validationMessage) {
+        validationMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearMessage()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -87,7 +99,8 @@ fun RoutineEditScreen(
             )
 
             LazyColumn {
-                itemsIndexed(exercises, key = { _, ex -> ex.id }) { index, ex ->
+                itemsIndexed(exercises, key = { _, item -> item.exercise.id }) { index, item ->
+                    val ex = item.exercise
                     val isFirst = index == 0
                     val isLast = index == exercises.size - 1
 
@@ -96,7 +109,10 @@ fun RoutineEditScreen(
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 2.dp)
                             .animateItem(),
-                        shape = MaterialTheme.shapes.largeIncreased
+                        shape = MaterialTheme.shapes.largeIncreased,
+                        colors = if (item.isBilbo) CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        ) else CardDefaults.cardColors()
                     ) {
                         Row(
                             Modifier.fillMaxWidth().padding(12.dp),
@@ -130,15 +146,26 @@ fun RoutineEditScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 if (ex.isBilboEligible) {
-                                    Text("Bilbo", style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Switch(
+                                            checked = item.isBilbo,
+                                            onCheckedChange = { viewModel.toggleBilbo(item) }
+                                        )
+                                        Spacer(Modifier.width(4.dp))
+                                        Text(
+                                            "Serie Bilbo",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = if (item.isBilbo) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                             }
 
                             IconButton(onClick = { replaceIndex = index }) {
                                 Icon(Icons.Default.Edit, "Reemplazar", modifier = Modifier.size(18.dp))
                             }
-                            IconButton(onClick = { viewModel.removeExercise(ex) }) {
+                            IconButton(onClick = { viewModel.removeExercise(item) }) {
                                 Icon(Icons.Default.Close, "Quitar", tint = MaterialTheme.colorScheme.error)
                             }
                         }
@@ -165,7 +192,7 @@ fun RoutineEditScreen(
 
     if (showAddDialog) {
         ExercisePickerDialog(
-            exercises = allExercises.filter { ex -> exercises.none { it.id == ex.id } },
+            exercises = allExercises.filter { ex -> exercises.none { it.exercise.id == ex.id } },
             onDismiss = { showAddDialog = false },
             onSelectMany = { selected ->
                 selected.forEach { viewModel.addExercise(it) }

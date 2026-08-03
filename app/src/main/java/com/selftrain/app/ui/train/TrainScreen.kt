@@ -230,10 +230,7 @@ fun TrainScreen(
 
             // Current exercise sets + input
             currentEx?.let { ex ->
-                val appliesBilbo = BilboProgression.appliesTo(
-                    ex.exercise.isBilboEligible,
-                    state.routine?.method ?: ""
-                )
+                val appliesBilbo = ex.isBilbo
                 exerciseSetItems(
                     scrollToInput = { scrollScope.launch {
                         delay(400)
