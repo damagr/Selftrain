@@ -54,6 +54,31 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
     }
 }
 
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Recrear workouts sin FK a routines: borrar una rutina no debe borrar el historial
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS workouts_new (
+                id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                routineId INTEGER NOT NULL,
+                date INTEGER NOT NULL,
+                notes TEXT NOT NULL,
+                completed INTEGER NOT NULL,
+                endDate INTEGER NOT NULL,
+                durationMinutes INTEGER NOT NULL,
+                lastExerciseIndex INTEGER NOT NULL
+            )
+        """.trimIndent())
+        db.execSQL("""
+            INSERT INTO workouts_new (id, routineId, date, notes, completed, endDate, durationMinutes, lastExerciseIndex)
+            SELECT id, routineId, date, notes, completed, endDate, durationMinutes, lastExerciseIndex FROM workouts
+        """.trimIndent())
+        db.execSQL("DROP TABLE workouts")
+        db.execSQL("ALTER TABLE workouts_new RENAME TO workouts")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_workouts_routineId ON workouts (routineId)")
+    }
+}
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
@@ -62,7 +87,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "selftrain.db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
             .build()
 
     @Provides

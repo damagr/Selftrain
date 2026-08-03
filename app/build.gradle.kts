@@ -29,8 +29,8 @@ android {
         applicationId = "com.selftrain.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 51
-        versionName = "1.2.2"
+        versionCode = 52
+        versionName = "1.2.3"
     }
 
     buildTypes {
