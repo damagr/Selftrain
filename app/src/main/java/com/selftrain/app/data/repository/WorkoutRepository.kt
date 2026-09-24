@@ -31,5 +31,6 @@ class WorkoutRepository @Inject constructor(
     suspend fun getExerciseIdsWithHistory() = dao.getExerciseIdsWithHistory()
     suspend fun getCompletedWorkoutsBetween(from: Long, to: Long) = dao.getCompletedWorkoutsBetween(from, to)
     suspend fun getUnfinishedWorkout() = dao.getUnfinishedWorkout()
+    suspend fun getUnfinishedForRoutine(routineId: Long) = dao.getUnfinishedForRoutine(routineId)
     suspend fun deleteWorkoutById(id: Long) = dao.deleteById(id)
 }

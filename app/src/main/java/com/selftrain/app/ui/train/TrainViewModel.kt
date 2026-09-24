@@ -139,30 +139,26 @@ class TrainViewModel @Inject constructor(
                 }
             }
 
-            // Resume existing workout or create new one
-            val workoutId: Long
+            // ponytail: resume explicit (nav arg) o auto-recover (huérfano de esta rutina) o crear nuevo.
+            // La recuperación por nav arg no cubre muerte de proceso con TrainScreen restaurada (resumeWorkoutId=0):
+            // si hay un entreno sin finalizar de esta rutina, se reanuda automáticamente sin diálogo.
             if (existingWorkoutId != null) {
-                // Resume: load existing sets
-                val existingWorkout = workoutRepo.getById(existingWorkoutId) ?: return@launch
-                val existingSets = workoutRepo.getSetsWithExercise(existingWorkoutId)
-                val loadedExercises = exercises.map { ex ->
-                    val exSets = existingSets.filter { it.set.exerciseId == ex.exercise.id }
-                        .map { it.set }
-                    ex.copy(sets = exSets)
+                val existingWorkout = workoutRepo.getById(existingWorkoutId)
+                if (existingWorkout != null) {
+                    applyResumedState(existingWorkout, routine, exercises, suggestions)
+                    return@launch
                 }
-                val startIdx = existingWorkout.lastExerciseIndex.coerceIn(0, (loadedExercises.size - 1).coerceAtLeast(0))
-                _state.value = TrainState(
-                    routine = routine,
-                    exercises = loadedExercises,
-                    workoutId = existingWorkoutId,
-                    suggestions = suggestions,
-                    currentExerciseIndex = startIdx
-                )
-                return@launch
+                // workout ya no existe → cae al flujo de crear (antes: spinner infinito)
             } else {
-                val workout = Workout(routineId = routineId)
-                workoutId = workoutRepo.insert(workout)
+                val orphan = workoutRepo.getUnfinishedForRoutine(routineId)
+                if (orphan != null) {
+                    applyResumedState(orphan, routine, exercises, suggestions)
+                    return@launch
+                }
             }
+
+            val workout = Workout(routineId = routineId)
+            val workoutId = workoutRepo.insert(workout)
 
             _state.value = TrainState(
                 routine = routine,
@@ -171,6 +167,29 @@ class TrainViewModel @Inject constructor(
                 suggestions = suggestions
             )
         }
+    }
+
+    // ponytail: aplica el estado de reanudación desde un workout existente sin finalizar
+    private suspend fun applyResumedState(
+        workout: Workout,
+        routine: Routine,
+        exercises: List<ExerciseWithSets>,
+        suggestions: List<PerExerciseSuggestion>
+    ) {
+        val existingSets = workoutRepo.getSetsWithExercise(workout.id)
+        val loadedExercises = exercises.map { ex ->
+            val exSets = existingSets.filter { it.set.exerciseId == ex.exercise.id }
+                .map { it.set }
+            ex.copy(sets = exSets)
+        }
+        val startIdx = workout.lastExerciseIndex.coerceIn(0, (loadedExercises.size - 1).coerceAtLeast(0))
+        _state.value = TrainState(
+            routine = routine,
+            exercises = loadedExercises,
+            workoutId = workout.id,
+            suggestions = suggestions,
+            currentExerciseIndex = startIdx
+        )
     }
 
     private fun saveExerciseIndex(index: Int) {
@@ -192,6 +211,11 @@ class TrainViewModel @Inject constructor(
                 explosive = explosive
             )
             workoutRepo.insertSet(set)
+            // ponytail: persistir índice también al registrar serie — un crash tras loguear sin navegar
+            // reanuda en el ejercicio correcto
+            _state.value.exercises.indexOfFirst { it.exercise.id == exerciseId }
+                .takeIf { it >= 0 }
+                ?.let { saveExerciseIndex(it) }
             reloadSets(exerciseId)
         }
     }

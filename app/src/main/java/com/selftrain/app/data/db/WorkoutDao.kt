@@ -108,6 +108,10 @@ interface WorkoutDao {
     @Query("SELECT * FROM workouts WHERE completed = 0 ORDER BY date DESC LIMIT 1")
     suspend fun getUnfinishedWorkout(): Workout?
 
+    // ponytail: auto-recovery — unfinished workout of a specific routine (process death on TrainScreen)
+    @Query("SELECT * FROM workouts WHERE completed = 0 AND routineId = :routineId ORDER BY date DESC LIMIT 1")
+    suspend fun getUnfinishedForRoutine(routineId: Long): Workout?
+
     @Query("DELETE FROM workouts WHERE id = :id")
     suspend fun deleteById(id: Long)
 }
