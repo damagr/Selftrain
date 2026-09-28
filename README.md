@@ -7,101 +7,55 @@
 
 App Android para registrar entrenamientos de gimnasio. Soporta **Método Bilbo** (series de activación explosiva + series de trabajo), Full Body y Push-Pull-Legs.
 
-## Funcionalidades
+## ¿Qué es SelfTrain?
 
-### Entreno en vivo
-- **Navegación paso a paso** entre ejercicios con anterior/siguiente y salto directo
-- **GIF demostrativo** de cada ejercicio — botón `i` junto al nombre → popup con animación del movimiento (vía CDN, sin peso en la app)
-- **Sugerencias automáticas** de peso y reps basadas en el historial de la sesión anterior
-- **PRs de la mejor sesión anterior** visibles durante el entreno (card colapsable para no ocupar espacio)
-- **Series Bilbo + series de trabajo** con prellavereo inteligente del peso
-- **Progresión intra-sesión**: ajuste automático de peso según reps efectivas del set anterior (tarjeta verde +5% si reps+RIR >10, roja −10% si reps+RIR <8)
-- **Redondeo de mancuernas**: las sugerencias de peso para ejercicios de mancuernas se redondean al paso de 2.5kg
-- **Temporizador de descanso** configurable (±30s, 30–300s) con:
-  - **Servicio en primer plano** con notificación persistente y botones Pausa/Parar
-  - **Aviso sonoro al terminar** (canal de alta prioridad con sonido+ vibración)
-  - Pausa/reanudar/reiniciar desde la propia tarjeta del timer
-  - Funciona aunque estés en otra app
-- **Resumen al finalizar**: volumen por grupo muscular, 1RM estimado (Epley), comparativa con la semana anterior, nuevos récords con flechas de evolución, duración editable
+SelfTrain te guía durante el entreno ejercicio a ejercicio, registra cada serie al instante y guarda tu progreso automáticamente. Así puedes concentrarte en entrenar: la app recuerda tus pesos, te sugiere la carga de cada ejercicio, controla los descansos y te muestra cómo evolucionas con calendarios y gráficos.
 
-### Recuperación de sesiones
-- Si la app se cierra durante un entreno, al volver aparece un diálogo para **reanudar o descartar** la sesión incompleta
-- El progreso se persiste ejercicio a ejercicio (`lastExerciseIndex` en la entidad Workout)
+## Características principales
 
-### Método Bilbo
-Sistema creado por Jesús María Varela Goicochea:
-- **1 serie Bilbo**: 15–50 reps al ~50% 1RM, concéntrica explosiva, excéntrica controlada, RIR 1–3
-- **3–4 series de trabajo**: 8–12 reps con ~40% más peso; descanso 2–3 min en compuestos, 90–120s en aislamiento
-- **Progresión automática**: al llegar a 50 reps limpias (sin contar RIR) → +10% peso y reinicio a 15–20 reps
+### Entrenamiento guiado
+- Navega entre ejercicios con anterior/siguiente o salta directamente a cualquiera
+- Cada ejercicio tiene un **GIF animado** (botón `i` junto al nombre) para ver cómo se hace
+- La app te **sugiere el peso y las repeticiones** según tu última sesión
+- Cada serie se registra al instante y **se guarda automáticamente**: si la app se cierra a mitad de entreno, al volver recupera tu sesión donde la dejaste (series y ejercicio)
 
-**Ejercicios compatibles** (la Serie Bilbo se ofrece automáticamente): ejercicios de **press** en cualquier variante, **jalón**, **remo**, **curl de bíceps**, **extensiones de tríceps** y **curl femoral**. **Excluidos** de la Serie Bilbo (van directos a series de trabajo): **sentadilla, peso muerto, prensa e hip thrust** — con 15-50 repeticiones su demanda respiratoria impide alcanzar el RIR 1-3 requerido.
+### Método Bilbo (automático)
+- Si tu rutina es Bilbo, la app te ofrece la **serie de activación explosiva** antes de las series de trabajo
+- Sugiere peso y reps según la **progresión del método**: al llegar a 50 reps limpias, sube el peso y reinicia
+- Las sugerencias de mancuernas se redondean al paso de 2.5kg
+
+### Temporizador de descanso
+- Inicia el descanso con un toque (ajustable ±30s)
+- La cuenta **sigue en una notificación aunque uses otra app, apagues la pantalla o el sistema cierre la app**
+- Pausa/reanudar desde la notificación o desde la app — siempre sincronizados
+- **Aviso sonoro** cuando termina
+
+### Historial y progreso
+- **Calendario mensual** con los días que entrenaste
+- Detalle de cada entreno: series, peso y RIR — **editables**
+- **1RM estimado** y gráficos de progresión por ejercicio
+- **Comparativa con la semana anterior**
 
 ### Rutinas
-- **6 programas predefinidos** cargables con un toque (botón "Cargar rutinas"): los tres últimos son variantes del Método Bilbo, distinguibles por el sufijo "— Bilbo":
-
-| Programa | Días | Método |
-|----------|------|--------|
-| PPL 5 Días | Push / Pull / Legs / Push / Pull | PPL |
-| PPL 3 Días | Push / Pull / Legs | PPL |
-| Full Body 3 Días | Día 1 / 2 / 3 | Full Body |
-| PPL 5 Días — Bilbo | Push / Pull / Legs / Push / Pull | Bilbo |
-| PPL 3 Días — Bilbo | Push / Pull / Legs | Bilbo |
-| Full Body 3 Días — Bilbo | Día 1 / 2 / 3 | Bilbo |
-
-- **Jerarquía padre/hijo**: los programas se expanden para mostrar sus días; las rutinas sueltas conviven sin interferir
-- Crear rutinas personalizadas con selector de método (Bilbo / Full Body / PPL)
-- Añadir/quitar/reordenar ejercicios (↑↓ con `animateItem()`)
-- Reemplazar ejercicios sin borrar y volver a añadir
-- Buscador en el selector de ejercicios (filtro en tiempo real)
-- Añadir días a programas existentes; eliminar programa con todos sus hijos
-
-### Compartir e importar rutinas (QR)
-- **Compartir por QR**: genera un QR de cualquier rutina o programa para importarla en otro dispositivo
-- **Escáner integrado** (CameraX + ML Kit): cámara a pantalla completa con guía de encuadre, tap-to-focus y zoom inicial; resolución alta para QRs densos
-- **Fallback sin cámara**: botón "Copiar código" al compartir y "Pegar código" al importar (portapapeles)
-- **Importación con confirmación**: muestra la rutina/días/ejercicios antes de importar; los ejercicios que no tengas se añaden a tu biblioteca (match por nombre)
-- Payload compacto: JSON plano o deflate+base64 para rutinas grandes; sin ids ni gifUrl (se recalculan al importar)
+- **6 programas predefinidos** (PPL, Full Body y variantes Bilbo) cargables con un toque
+- Crea tus propias rutinas y añade/quita/reordena ejercicios
+- **Comparte rutinas por QR** (o cópialas como texto) para importarlas en otro dispositivo
 
 ### Biblioteca de ejercicios
-- **60 ejercicios pre-cargados** con grupo muscular, categoría (compuesto/aislamiento) y equipamiento (barra, mancuerna, cable, máquina, peso corporal)
-- **GIF demostrativo** de cada ejercicio cargado desde CDN
-- Crear ejercicios propios (nombre, grupo muscular, categoría, equipamiento)
-- **Eliminación suave** (soft delete): modo borrado con toggle en la barra superior; muestra conteo exacto de usos antes de borrar
-- Validación: no permite borrar ejercicios en uso en rutinas o histórico (avisa con snackbar)
-- Restauración de ejercicios eliminados desde Ajustes
-
-### Historial
-- **Calendario mensual** navegable con dots en días con entreno, día seleccionado con borde
-- Vista resumen con volumen por grupos musculares
-- Drill-down: pulsar entreno → detalle por ejercicio con sets expandibles
-- **Edición de sets**: modificar reps, peso, RIR, tipo Bilbo/Trabajo desde el detalle
-- **Añadir sets y ejercicios** a entrenos ya completados
-- 1RM estimado (fórmula Epley) con evolución
-- Gráfico de progresión de 1RM por ejercicio
-- Comparativa con la semana anterior
-- Borrado de entreno con doble confirmación
+- **60 ejercicios pre-cargados** con grupo muscular, categoría y equipamiento
+- Crea ejercicios propios
+- Borra los que no uses (la app avisa si están en uso)
 
 ### Backup y datos
-- **Backup automático diario** (WorkManager) en segundo plano
-- **Backup preventivo antes de cada actualización** de la app
-- **Carpeta configurable**: selector SAF (Storage Access Framework) — elige dónde guardar los backups desde Ajustes
-- Conserva los últimos 5 backups automáticos (limpia los antiguos)
-- Exportar/importar manual en JSON con feedback toast
+- **Backup automático diario** en segundo plano
+- Exporta/importa tus datos manualmente en JSON
+- Elige la carpeta donde guardar los backups
 
-### Actualización integrada
-- Detecta automáticamente nuevas versiones en GitHub
-- Diálogo de progreso con porcentaje durante la descarga del APK
-- Gestión de permisos `REQUEST_INSTALL_PACKAGES` en Android 8+
-- Backup automático antes de instalar la actualización
+### Actualizaciones integradas
+- La app detecta nuevas versiones y **las instala desde la propia app**
 
-### Temática (Material 3 Expressive)
-- **Material You** (Android 12+): esquemas de color dinámicos claro/oscuro con paleta pastel azul de respaldo
-- **Google Fonts**: Oswald para titulares + Inter para cuerpo/textos
-- **Esquinas redondeadas**: 8 niveles de forma personalizada (4–32dp)
-- **Animaciones**: transiciones slide+fade entre pantallas, `animateItem()` en reordenación de ejercicios
-
-### Cuadro de mando web
-Dashboard interactivo para estudiar progresión desde el navegador del PC:
+### Dashboard web (PC)
+Estudia tu progresión desde el navegador del PC:
 
 ```bash
 # Exporta el backup desde la app (Ajustes → Exportar)
@@ -110,50 +64,29 @@ python3 dashboard/dashboard.py selftrain_backup.json
 # Abre http://localhost:8080
 ```
 
-Dos pestañas con Chart.js v4 + plugin de anotaciones:
-- **Ejercicios**: 1RM estimado (Epley), peso máximo, volumen; gráfico Bilbo dual-axis (reps + peso) con línea de anotación en 50 reps
-- **Entrenamientos**: total de entrenos, volumen total, duración media, ejercicios distintos; barras de volumen semanal y frecuencia semanal; tabla ordenable con fecha, rutina, duración, ejercicios, series, volumen
-
 Solo necesita Python 3 (sin dependencias extra).
 
-## Stack
+## Cómo funciona: el workflow
 
-Kotlin + Jetpack Compose + Material 3 Expressive + Room + Hilt + Navigation Compose + Coil
+1. **Prepara tus rutinas** — al abrir por primera vez, carga los programas predefinidos (botón "Cargar rutinas") o crea las tuyas. Al iniciar, la app pedirá permiso de notificaciones (para el aviso del temporizador).
+2. **Empieza el entreno** — elige la rutina y pulsa **Empezar**.
+3. **Registra las series** — sigue los ejercicios en orden: serie de activación (si es Bilbo) + series de trabajo. La app sugiere los pesos y guarda todo al instante. Si te equivocas, puedes deshacer la última serie.
+4. **Descansa** — usa el temporizador entre series; la cuenta sigue fuera de la app aunque apagues la pantalla.
+5. **Finaliza** — pulsa **Finalizar** y revisa el resumen: volumen por grupo muscular, 1RM estimado, nuevos récords y duración. Se guarda en el historial automáticamente.
+6. **Consulta tu progreso** — calendario, gráficos de 1RM y comparativas en la app; o el dashboard interactivo en el PC.
+7. **Protege tus datos** — backup automático diario o exportación manual desde Ajustes.
 
-### Dependencias principales
-- **Coil** — carga de GIFs demostrativos desde CDN (con `ImageDecoderDecoder`)
-- **Room** — persistencia local SQLite (v5, 5 entidades)
-- **Hilt** — inyección de dependencias (con integración WorkManager)
-- **Navigation Compose** — navegación tipo single-activity
-- **Gson** — parsing de ejercicios semilla y backups JSON
-- **CameraX** — escáner de QR para importar rutinas
-- **ML Kit Barcode** — detección de QRs en el escáner
-- **ZXing** — generación de QRs para compartir rutinas
-- **WorkManager** — backup automático diario
-- **Material Icons Extended** — iconos Material
-- **Google Fonts** — Oswald + Inter tipografía
+## Descarga e instalación
 
-### Tests
-- 27 tests unitarios (JUnit 4, solo JVM) en `app/src/test/`: lógica Bilbo (progresión, Epley 1RM, reglas de ajuste con RIR, redondeo mancuernas) y codec de rutinas compartidas (encode/decode con/sin compresión)
+1. Descarga el APK de la última versión desde [GitHub Releases](https://github.com/damagr/Selftrain/releases)
+2. Instálalo (si te lo pide, activa "Instalar apps de fuentes desconocidas")
+3. Las actualizaciones llegarán avisadas dentro de la propia app (Ajustes → Buscar actualización)
 
-## Build
+## Para desarrolladores
 
 ```bash
 ./gradlew assembleDebug
 ```
-
-APK en `app/build/outputs/apk/debug/selftrain-debug.apk`
-
-```bash
-# Release (firmado con keystore)
-./gradlew assembleRelease
-```
-
-APK firmado en `app/build/outputs/apk/release/selftrain-release.apk`
-
-## CI/CD
-
-GitHub Actions en `.github/workflows/release.yml`: detecta cambio de versión → auto-tag → build APK release → crea GitHub Release.
 
 ## Licencia
 
