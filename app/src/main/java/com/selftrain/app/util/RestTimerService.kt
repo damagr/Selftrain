@@ -3,32 +3,46 @@ package com.selftrain.app.util
 import android.app.*
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import kotlinx.coroutines.*
 import com.selftrain.app.MainActivity
 
-// ponytail: foreground service for rest timer, notification shows countdown
+// ponytail: foreground service for rest timer, notification shows countdown.
+// La cuenta es por deadline (RestTimerController): los ticks solo refrescan la notificación,
+// el tiempo mostrado es correcto aunque Doze retrase un tick. Wake lock parcial para que el
+// tick corra con pantalla apagada. START_STICKY + prefs: si el sistema mata el proceso,
+// el servicio se recrea y la cuenta continúa desde el deadline persistido.
 class RestTimerService : Service() {
 
-    private var secondsRemaining: Int = 90
-    private var isRunning: Boolean = false
     private var tickJob: Job? = null
+    private var wakeLock: PowerManager.WakeLock? = null
+    private var serviceScope: CoroutineScope? = null
 
     companion object {
         const val CHANNEL_ID = "rest_timer_channel"
         const val CHANNEL_ID_DONE = "rest_timer_done_channel"
         const val NOTIFICATION_ID = 1001
         const val NOTIFICATION_ID_DONE = 1002
-        const val EXTRA_SECONDS = "seconds"
+        const val EXTRA_END_TIMESTAMP = "end_timestamp"
+        const val EXTRA_TOTAL = "total_seconds"
         const val EXTRA_ACTION = "action" // "start", "pause", "stop"
 
-        fun createStartIntent(ctx: Context, seconds: Int): Intent {
+        private const val PREFS = "rest_timer_prefs"
+        private const val KEY_END = "end_timestamp"
+        private const val KEY_TOTAL = "total_seconds"
+        private const val KEY_PAUSED = "paused_remaining"
+        private const val KEY_RUNNING = "is_running"
+
+        fun createStartIntent(ctx: Context, endTimestamp: Long, totalSecs: Int): Intent {
             return Intent(ctx, RestTimerService::class.java).apply {
-                putExtra(EXTRA_SECONDS, seconds)
+                putExtra(EXTRA_END_TIMESTAMP, endTimestamp)
+                putExtra(EXTRA_TOTAL, totalSecs)
                 putExtra(EXTRA_ACTION, "start")
             }
         }
@@ -71,68 +85,145 @@ class RestTimerService : Service() {
                 nm.createNotificationChannel(doneChannel)
             }
         }
+
+        // ponytail: estado persistido para sobrevivir kills del sistema (START_STICKY)
+        private fun prefs(ctx: Context): SharedPreferences =
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+        private fun persistState(ctx: Context) {
+            prefs(ctx).edit()
+                .putLong(KEY_END, RestTimerController.endTimestamp)
+                .putInt(KEY_TOTAL, RestTimerController.totalSeconds)
+                .putInt(KEY_PAUSED, RestTimerController.pausedRemaining)
+                .putBoolean(KEY_RUNNING, RestTimerController.isRunning)
+                .apply()
+        }
+
+        private fun clearState(ctx: Context) {
+            prefs(ctx).edit().clear().apply()
+        }
     }
 
     override fun onCreate() {
         super.onCreate()
         createChannel(this)
+        serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val action = intent?.getStringExtra(EXTRA_ACTION) ?: "start"
-        when (action) {
+        when (intent?.getStringExtra(EXTRA_ACTION)) {
             "start" -> {
-                val secs = intent?.getIntExtra(EXTRA_SECONDS, 90) ?: 90
-                secondsRemaining = secs
-                isRunning = true
-                // ponytail: guard startForeground so a denied/revoked POST_NOTIFICATIONS
-                // doesn't crash the service; countdown still runs without a visible notif.
-                if (NotificationManagerCompat.from(this).areNotificationsEnabled()) {
-                    try {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                            startForeground(
-                                NOTIFICATION_ID,
-                                buildNotification(),
-                                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-                            )
-                        } else {
-                            startForeground(NOTIFICATION_ID, buildNotification())
-                        }
-                    } catch (_: SecurityException) {
-                        // FGS permission denied at runtime — timer runs silently
-                    }
+                val end = intent.getLongExtra(EXTRA_END_TIMESTAMP, 0L)
+                val total = intent.getIntExtra(EXTRA_TOTAL, 90)
+                if (end <= System.currentTimeMillis()) {
+                    // deadline ya pasado → nada que contar
+                    RestTimerController.stop()
+                    clearState(this)
+                    stopSelf()
+                    return START_NOT_STICKY
                 }
+                RestTimerController.restoreRunning(total, end)
+                persistState(this)
+                goForeground()
+                acquireLock()
                 startTicking()
             }
             "pause" -> {
-                isRunning = !isRunning
-                if (isRunning) startTicking() else tickJob?.cancel()
+                // toggle: pausa ↔ reanuda (lo usan la notificación y la app — sincronizados)
+                if (RestTimerController.isRunning) {
+                    RestTimerController.pause()
+                    stopTicking()
+                    releaseLock()
+                } else {
+                    RestTimerController.resume()
+                    if (RestTimerController.endTimestamp <= System.currentTimeMillis()) {
+                        // agotado mientras estaba en pausa → fin
+                        finishAndNotify()
+                        return START_NOT_STICKY
+                    }
+                    goForeground()
+                    acquireLock()
+                    startTicking()
+                }
+                persistState(this)
                 updateNotification()
             }
             "stop" -> {
-                stopTicking()
-                stopForeground(STOP_FOREGROUND_REMOVE)
-                stopSelf()
+                stopEverything()
+                return START_NOT_STICKY
+            }
+            else -> {
+                // START_STICKY: recreación tras kill del sistema → seguir desde prefs
+                val p = prefs(this)
+                val end = p.getLong(KEY_END, 0L)
+                val total = p.getInt(KEY_TOTAL, 90)
+                val paused = p.getInt(KEY_PAUSED, 0)
+                val wasRunning = p.getBoolean(KEY_RUNNING, false)
+                if (wasRunning && end > System.currentTimeMillis()) {
+                    RestTimerController.restoreRunning(total, end)
+                    goForeground()
+                    acquireLock()
+                    startTicking()
+                } else if (wasRunning && end > 0L) {
+                    // agotado mientras el proceso estuvo muerto → aviso de fin
+                    finishAndNotify()
+                } else if (!wasRunning && paused > 0) {
+                    // estaba en pausa: recuperar notificación pausada
+                    RestTimerController.restorePaused(total, paused)
+                    goForeground()
+                    updateNotification()
+                } else {
+                    stopSelf()
+                }
             }
         }
-        return START_NOT_STICKY
+        return START_STICKY
+    }
+
+    // ponytail: startForeground siempre — sin notificaciones el FGS corre headless y sigue
+    // contando (omítelo y el sistema mata el proceso a los 5s por FGS no iniciado)
+    private fun goForeground() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    buildNotification(),
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, buildNotification())
+            }
+        } catch (_: SecurityException) {
+            // FGS permission denied at runtime — timer runs silently
+        }
+    }
+
+    private fun acquireLock() {
+        if (wakeLock?.isHeld == true) return
+        val pm = getSystemService(PowerManager::class.java)
+        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "selftrain:RestTimer").apply {
+            setReferenceCounted(false)
+            // red de seguridad: auto-release si algo se cuelga (restante + margen)
+            acquire((RestTimerController.remainingFromDeadline() + 5) * 1000L)
+        }
+    }
+
+    private fun releaseLock() {
+        wakeLock?.let { if (it.isHeld) it.release() }
+        wakeLock = null
     }
 
     private fun startTicking() {
-        tickJob?.cancel()
-        tickJob = CoroutineScope(Dispatchers.Default).launch {
-            while (isRunning && secondsRemaining > 0) {
+        stopTicking()
+        tickJob = serviceScope?.launch {
+            while (RestTimerController.isRunning) {
                 delay(1000L)
-                secondsRemaining--
+                // recalcula desde el deadline: correcto aunque el tick se retrase
+                RestTimerController.tick()
                 updateNotification()
-                if (secondsRemaining <= 0) {
-                    isRunning = false
-                    // ponytail: post heads-up + sound notification on HIGH channel so it
-                    // surfaces over other apps; remove the silent running notification.
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                    val nm = getSystemService(NotificationManager::class.java)
-                    nm.notify(NOTIFICATION_ID_DONE, buildDoneNotification())
-                    stopSelf()
+                if (RestTimerController.remaining <= 0) {
+                    finishAndNotify()
+                    return@launch
                 }
             }
         }
@@ -141,6 +232,25 @@ class RestTimerService : Service() {
     private fun stopTicking() {
         tickJob?.cancel()
         tickJob = null
+    }
+
+    private fun finishAndNotify() {
+        releaseLock()
+        RestTimerController.finish()
+        clearState(this)
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        val nm = getSystemService(NotificationManager::class.java)
+        nm.notify(NOTIFICATION_ID_DONE, buildDoneNotification())
+        stopSelf()
+    }
+
+    private fun stopEverything() {
+        stopTicking()
+        releaseLock()
+        RestTimerController.stop()
+        clearState(this)
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 
     private fun updateNotification() {
@@ -165,17 +275,22 @@ class RestTimerService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val mins = secondsRemaining / 60
-        val secs = secondsRemaining % 60
+        val rem = if (RestTimerController.isRunning) {
+            RestTimerController.remainingFromDeadline()
+        } else {
+            RestTimerController.remaining
+        }
+        val mins = rem / 60
+        val secs = rem % 60
         val timeStr = "${mins}:${secs.toString().padStart(2, '0')}"
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Descanso: $timeStr")
-            .setContentText(if (isRunning) "Tiempo restante..." else "Pausado")
+            .setContentText(if (RestTimerController.isRunning) "Tiempo restante..." else "Pausado")
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setOngoing(true)
             .setContentIntent(openIntent)
-            .addAction(0, if (isRunning) "Pausar" else "Reanudar", pausedIntent)
+            .addAction(0, if (RestTimerController.isRunning) "Pausar" else "Reanudar", pausedIntent)
             .addAction(0, "Parar", stopIntent)
             .build()
     }
@@ -207,8 +322,11 @@ class RestTimerService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        // NO limpiar prefs aquí: el sticky restart las necesita tras muerte del proceso.
         stopTicking()
-        stopForeground(STOP_FOREGROUND_REMOVE)
+        releaseLock()
+        serviceScope?.cancel()
+        serviceScope = null
         super.onDestroy()
     }
 }

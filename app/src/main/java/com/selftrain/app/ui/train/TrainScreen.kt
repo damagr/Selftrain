@@ -1,5 +1,6 @@
 package com.selftrain.app.ui.train
 
+import android.content.Context
 import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -28,6 +29,7 @@ import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import com.selftrain.app.util.BilboProgression
 import com.selftrain.app.util.Labels
+import com.selftrain.app.util.RestTimerController
 import com.selftrain.app.util.RestTimerService
 import com.selftrain.app.util.getExerciseGifUrl
 
@@ -39,6 +41,7 @@ fun TrainScreen(
     onFinish: () -> Unit,
     viewModel: TrainViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val state by viewModel.state.collectAsState()
 
     LaunchedEffect(routineId, resumeWorkoutId) { viewModel.startWorkout(routineId, resumeWorkoutId) }
@@ -353,6 +356,7 @@ fun TrainScreen(
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.discardEmptyWorkout()
+                    stopRestTimer(context)
                     onFinish()
                 }) {
                     Text("Salir sin guardar")
@@ -376,6 +380,7 @@ fun TrainScreen(
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.discardWorkout()
+                    stopRestTimer(context)
                     onFinish()
                 }) {
                     Text("Cancelar entreno", color = MaterialTheme.colorScheme.error)
@@ -443,7 +448,7 @@ fun TrainScreen(
         var editDuration by remember { mutableStateOf(summary.durationMinutes.toString()) }
 
         AlertDialog(
-            onDismissRequest = { viewModel.dismissSummary(); onFinish() },
+            onDismissRequest = { viewModel.dismissSummary(); stopRestTimer(context); onFinish() },
             shape = MaterialTheme.shapes.large,
             title = { Text("¡Entreno completado!") },
             text = {
@@ -508,7 +513,7 @@ fun TrainScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { viewModel.dismissSummary(); onFinish() }) {
+                TextButton(onClick = { viewModel.dismissSummary(); stopRestTimer(context); onFinish() }) {
                     Text("Volver a rutinas")
                 }
             },
@@ -879,48 +884,72 @@ fun WorkSetInput(
 @Composable
 fun RestTimer(category: String? = null) {
     val context = LocalContext.current
-    var totalSeconds by rememberSaveable { mutableIntStateOf(defaultRestSeconds(category)) }
-    var remaining by rememberSaveable { mutableIntStateOf(defaultRestSeconds(category)) }
-    var isRunning by rememberSaveable { mutableStateOf(false) }
-    var showTimer by rememberSaveable { mutableStateOf(false) }
-    var pausedRemaining by rememberSaveable { mutableIntStateOf(0) }
-    var showFinishedMessage by rememberSaveable { mutableStateOf(false) }
 
-    // Ponytail: reset del default al cambiar de ejercicio, solo si el timer no corre
-    // (para no cortar un descanso en marcha). El ±30s manual sigue disponible.
-    LaunchedEffect(category) {
-        if (!isRunning) {
-            totalSeconds = defaultRestSeconds(category)
-            remaining = totalSeconds
-        }
-    }
+    // ponytail: única fuente de verdad = RestTimerController (lo escribe el servicio, la UI lee).
+    // Sin estado local duplicado: la UI siempre muestra el valor del controller — el servicio y
+    // la app quedan sincronizados (pausa por notificación incluida), y la cuenta sobrevive a
+    // navegación y rotación porque el controller vive a nivel de proceso.
+    val isActive = RestTimerController.isActive
+    val isRunning = RestTimerController.isRunning
+    val remaining = RestTimerController.remaining
 
-    // Stop service when composable leaves composition (e.g. navigate away)
-    DisposableEffect(Unit) {
-        onDispose {
-            context.stopService(RestTimerService.createStopIntent(context))
-        }
-    }
+    // Payload para restaurar tras muerte de proceso: guarda el DEADLINE (no los segundos),
+    // así el remaining real se recalcula aunque el proceso haya estado muerto un rato.
+    var savedActive by rememberSaveable { mutableStateOf(false) }
+    var savedRunning by rememberSaveable { mutableStateOf(false) }
+    var savedDeadline by rememberSaveable { mutableLongStateOf(0L) }
+    var savedTotal by rememberSaveable { mutableIntStateOf(0) }
+    var savedPaused by rememberSaveable { mutableIntStateOf(0) }
 
-    // Tick loop: decrement every second while running
-    if (isRunning) {
-        LaunchedEffect(isRunning) {
-            while (isRunning) {
-                delay(1000L)
-                remaining = (remaining - 1).coerceAtLeast(0)
-                if (remaining <= 0) {
-                    // ponytail: service notification handles sound+vibrate; in-app shows flash only
-                    showFinishedMessage = true
-                    delay(2000)
-                    showFinishedMessage = false
-                    isRunning = false
-                    showTimer = false
+    // Restore-once: controller vacío (proceso nuevo) pero había timer activo al morir.
+    LaunchedEffect(Unit) {
+        if (!RestTimerController.isActive && savedActive) {
+            if (savedRunning) {
+                val rem = ((savedDeadline - System.currentTimeMillis()) / 1000L).toInt()
+                if (rem > 0) {
+                    // rearranca servicio + notificación con el tiempo real restante
+                    RestTimerController.restoreRunning(savedTotal, savedDeadline)
+                    context.startForegroundService(
+                        RestTimerService.createStartIntent(context, savedDeadline, savedTotal)
+                    )
+                } else {
+                    // expiró mientras el proceso estuvo muerto → flash, sin servicio
+                    RestTimerController.finish()
                 }
+            } else {
+                // estaba en pausa: restaura la tarjeta; la notificación la recupera el sticky
+                // restart si lo hubo, y reanudar in-app rearraque el servicio
+                RestTimerController.restorePaused(savedTotal, savedPaused)
             }
+            savedActive = false
         }
     }
 
-    if (!showTimer) {
+    // Sync del payload tras cada composición
+    SideEffect {
+        savedActive = RestTimerController.isActive
+        savedRunning = RestTimerController.isRunning
+        savedDeadline = RestTimerController.endTimestamp
+        savedTotal = RestTimerController.totalSeconds
+        savedPaused = RestTimerController.pausedRemaining
+    }
+
+    // Flash "terminado": se auto-limpia a los 2s
+    LaunchedEffect(RestTimerController.finishedFlash) {
+        if (RestTimerController.finishedFlash) {
+            delay(2000)
+            RestTimerController.clearFlash()
+        }
+    }
+
+    // Reset del default al cambiar de ejercicio, solo si no hay descanso activo
+    // (para no cortar un descanso en marcha). El ±30s manual sigue disponible.
+    var customSeconds by remember(category) { mutableIntStateOf(defaultRestSeconds(category)) }
+    LaunchedEffect(category) {
+        if (!RestTimerController.isActive) customSeconds = defaultRestSeconds(category)
+    }
+
+    if (!isActive) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.Center,
@@ -928,29 +957,25 @@ fun RestTimer(category: String? = null) {
         ) {
             // +/- 30s buttons
             IconButton(onClick = {
-                if (totalSeconds > 30) totalSeconds -= 30
-                remaining = totalSeconds
+                if (customSeconds > 30) customSeconds -= 30
             }) {
                 Text("−30s", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Spacer(Modifier.width(8.dp))
             TextButton(onClick = {
-                showTimer = true
-                isRunning = true
-                remaining = totalSeconds
-                // Start foreground service
-                RestTimerService.createChannel(context)
-                context.startForegroundService(RestTimerService.createStartIntent(context, totalSeconds))
+                RestTimerController.start(customSeconds)
+                context.startForegroundService(
+                    RestTimerService.createStartIntent(context, RestTimerController.endTimestamp, customSeconds)
+                )
             }) {
                 Icon(Icons.Default.Timer, null, Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Iniciar descanso (${totalSeconds}s)")
+                Text("Iniciar descanso (${customSeconds}s)")
             }
             Spacer(Modifier.width(8.dp))
             IconButton(onClick = {
-                if (totalSeconds < 300) totalSeconds += 30
-                remaining = totalSeconds
+                if (customSeconds < 300) customSeconds += 30
             }) {
                 Text("+30s", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -974,28 +999,13 @@ fun RestTimer(category: String? = null) {
                 )
                 Row {
                     TextButton(onClick = {
-                        if (isRunning) {
-                            // Pause
-                            isRunning = false
-                            pausedRemaining = remaining
-                            context.stopService(RestTimerService.createStopIntent(context))
-                        } else {
-                            // Resume
-                            isRunning = true
-                            remaining = pausedRemaining
-                            totalSeconds = pausedRemaining
-                            // Restart service with remaining time
-                            RestTimerService.createChannel(context)
-                            context.startForegroundService(RestTimerService.createStartIntent(context, pausedRemaining))
-                        }
+                        // mismo intent toggle que la notificación → sincronizados
+                        context.startService(RestTimerService.createPauseIntent(context))
                     }) {
                         Text(if (isRunning) "Pausa" else "Reanudar")
                     }
                     TextButton(onClick = {
-                        isRunning = false
-                        remaining = totalSeconds
-                        showTimer = false
-                        context.stopService(RestTimerService.createStopIntent(context))
+                        context.startService(RestTimerService.createStopIntent(context))
                     }) {
                         Text("Reset")
                     }
@@ -1005,7 +1015,7 @@ fun RestTimer(category: String? = null) {
     }
 
     // Flash "finished" message
-    if (showFinishedMessage) {
+    if (RestTimerController.finishedFlash) {
         Card(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             shape = MaterialTheme.shapes.medium,
@@ -1026,4 +1036,13 @@ private fun defaultRestSeconds(category: String?): Int = when (category) {
     "compound" -> 150
     "isolation" -> 105
     else -> 90
+}
+
+/** ponytail: para el descanso activo y limpia el controller al terminar/descartar el entreno.
+ *  Usa el intent "stop" (no stopService) para que el servicio limpie también las prefs. */
+private fun stopRestTimer(context: Context) {
+    if (RestTimerController.isActive) {
+        context.startService(RestTimerService.createStopIntent(context))
+    }
+    RestTimerController.stop()
 }
