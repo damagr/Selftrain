@@ -19,7 +19,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -29,6 +31,7 @@ import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import com.selftrain.app.util.BilboProgression
 import com.selftrain.app.util.Labels
+import com.selftrain.app.util.PlateCalculator
 import com.selftrain.app.util.RestTimerController
 import com.selftrain.app.util.RestTimerService
 import com.selftrain.app.util.getExerciseGifUrl
@@ -43,6 +46,8 @@ fun TrainScreen(
 ) {
     val context = LocalContext.current
     val state by viewModel.state.collectAsState()
+    val restTrigger by viewModel.restTrigger.collectAsState()
+    val hapticFeedback = LocalHapticFeedback.current
 
     LaunchedEffect(routineId, resumeWorkoutId) { viewModel.startWorkout(routineId, resumeWorkoutId) }
 
@@ -238,8 +243,16 @@ fun TrainScreen(
                 }
             }
 
-            // Rest timer (shared across exercises) — default según tipo compound/isolation
-            item { RestTimer(category = state.exercises.getOrNull(currentIndex)?.exercise?.category) }
+            // Rest timer (shared across exercises) — default: configurado en la rutina o por categoría
+            item {
+                val restDefault = currentEx?.restSeconds?.takeIf { it > 0 }
+                    ?: defaultRestSeconds(currentEx?.exercise?.category)
+                RestTimer(
+                    category = state.exercises.getOrNull(currentIndex)?.exercise?.category,
+                    restTrigger = restTrigger,
+                    defaultSeconds = restDefault
+                )
+            }
 
             // Current exercise sets + input
             currentEx?.let { ex ->
@@ -255,11 +268,13 @@ fun TrainScreen(
                     sets = ex.sets,
                     suggestion = currentSuggestion,
                     exerciseKey = ex.exercise.id.toString(),
-                    onLogBilboSet = { reps, weight, rir ->
-                        viewModel.logSet(ex.exercise.id, "bilbo", reps, weight, rir, true)
+                    onLogBilboSet = { reps, weight, rir, notes ->
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.logSet(ex.exercise.id, "bilbo", reps, weight, rir, true, notes)
                     },
-                    onLogWorkSet = { reps, weight, rir ->
-                        viewModel.logSet(ex.exercise.id, "work", reps, weight, rir, false)
+                    onLogWorkSet = { reps, weight, rir, notes ->
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.logSet(ex.exercise.id, "work", reps, weight, rir, false, notes)
                     },
                     onDeleteLastSet = { showUndoConfirm = true }
                 )
@@ -446,6 +461,9 @@ fun TrainScreen(
     // Workout summary dialog
     state.workoutSummary?.let { summary ->
         var editDuration by remember { mutableStateOf(summary.durationMinutes.toString()) }
+        var editBodyWeight by remember {
+            mutableStateOf(if (summary.bodyWeight > 0) String.format("%.1f", summary.bodyWeight) else "")
+        }
 
         AlertDialog(
             onDismissRequest = { viewModel.dismissSummary(); stopRestTimer(context); onFinish() },
@@ -464,6 +482,23 @@ fun TrainScreen(
                             },
                             label = { Text("min") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.width(100.dp),
+                            singleLine = true
+                        )
+                    }
+
+                    // ponytail: peso corporal opcional (para fuerza relativa 1RM/kg)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Peso corporal: ")
+                        OutlinedTextField(
+                            value = editBodyWeight,
+                            onValueChange = { v ->
+                                editBodyWeight = v.filter { ch -> ch.isDigit() || ch == '.' }
+                                v.toFloatOrNull()?.let { viewModel.updateBodyWeight(it) }
+                                if (v.isEmpty()) viewModel.updateBodyWeight(0f)
+                            },
+                            label = { Text("kg (opcional)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.width(100.dp),
                             singleLine = true
                         )
@@ -513,8 +548,39 @@ fun TrainScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { viewModel.dismissSummary(); stopRestTimer(context); onFinish() }) {
-                    Text("Volver a rutinas")
+                Row {
+                    // ponytail: compartir el resumen del entreno como texto
+                    TextButton(onClick = {
+                        val shareText = buildString {
+                            appendLine("Entreno completado")
+                            appendLine("Duración: ${summary.durationMinutes} min")
+                            if (summary.bodyWeight > 0f) {
+                                appendLine("Peso corporal: ${String.format("%.1f", summary.bodyWeight)} kg")
+                            }
+                            if (summary.volumeByMuscle.isNotEmpty()) {
+                                appendLine("Volumen por grupo muscular:")
+                                summary.volumeByMuscle.forEach {
+                                    appendLine("  - ${Labels.muscleGroup(it.muscleGroup)}: ${String.format("%.1f", it.totalKg)} kg (${it.setCount} series)")
+                                }
+                            }
+                            if (summary.personalRecords.isNotEmpty()) {
+                                appendLine("Nuevos récords (1RM estimado):")
+                                summary.personalRecords.forEach {
+                                    appendLine("  - ${it.exerciseName}: ${String.format("%.1f", it.newRecord)} kg (antes ${String.format("%.1f", it.previousBest)})")
+                                }
+                            }
+                        }
+                        val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                        }
+                        context.startActivity(android.content.Intent.createChooser(send, "Compartir resumen"))
+                    }) {
+                        Text("Compartir")
+                    }
+                    TextButton(onClick = { viewModel.dismissSummary(); stopRestTimer(context); onFinish() }) {
+                        Text("Volver a rutinas")
+                    }
                 }
             },
             dismissButton = null
@@ -530,8 +596,8 @@ private fun LazyListScope.exerciseSetItems(
     sets: List<WorkoutSet>,
     suggestion: PerExerciseSuggestion,
     exerciseKey: String,
-    onLogBilboSet: (reps: Int, weight: Float, rir: Int) -> Unit,
-    onLogWorkSet: (reps: Int, weight: Float, rir: Int) -> Unit,
+    onLogBilboSet: (reps: Int, weight: Float, rir: Int, notes: String) -> Unit,
+    onLogWorkSet: (reps: Int, weight: Float, rir: Int, notes: String) -> Unit,
     onDeleteLastSet: () -> Unit
 ) {
     val lastWorkSet = sets.lastOrNull { it.setType == "work" }
@@ -580,6 +646,14 @@ private fun LazyListScope.exerciseSetItems(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
+                        }
+                        // ponytail: nota de la serie, visible en la sesión
+                        if (set.notes.isNotBlank()) {
+                            Text(
+                                "↳ ${set.notes}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
@@ -694,7 +768,7 @@ fun BilboSetInput(
     exerciseKey: String,
     sets: List<WorkoutSet>,
     suggestion: PerExerciseSuggestion,
-    onLog: (reps: Int, weight: Float, rir: Int) -> Unit,
+    onLog: (reps: Int, weight: Float, rir: Int, notes: String) -> Unit,
     onDeleteLastSet: () -> Unit,
     onFieldFocused: () -> Unit = {}
 ) {
@@ -708,6 +782,8 @@ fun BilboSetInput(
         )
     }
     var rir by remember { mutableStateOf("2") }
+    var note by remember(exerciseKey) { mutableStateOf("") }
+    var showPlateCalc by remember { mutableStateOf(false) }
 
     LaunchedEffect(lastSetWeight) {
         if (lastSetWeight != null && lastSetWeight > 0) {
@@ -728,8 +804,8 @@ fun BilboSetInput(
         }
         Spacer(Modifier.height(8.dp))
 
-        // Row 1: Reps + Peso
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Row 1: Reps + Peso + discos
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = reps,
                 onValueChange = { reps = it.filter { c -> c.isDigit() } },
@@ -746,6 +822,9 @@ fun BilboSetInput(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.weight(1f).onFocusChanged { if (it.isFocused) onFieldFocused() }, singleLine = true
             )
+            IconButton(onClick = { showPlateCalc = true }, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Default.Calculate, "Calcular discos", Modifier.size(20.dp))
+            }
         }
         Spacer(Modifier.height(8.dp))
 
@@ -759,6 +838,15 @@ fun BilboSetInput(
         )
         Spacer(Modifier.height(8.dp))
 
+        // ponytail: nota opcional de la serie
+        OutlinedTextField(
+            value = note,
+            onValueChange = { note = it },
+            label = { Text("Nota (opcional)") },
+            modifier = Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) onFieldFocused() }, singleLine = true
+        )
+        Spacer(Modifier.height(8.dp))
+
         // Row 3: Registrar + Deshacer
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
@@ -766,8 +854,9 @@ fun BilboSetInput(
                     val r = reps.toIntOrNull() ?: return@Button
                     val w = weight.toFloatOrNull() ?: return@Button
                     val ri = rir.toIntOrNull() ?: 2
-                    onLog(r, w, ri)
+                    onLog(r, w, ri, note.trim())
                     reps = ""
+                    note = ""
                 },
                 modifier = Modifier.weight(1f), shape = MaterialTheme.shapes.medium
             ) {
@@ -783,6 +872,13 @@ fun BilboSetInput(
                 }
             }
         }
+
+        if (showPlateCalc) {
+            PlateCalculatorDialog(
+                initialWeight = weight.toFloatOrNull() ?: 0f,
+                onDismiss = { showPlateCalc = false }
+            )
+        }
     }
 }
 
@@ -791,7 +887,7 @@ fun WorkSetInput(
     exerciseKey: String,
     sets: List<WorkoutSet>,
     suggestion: PerExerciseSuggestion,
-    onLog: (reps: Int, weight: Float, rir: Int) -> Unit,
+    onLog: (reps: Int, weight: Float, rir: Int, notes: String) -> Unit,
     onDeleteLastSet: () -> Unit,
     onFieldFocused: () -> Unit = {}
 ) {
@@ -808,6 +904,8 @@ fun WorkSetInput(
         )
     }
     var rir by remember { mutableStateOf("2") }
+    var note by remember(exerciseKey) { mutableStateOf("") }
+    var showPlateCalc by remember { mutableStateOf(false) }
 
     LaunchedEffect(lastSetWeight) {
         if (lastSetWeight != null && lastSetWeight > 0) {
@@ -825,8 +923,8 @@ fun WorkSetInput(
         }
         Spacer(Modifier.height(8.dp))
 
-        // Row 1: Reps + Peso
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Row 1: Reps + Peso + discos
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = reps,
                 onValueChange = { reps = it.filter { c -> c.isDigit() } },
@@ -843,6 +941,9 @@ fun WorkSetInput(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.weight(1f).onFocusChanged { if (it.isFocused) onFieldFocused() }, singleLine = true
             )
+            IconButton(onClick = { showPlateCalc = true }, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Default.Calculate, "Calcular discos", Modifier.size(20.dp))
+            }
         }
         Spacer(Modifier.height(8.dp))
 
@@ -856,6 +957,15 @@ fun WorkSetInput(
         )
         Spacer(Modifier.height(8.dp))
 
+        // ponytail: nota opcional de la serie
+        OutlinedTextField(
+            value = note,
+            onValueChange = { note = it },
+            label = { Text("Nota (opcional)") },
+            modifier = Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) onFieldFocused() }, singleLine = true
+        )
+        Spacer(Modifier.height(8.dp))
+
         // Row 3: Registrar + Deshacer
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
@@ -863,8 +973,9 @@ fun WorkSetInput(
                     val r = reps.toIntOrNull() ?: return@Button
                     val w = weight.toFloatOrNull() ?: return@Button
                     val ri = rir.toIntOrNull() ?: 2
-                    onLog(r, w, ri)
+                    onLog(r, w, ri, note.trim())
                     reps = ""
+                    note = ""
                 },
                 modifier = Modifier.weight(1f), shape = MaterialTheme.shapes.medium
             ) {
@@ -878,11 +989,18 @@ fun WorkSetInput(
                 }
             }
         }
+
+        if (showPlateCalc) {
+            PlateCalculatorDialog(
+                initialWeight = weight.toFloatOrNull() ?: 0f,
+                onDismiss = { showPlateCalc = false }
+            )
+        }
     }
 }
 
 @Composable
-fun RestTimer(category: String? = null) {
+fun RestTimer(category: String? = null, restTrigger: Int = 0, defaultSeconds: Int = 90) {
     val context = LocalContext.current
 
     // ponytail: única fuente de verdad = RestTimerController (lo escribe el servicio, la UI lee).
@@ -934,9 +1052,11 @@ fun RestTimer(category: String? = null) {
         savedPaused = RestTimerController.pausedRemaining
     }
 
-    // Flash "terminado": se auto-limpia a los 2s
+    // Flash "terminado": háptico + se auto-limpia a los 2s
+    val hapticFeedback = LocalHapticFeedback.current
     LaunchedEffect(RestTimerController.finishedFlash) {
         if (RestTimerController.finishedFlash) {
+            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
             delay(2000)
             RestTimerController.clearFlash()
         }
@@ -944,9 +1064,24 @@ fun RestTimer(category: String? = null) {
 
     // Reset del default al cambiar de ejercicio, solo si no hay descanso activo
     // (para no cortar un descanso en marcha). El ±30s manual sigue disponible.
-    var customSeconds by remember(category) { mutableIntStateOf(defaultRestSeconds(category)) }
-    LaunchedEffect(category) {
-        if (!RestTimerController.isActive) customSeconds = defaultRestSeconds(category)
+    var customSeconds by remember(defaultSeconds) { mutableIntStateOf(defaultSeconds) }
+    LaunchedEffect(defaultSeconds) {
+        if (!RestTimerController.isActive) customSeconds = defaultSeconds
+    }
+
+    // ponytail: descanso automático — al registrar una serie (trigger del ViewModel) arranca
+    // el descanso con los customSeconds del usuario (respeta sus ±30s ajustados)
+    var lastHandledTrigger by remember { mutableIntStateOf(0) }
+    LaunchedEffect(restTrigger) {
+        if (restTrigger != lastHandledTrigger) {
+            lastHandledTrigger = restTrigger
+            if (restTrigger > 0) {
+                RestTimerController.start(customSeconds)
+                context.startForegroundService(
+                    RestTimerService.createStartIntent(context, RestTimerController.endTimestamp, customSeconds)
+                )
+            }
+        }
     }
 
     if (!isActive) {
@@ -1036,6 +1171,97 @@ private fun defaultRestSeconds(category: String?): Int = when (category) {
     "compound" -> 150
     "isolation" -> 105
     else -> 90
+}
+
+/** ponytail: calculadora de discos — cómo cargar la barra para el peso indicado */
+@Composable
+fun PlateCalculatorDialog(
+    initialWeight: Float,
+    onDismiss: () -> Unit
+) {
+    var targetText by remember { mutableStateOf(
+        if (initialWeight > 0) String.format(java.util.Locale.US, "%.1f", initialWeight) else ""
+    ) }
+    var barKg by remember { mutableDoubleStateOf(20.0) }
+    val target = targetText.replace(",", ".").toDoubleOrNull() ?: 0.0
+    val result = remember(target, barKg) {
+        if (target > 0) PlateCalculator.compute(target, barKg) else null
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = MaterialTheme.shapes.large,
+        title = { Text("Calculadora de discos") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = targetText,
+                    onValueChange = { targetText = it.filter { c -> c.isDigit() || c == '.' || c == ',' } },
+                    label = { Text("Peso objetivo (kg)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true
+                )
+                // Barra: 20 / 15 / 10 kg
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = barKg == 20.0,
+                        onClick = { barKg = 20.0 },
+                        label = { Text("Barra 20kg") }
+                    )
+                    FilterChip(
+                        selected = barKg == 15.0,
+                        onClick = { barKg = 15.0 },
+                        label = { Text("15kg") }
+                    )
+                    FilterChip(
+                        selected = barKg == 10.0,
+                        onClick = { barKg = 10.0 },
+                        label = { Text("10kg") }
+                    )
+                }
+                when {
+                    target <= 0 -> {
+                        Text("Introduce el peso objetivo",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    target <= barKg -> {
+                        Text("El peso no supera a la barra: carga solo la barra",
+                            style = MaterialTheme.typography.bodyMedium)
+                    }
+                    result != null -> {
+                        Text("Por lado:", style = MaterialTheme.typography.titleSmall)
+                        if (result.perSide.isEmpty()) {
+                            Text("Sin discos", style = MaterialTheme.typography.bodyMedium)
+                        } else {
+                            Text(
+                                result.perSide.joinToString(" + ") {
+                                    if (it == it.toLong().toDouble()) "${it.toLong()}" else "$it"
+                                } + " kg",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        if (result.remainderKg > 0) {
+                            Text(
+                                "Con los discos estándar cargarás ${String.format("%.1f", result.totalKg)} kg (faltan ${result.remainderKg} kg en total)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Text(
+                            "Total en barra: ${String.format("%.1f", result.totalKg)} kg",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Cerrar") }
+        }
+    )
 }
 
 /** ponytail: para el descanso activo y limpia el controller al terminar/descartar el entreno.

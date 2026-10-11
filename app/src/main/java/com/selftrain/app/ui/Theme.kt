@@ -1,8 +1,12 @@
 package com.selftrain.app.ui
 
+import android.content.Context
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -12,6 +16,26 @@ import androidx.compose.ui.text.googlefonts.Font
 import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
+// ponytail: preferencia de tema (modo claro) — estado Compose + persistencia en prefs.
+// MainActivity hace load() al arrancar; Ajustes llama a set().
+object AppThemePrefs {
+    var lightMode by mutableStateOf(false)
+        private set
+
+    private const val PREFS = "settings_prefs"
+    private const val KEY = "light_mode"
+
+    fun load(context: Context) {
+        lightMode = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY, false)
+    }
+
+    fun set(context: Context, light: Boolean) {
+        lightMode = light
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY, light).apply()
+    }
+}
 
 /*
  * Font choices for Selftrain (fitness app):
@@ -213,6 +237,37 @@ private val FitnessDarkColorScheme = darkColorScheme(
     surfaceTint = Color(0xFFD4FF3D),
 )
 
+/*
+ * Light palette for Selftrain — same lime accent family, adapted for light backgrounds.
+ * Activable desde Ajustes ("Modo claro").
+ */
+private val FitnessLightColorScheme = lightColorScheme(
+    primary = Color(0xFF556B00),
+    onPrimary = Color(0xFFF8FDF2),
+    primaryContainer = Color(0xFFD4FF3D),
+    onPrimaryContainer = Color(0xFF1A2A00),
+    secondary = Color(0xFF556B00),
+    onSecondary = Color(0xFFF8FDF2),
+    secondaryContainer = Color(0xFFE2F2B8),
+    onSecondaryContainer = Color(0xFF1A2A00),
+    background = Color(0xFFFAFAF2),
+    onBackground = Color(0xFF1A1C16),
+    surface = Color(0xFFFDFDF6),
+    onSurface = Color(0xFF1A1C16),
+    surfaceVariant = Color(0xFFE6E8DC),
+    onSurfaceVariant = Color(0xFF45483C),
+    error = Color(0xFFBA1A1A),
+    onError = Color(0xFFFDFDF6),
+    errorContainer = Color(0xFFFFDAD6),
+    onErrorContainer = Color(0xFF410002),
+    outline = Color(0xFF76796C),
+    outlineVariant = Color(0xFFD7DACD),
+    inverseSurface = Color(0xFF2F312A),
+    inverseOnSurface = Color(0xFFF1F2E7),
+    inversePrimary = Color(0xFFD4FF3D),
+    surfaceTint = Color(0xFF556B00),
+)
+
 private val AppShapes = Shapes(
     extraSmall = RoundedCornerShape(4.dp),
     small = RoundedCornerShape(8.dp),
@@ -227,10 +282,11 @@ private val AppShapes = Shapes(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SelfTrainTheme(
+    lightMode: Boolean = false,
     content: @Composable () -> Unit
 ) {
     MaterialExpressiveTheme(
-        colorScheme = FitnessDarkColorScheme,
+        colorScheme = if (lightMode) FitnessLightColorScheme else FitnessDarkColorScheme,
         typography = AppTypography,
         shapes = AppShapes,
         motionScheme = MotionScheme.expressive()

@@ -37,6 +37,20 @@ fun ProgramDaysScreen(
     var showAddDayDialog by rememberSaveable { mutableStateOf(false) }
     var isEditing by rememberSaveable { mutableStateOf(false) }
 
+    // ponytail: sugerir el día que toca según la rotación del programa — el día entrenado más
+    // recientemente marca el siguiente en el orden (circular). Sin entrenos → toca el primero.
+    val lastWorkoutByRoutine by viewModel.lastWorkoutByRoutine.collectAsState()
+    val suggestedIndex = remember(children, lastWorkoutByRoutine) {
+        if (children.isEmpty()) -1
+        else {
+            val lastDone = children.withIndex()
+                .map { (idx, r) -> idx to (lastWorkoutByRoutine[r.id] ?: 0L) }
+                .maxByOrNull { it.second }
+            if (lastDone == null || lastDone.second == 0L) 0
+            else (lastDone.first + 1) % children.size
+        }
+    }
+
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDayDialog = true }) {
@@ -110,7 +124,16 @@ fun ProgramDaysScreen(
                                     }
                                 }
                             }
-                            Text(child.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                            Column(Modifier.weight(1f)) {
+                                Text(child.name, style = MaterialTheme.typography.bodyLarge)
+                                if (dayIndex == suggestedIndex) {
+                                    Text(
+                                        "Te toca",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
                             IconButton(onClick = { onStartWorkout(child.id) }) {
                                 Icon(Icons.Default.PlayArrow, "Empezar", tint = MaterialTheme.colorScheme.primary)
                             }

@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.TableView
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -31,6 +32,7 @@ import com.selftrain.app.data.repository.ExerciseRepository
 import com.selftrain.app.util.BackupManager
 import com.selftrain.app.util.Labels
 import com.selftrain.app.BuildConfig
+import com.selftrain.app.ui.AppThemePrefs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,7 +43,10 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val backupManager: BackupManager,
-    private val exerciseRepo: ExerciseRepository
+    private val exerciseRepo: ExerciseRepository,
+    private val workoutRepo: com.selftrain.app.data.repository.WorkoutRepository,
+    private val routineRepo: com.selftrain.app.data.repository.RoutineRepository,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
     var isExporting by mutableStateOf(false)
@@ -103,6 +108,61 @@ class SettingsViewModel @Inject constructor(
             onDone()
         }
     }
+
+    // ponytail: exportar CSV (una fila por serie) para Excel / Google Sheets
+    var isExportingCsv by mutableStateOf(false)
+
+    fun exportCsvTo(uri: Uri, onDone: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            isExportingCsv = true
+            var ok = false
+            try {
+                val workouts = workoutRepo.getAllWorkouts().filter { it.completed }.associateBy { it.id }
+                val routines = routineRepo.getAllList().associateBy { it.id }
+                val exercises = exerciseRepo.getByIds(workoutRepo.getAllSets().map { it.exerciseId }.distinct())
+                    .associateBy { it.id }
+                val dateFmt = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault())
+                val sb = StringBuilder()
+                sb.appendLine("fecha;rutina;ejercicio;tipo;reps;peso_kg;rir;notas")
+                // Orden: por fecha de entreno, luego orden de inserción de la serie
+                val setsByWorkout = workoutRepo.getAllSets()
+                    .filter { it.workoutId in workouts }
+                    .groupBy { it.workoutId }
+                workouts.values.sortedBy { it.date }.forEach { w ->
+                    val routineName = routines[w.routineId]?.name ?: ""
+                    setsByWorkout[w.id]?.forEach { s ->
+                        val exName = exercises[s.exerciseId]?.name ?: ""
+                        sb.appendLine(
+                            listOf(
+                                dateFmt.format(java.util.Date(w.date)),
+                                routineName.csvEscape(),
+                                exName.csvEscape(),
+                                s.setType,
+                                s.reps.toString(),
+                                String.format(java.util.Locale.US, "%.1f", s.weightKg),
+                                s.rir.toString(),
+                                s.notes.csvEscape()
+                            ).joinToString(";")
+                        )
+                    }
+                }
+                appContext.contentResolver.openOutputStream(uri, "w")?.use { os ->
+                    // BOM para que Excel respete los acentos
+                    os.write(byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte()))
+                    os.write(sb.toString().toByteArray(Charsets.UTF_8))
+                }
+                ok = true
+            } catch (_: Exception) { }
+            isExportingCsv = false
+            onDone(ok)
+        }
+    }
+
+    private fun String.csvEscape(): String {
+        return if (contains(';') || contains('\n') || contains('"')) {
+            "\"" + replace("\"", "\"\"") + "\""
+        } else this
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -122,6 +182,17 @@ fun SettingsScreen(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
         uri?.let { viewModel.exportTo(it) { context.toast("Datos exportados correctamente") } }
+    }
+
+    // ponytail: exportar CSV (una fila por serie) para Excel / Sheets
+    val csvLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/csv")
+    ) { uri ->
+        uri?.let {
+            viewModel.exportCsvTo(it) { ok ->
+                context.toast(if (ok) "CSV exportado correctamente" else "Error al exportar el CSV")
+            }
+        }
     }
 
     val importLauncher = rememberLauncherForActivityResult(
@@ -187,6 +258,47 @@ fun SettingsScreen(
                             Text("Exportar backup")
                         }
                     }
+                    Spacer(Modifier.height(8.dp))
+                    // ponytail: exportar CSV (una fila por serie) para Excel / Sheets
+                    OutlinedButton(
+                        onClick = { csvLauncher.launch("selftrain_sets.csv") },
+                        enabled = !viewModel.isExportingCsv
+                    ) {
+                        if (viewModel.isExportingCsv) {
+                            ContainedLoadingIndicator(
+                                modifier = Modifier.size(18.dp),
+                                containerShape = MaterialTheme.shapes.small,
+                                polygons = LoadingIndicatorDefaults.IndeterminateIndicatorPolygons
+                            )
+                        } else {
+                            Icon(Icons.Filled.TableView, null)
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (viewModel.isExportingCsv) "Exportando..." else "Exportar CSV (series)")
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // ponytail: modo claro — toggle de tema persistente
+            ElevatedCard(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
+                Row(
+                    Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Modo claro", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "Tema claro para entrenar con mucha luz. El tema oscuro es el predeterminado.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = AppThemePrefs.lightMode,
+                        onCheckedChange = { AppThemePrefs.set(context, it) }
+                    )
                 }
             }
 

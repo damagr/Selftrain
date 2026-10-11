@@ -19,14 +19,36 @@ import javax.inject.Inject
 
 enum class HistoryView { SUMMARY, WORKOUT_LIST, WORKOUT_DETAIL }
 
+// ponytail: filtros del historial — por rutina y/o ejercicio
+data class HistoryFilter(val routineId: Long? = null, val exerciseId: Long? = null)
+
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
     private val workoutRepo: WorkoutRepository,
-    private val exerciseRepo: ExerciseRepository
+    private val exerciseRepo: ExerciseRepository,
+    private val routineRepo: com.selftrain.app.data.repository.RoutineRepository
 ) : ViewModel() {
 
     val workouts = workoutRepo.workouts.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     private val allExercises = exerciseRepo.exercises.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val routines = routineRepo.routines.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Filter state
+    private val _filter = MutableStateFlow(HistoryFilter())
+    val filter: StateFlow<HistoryFilter> = _filter.asStateFlow()
+
+    // ids de entrenos que contienen el ejercicio filtrado (se resuelve al cambiar el filtro)
+    private val _exerciseWorkoutIds = MutableStateFlow<Set<Long>>(emptySet())
+
+    fun setFilter(newFilter: HistoryFilter) {
+        _filter.value = newFilter
+        viewModelScope.launch {
+            _exerciseWorkoutIds.value = if (newFilter.exerciseId != null)
+                workoutRepo.getSetHistory(newFilter.exerciseId).map { it.set.workoutId }.toSet()
+            else emptySet()
+        }
+    }
 
     private val _exerciseIdsWithHistory = MutableStateFlow<List<Long>>(emptyList())
     val exercisesWithHistory: StateFlow<List<Exercise>> = combine(
@@ -44,8 +66,13 @@ class HistoryViewModel @Inject constructor(
     private val _workoutDetailSets = MutableStateFlow<List<SetWithExercise>>(emptyList())
     val workoutDetailSets: StateFlow<List<SetWithExercise>> = _workoutDetailSets
 
-    val completedWorkouts: StateFlow<List<Workout>> = workouts.map { list ->
-        list.filter { it.completed }.sortedByDescending { it.date }
+    val completedWorkouts: StateFlow<List<Workout>> = combine(workouts, _filter, _exerciseWorkoutIds) { list, f, exIds ->
+        list.filter { it.completed }
+            .filter { w ->
+                (f.routineId == null || w.routineId == f.routineId) &&
+                    (f.exerciseId == null || w.id in exIds)
+            }
+            .sortedByDescending { it.date }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Calendar state
@@ -117,9 +144,9 @@ class HistoryViewModel @Inject constructor(
     }
 
     // ponytail: edit history — update/delete/add sets from workout detail
-    fun updateSet(set: WorkoutSet, reps: Int, weightKg: Float, rir: Int) {
+    fun updateSet(set: WorkoutSet, reps: Int, weightKg: Float, rir: Int, notes: String) {
         viewModelScope.launch {
-            workoutRepo.updateSet(set.copy(reps = reps, weightKg = weightKg, rir = rir))
+            workoutRepo.updateSet(set.copy(reps = reps, weightKg = weightKg, rir = rir, notes = notes))
             val workout = _selectedWorkout.value ?: return@launch
             _workoutDetailSets.value = workoutRepo.getSetsWithExercise(workout.id)
         }
@@ -152,6 +179,14 @@ class HistoryViewModel @Inject constructor(
 
     fun getExercisesInWorkout(): List<Long> {
         return _workoutDetailSets.value.map { it.set.exerciseId }.distinct()
+    }
+
+    // ponytail: editar la fecha de un entreno del historial (conserva la hora del día original)
+    fun updateWorkoutDate(workout: Workout, newDateMillis: Long) {
+        viewModelScope.launch {
+            workoutRepo.update(workout.copy(date = newDateMillis))
+            _selectedWorkout.value = workout.copy(date = newDateMillis)
+        }
     }
 
     // ponytail: add a missed exercise to an already-completed workout

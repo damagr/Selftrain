@@ -14,8 +14,11 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,9 +38,11 @@ import com.selftrain.app.data.model.WorkoutSet
 import com.selftrain.app.util.Labels
 import java.text.SimpleDateFormat
 import java.time.DayOfWeek
+import java.time.Instant
 import java.time.LocalDate
 import java.time.Month
 import java.time.YearMonth
+import java.time.ZoneId
 import java.time.format.TextStyle
 import java.util.*
 
@@ -45,6 +50,7 @@ import java.util.*
 @Composable
 fun HistoryScreen(
     onSettings: () -> Unit,
+    onStats: () -> Unit = {},
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
     val view by viewModel.view.collectAsState()
@@ -60,12 +66,17 @@ fun HistoryScreen(
 
     val currentMonth by viewModel.currentMonth.collectAsState()
     val workoutsByDay by viewModel.workoutsByDay.collectAsState()
+    val historyFilter by viewModel.filter.collectAsState()
+    val routineOptions by viewModel.routines.collectAsState()
     var selectedDay by remember { mutableStateOf<LocalDate?>(null) }
     val today = remember { LocalDate.now() }
     val localeES = remember { Locale.forLanguageTag("es-ES") }
     val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showDeleteConfirm2 by remember { mutableStateOf(false) }
+    var showEditDate by remember { mutableStateOf(false) }
+    var showFilterDialog by remember { mutableStateOf(false) }
+    val filterActive = historyFilter.routineId != null || historyFilter.exerciseId != null
 
     Scaffold(
         topBar = {
@@ -99,10 +110,23 @@ fun HistoryScreen(
                 },
                 actions = {
                     if (view == HistoryView.WORKOUT_DETAIL) {
+                        IconButton(onClick = { showEditDate = true }) {
+                            Icon(Icons.Default.Edit, "Editar fecha")
+                        }
                         IconButton(onClick = { showDeleteConfirm = true }) {
                             Icon(Icons.Default.Delete, "Eliminar entrenamiento",
                                 tint = MaterialTheme.colorScheme.error)
                         }
+                    }
+                    if (view == HistoryView.SUMMARY && selectedExercise == null) {
+                        IconButton(onClick = { showFilterDialog = true }) {
+                            Icon(Icons.Default.FilterList, "Filtrar",
+                                tint = if (filterActive) MaterialTheme.colorScheme.primary
+                                else LocalContentColor.current)
+                        }
+                    }
+                    IconButton(onClick = onStats) {
+                        Icon(Icons.Default.Insights, "Estadísticas")
                     }
                     IconButton(onClick = onSettings) {
                         Icon(Icons.Default.Settings, "Ajustes")
@@ -197,6 +221,26 @@ fun HistoryScreen(
                 }
 
                 LazyColumn(Modifier.padding(padding)) {
+                    // --- Active filter indicator ---
+                    if (filterActive) {
+                        item {
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+                                AssistChip(
+                                    onClick = { viewModel.setFilter(com.selftrain.app.ui.history.HistoryFilter()) },
+                                    label = {
+                                        val routineName = historyFilter.routineId?.let { rid ->
+                                            routineOptions.find { it.id == rid }?.name
+                                        }
+                                        val exerciseName = historyFilter.exerciseId?.let { eid ->
+                                            exercises.find { it.id == eid }?.name
+                                        }
+                                        Text("Filtro: ${listOfNotNull(routineName, exerciseName).joinToString(" + ")} ✕")
+                                    }
+                                )
+                            }
+                        }
+                    }
+
                     // --- Calendar header ---
                     item {
                         Row(
@@ -408,6 +452,14 @@ fun HistoryScreen(
                                                 if (s.set.rir > 0) " (RIR ${s.set.rir})" else "",
                                             style = MaterialTheme.typography.bodyMedium
                                         )
+                                        // ponytail: nota de la serie
+                                        if (s.set.notes.isNotBlank()) {
+                                            Text(
+                                                "↳ ${s.set.notes}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
                                     }
                                     IconButton(onClick = {
                                         viewModel.deleteSetFromHistory(s.set)
@@ -424,8 +476,8 @@ fun HistoryScreen(
                                 EditSetDialog(
                                     set = s.set,
                                     onDismiss = { showEditDialog = false },
-                                    onSave = { reps, weight, rir ->
-                                        viewModel.updateSet(s.set, reps, weight, rir)
+                                    onSave = { reps, weight, rir, notes ->
+                                        viewModel.updateSet(s.set, reps, weight, rir, notes)
                                         showEditDialog = false
                                     }
                                 )
@@ -519,6 +571,114 @@ fun HistoryScreen(
             }
         )
     }
+
+    // ponytail: editar la fecha del entreno (conserva la hora del día original)
+    if (showEditDate && selectedWorkout != null) {
+        val workoutVal = selectedWorkout!!
+        val initialMillis = remember(workoutVal.id, workoutVal.date) {
+            Instant.ofEpochMilli(workoutVal.date).atZone(ZoneId.systemDefault()).toLocalDate()
+                .atStartOfDay(ZoneId.of("UTC")).toInstant().toEpochMilli()
+        }
+        val dateState = rememberDatePickerState(initialSelectedDateMillis = initialMillis)
+        DatePickerDialog(
+            onDismissRequest = { showEditDate = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    dateState.selectedDateMillis?.let { utcMillis ->
+                        val pickedDay = Instant.ofEpochMilli(utcMillis).atZone(ZoneId.of("UTC")).toLocalDate()
+                        val origTime = Instant.ofEpochMilli(workoutVal.date).atZone(ZoneId.systemDefault()).toLocalTime()
+                        val newMillis = pickedDay.atTime(origTime).atZone(ZoneId.systemDefault())
+                            .toInstant().toEpochMilli()
+                        viewModel.updateWorkoutDate(workoutVal, newMillis)
+                    }
+                    showEditDate = false
+                }) { Text("Guardar") }
+            },
+            dismissButton = { TextButton(onClick = { showEditDate = false }) { Text("Cancelar") } }
+        ) {
+            DatePicker(state = dateState)
+        }
+    }
+
+    // ponytail: filtros del historial — por rutina y/o ejercicio
+    if (showFilterDialog) {
+        val exercisesWithHistory by viewModel.exercisesWithHistory.collectAsState()
+        var expandedRoutine by remember { mutableStateOf(false) }
+        var expandedExercise by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = { showFilterDialog = false },
+            shape = MaterialTheme.shapes.large,
+            title = { Text("Filtrar historial") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // Rutina
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Rutina:", Modifier.weight(0.3f),
+                            style = MaterialTheme.typography.bodyMedium)
+                        Box(Modifier.weight(0.7f)) {
+                            TextButton(onClick = { expandedRoutine = true }) {
+                                Text(
+                                    historyFilter.routineId?.let { rid ->
+                                        routineOptions.find { it.id == rid }?.name
+                                    } ?: "Todas",
+                                    maxLines = 1
+                                )
+                            }
+                            DropdownMenu(expanded = expandedRoutine, onDismissRequest = { expandedRoutine = false }) {
+                                DropdownMenuItem(text = { Text("Todas") }, onClick = {
+                                    viewModel.setFilter(HistoryFilter(routineId = null, exerciseId = historyFilter.exerciseId))
+                                    expandedRoutine = false
+                                })
+                                routineOptions.forEach { r ->
+                                    DropdownMenuItem(text = { Text(r.name) }, onClick = {
+                                        viewModel.setFilter(HistoryFilter(routineId = r.id, exerciseId = historyFilter.exerciseId))
+                                        expandedRoutine = false
+                                    })
+                                }
+                            }
+                        }
+                    }
+                    // Ejercicio
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Ejercicio:", Modifier.weight(0.3f),
+                            style = MaterialTheme.typography.bodyMedium)
+                        Box(Modifier.weight(0.7f)) {
+                            TextButton(onClick = { expandedExercise = true }) {
+                                Text(
+                                    historyFilter.exerciseId?.let { eid ->
+                                        exercisesWithHistory.find { it.id == eid }?.name
+                                    } ?: "Todos",
+                                    maxLines = 1
+                                )
+                            }
+                            DropdownMenu(expanded = expandedExercise, onDismissRequest = { expandedExercise = false }) {
+                                DropdownMenuItem(text = { Text("Todos") }, onClick = {
+                                    viewModel.setFilter(HistoryFilter(routineId = historyFilter.routineId, exerciseId = null))
+                                    expandedExercise = false
+                                })
+                                exercisesWithHistory.forEach { e ->
+                                    DropdownMenuItem(text = { Text(e.name) }, onClick = {
+                                        viewModel.setFilter(HistoryFilter(routineId = historyFilter.routineId, exerciseId = e.id))
+                                        expandedExercise = false
+                                    })
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.setFilter(HistoryFilter())
+                    showFilterDialog = false
+                }) { Text("Limpiar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showFilterDialog = false }) { Text("Cerrar") }
+            }
+        )
+    }
 }
 
 @Composable
@@ -587,12 +747,13 @@ fun ExerciseProgressionView(
 fun EditSetDialog(
     set: WorkoutSet,
     onDismiss: () -> Unit,
-    onSave: (reps: Int, weight: Float, rir: Int) -> Unit
+    onSave: (reps: Int, weight: Float, rir: Int, notes: String) -> Unit
 ) {
     var reps by remember { mutableStateOf(set.reps.toString()) }
     var weight by remember { mutableStateOf(String.format("%.1f", set.weightKg)) }
     var rir by remember { mutableStateOf(if (set.rir > 0) set.rir.toString() else "") }
     var setType by remember { mutableStateOf(set.setType) }
+    var notes by remember { mutableStateOf(set.notes) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -637,6 +798,12 @@ fun EditSetDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true
                 )
+                OutlinedTextField(
+                    value = notes,
+                    onValueChange = { notes = it },
+                    label = { Text("Nota (opcional)") },
+                    singleLine = true
+                )
             }
         },
         confirmButton = {
@@ -644,7 +811,7 @@ fun EditSetDialog(
                 val r = reps.toIntOrNull() ?: return@TextButton
                 val w = weight.toFloatOrNull() ?: return@TextButton
                 val ri = rir.toIntOrNull() ?: 0
-                onSave(r, w, ri)
+                onSave(r, w, ri, notes.trim())
             }) { Text("Guardar") }
         },
         dismissButton = {

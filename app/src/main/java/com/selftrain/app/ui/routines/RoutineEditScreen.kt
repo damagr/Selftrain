@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -22,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -45,6 +47,8 @@ fun RoutineEditScreen(
     var showAddDialog by rememberSaveable { mutableStateOf(false) }
     var showDeleteConfirm by rememberSaveable { mutableStateOf(false) }
     var replaceIndex by rememberSaveable { mutableStateOf<Int?>(null) }
+    // ponytail: descanso configurable por ejercicio
+    var restEditItem by remember { mutableStateOf<RoutineExerciseItem?>(null) }
 
     LaunchedEffect(routineId) { viewModel.loadRoutine(routineId) }
 
@@ -138,7 +142,6 @@ fun RoutineEditScreen(
                                     }
                                 }
                             }
-
                             Column(Modifier.weight(1f).padding(start = 8.dp)) {
                                 Text(ex.name, style = MaterialTheme.typography.bodyLarge)
                                 Text(
@@ -161,6 +164,17 @@ fun RoutineEditScreen(
                                         )
                                     }
                                 }
+                                // ponytail: descanso configurable por ejercicio (0 = default por categoría)
+                                Text(
+                                    if (item.restSeconds > 0) "Descanso: ${item.restSeconds}s"
+                                    else "Descanso: Auto (por categoría)",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (item.restSeconds > 0) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier
+                                        .padding(top = 2.dp)
+                                        .clickable { restEditItem = item }
+                                )
                             }
 
                             IconButton(onClick = { replaceIndex = index }) {
@@ -189,6 +203,42 @@ fun RoutineEditScreen(
 
             Spacer(Modifier.height(16.dp))
         }
+    }
+
+    // ponytail: editar el descanso de un ejercicio concreto
+    restEditItem?.let { item ->
+        var restText by remember(item.exercise.id) {
+            mutableStateOf(if (item.restSeconds > 0) item.restSeconds.toString() else "")
+        }
+        AlertDialog(
+            onDismissRequest = { restEditItem = null },
+            shape = MaterialTheme.shapes.large,
+            title = { Text("Descanso: ${item.exercise.name}") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Segundos de descanso tras registrar una serie de este ejercicio. Déjalo vacío para usar el default por categoría (compuesto 150s, aislamiento 105s).",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    OutlinedTextField(
+                        value = restText,
+                        onValueChange = { restText = it.filter { c -> c.isDigit() } },
+                        label = { Text("Segundos (30-300)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.setRest(item, restText.toIntOrNull() ?: 0)
+                    restEditItem = null
+                }) { Text("Guardar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { restEditItem = null }) { Text("Cancelar") }
+            }
+        )
     }
 
     if (showAddDialog) {

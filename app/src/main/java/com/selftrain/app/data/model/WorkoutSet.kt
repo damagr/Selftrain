@@ -21,5 +21,6 @@ data class WorkoutSet(
     val reps: Int,
     val weightKg: Float,
     val rir: Int = 0,          // reps in reserve (for bilbo sets)
-    val explosive: Boolean = false  // for bilbo sets
+    val explosive: Boolean = false,  // for bilbo sets
+    val notes: String = ""     // ponytail: nota opcional de la serie
 )

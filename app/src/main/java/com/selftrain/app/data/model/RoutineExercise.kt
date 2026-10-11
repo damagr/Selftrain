@@ -18,5 +18,6 @@ data class RoutineExercise(
     val routineId: Long,
     val exerciseId: Long,
     val order: Int,
-    val isBilbo: Boolean = false   // es la Serie Bilbo de esta sesión (máx 1 por grupo muscular)
+    val isBilbo: Boolean = false,  // es la Serie Bilbo de esta sesión (máx 1 por grupo muscular)
+    val restSeconds: Int = 0       // ponytail: 0 = default por categoría (compound/isolation)
 )

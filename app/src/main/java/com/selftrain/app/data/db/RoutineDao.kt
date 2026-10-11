@@ -58,4 +58,8 @@ interface RoutineDao {
 
     @Query("UPDATE routine_exercises SET isBilbo = :isBilbo WHERE id = :id")
     suspend fun setBilbo(id: Long, isBilbo: Boolean)
+
+    // ponytail: descanso configurable por ejercicio (0 = default por categoría)
+    @Query("UPDATE routine_exercises SET restSeconds = :restSeconds WHERE id = :id")
+    suspend fun setRest(id: Long, restSeconds: Int)
 }

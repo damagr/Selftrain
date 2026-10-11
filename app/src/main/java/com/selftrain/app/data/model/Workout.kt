@@ -17,5 +17,6 @@ data class Workout(
     val completed: Boolean = false,
     val endDate: Long = 0,
     val durationMinutes: Int = 0,
+    val bodyWeight: Float = 0f,   // ponytail: peso corporal opcional registrado al finalizar (0 = sin registro)
     val lastExerciseIndex: Int = 0  // ponytail: recovery on crash
 )

@@ -21,6 +21,7 @@ import com.selftrain.app.util.SharedRoutine
 import com.selftrain.app.util.findMatchingGifUrl
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -45,6 +46,13 @@ class RoutinesViewModel @Inject constructor(
 ) : AndroidViewModel(app) {
 
     val routines = routineRepo.routines.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // ponytail: última fecha de entreno completado por rutina — para sugerir el día que toca
+    val lastWorkoutByRoutine = workoutRepo.workouts.map { list ->
+        list.filter { it.completed }
+            .groupBy { it.routineId }
+            .mapValues { (_, v) -> v.maxOf { it.date } }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     // Crash recovery dialog state — survives recomposition
     var showRecoveryDialog by mutableStateOf(false)

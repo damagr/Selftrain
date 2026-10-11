@@ -16,7 +16,9 @@ import javax.inject.Inject
 
 data class RoutineExerciseItem(
     val exercise: Exercise,
-    val isBilbo: Boolean = false
+    val isBilbo: Boolean = false,
+    val routineExerciseId: Long = 0,  // ponytail: id en routine_exercises (para setRest)
+    val restSeconds: Int = 0          // ponytail: 0 = default por categoría
 )
 
 @HiltViewModel
@@ -45,7 +47,7 @@ class RoutineEditViewModel @Inject constructor(
             val ids = reList.map { it.exerciseId }
             val byId = if (ids.isNotEmpty()) exerciseRepo.getByIds(ids).associateBy { it.id } else emptyMap()
             val items = reList.mapNotNull { re ->
-                byId[re.exerciseId]?.let { RoutineExerciseItem(it, re.isBilbo) }
+                byId[re.exerciseId]?.let { RoutineExerciseItem(it, re.isBilbo, re.id, re.restSeconds) }
             }.toMutableList()
             // Backfill: rutinas Bilbo antiguas sin marca → primera elegible (mínimo 1 Serie Bilbo)
             if (r.method.equals("bilbo", true) && items.none { it.isBilbo }) {
@@ -99,6 +101,18 @@ class RoutineEditViewModel @Inject constructor(
         _exercises.value = list
     }
 
+    // ponytail: descanso configurable por ejercicio (0 = default por categoría)
+    fun setRest(item: RoutineExerciseItem, seconds: Int) {
+        viewModelScope.launch {
+            if (item.routineExerciseId != 0L) {
+                routineRepo.setRest(item.routineExerciseId, seconds)
+            }
+            _exercises.value = _exercises.value.map {
+                if (it.exercise.id == item.exercise.id) it.copy(restSeconds = seconds) else it
+            }
+        }
+    }
+
     /** Máximo 1 Serie Bilbo por grupo muscular dentro de la misma sesión. */
     fun toggleBilbo(item: RoutineExerciseItem) {
         val list = _exercises.value.toMutableList()
@@ -130,7 +144,7 @@ class RoutineEditViewModel @Inject constructor(
             routineRepo.update(r)
             routineRepo.clearExercises(r.id)
             items.forEachIndexed { index, item ->
-                routineRepo.addExercise(r.id, item.exercise.id, index, item.isBilbo)
+                routineRepo.addExercise(r.id, item.exercise.id, index, item.isBilbo, item.restSeconds)
             }
             onSaved()
         }

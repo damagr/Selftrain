@@ -6,7 +6,7 @@ import com.selftrain.app.data.model.*
 
 @Database(
     entities = [Exercise::class, Routine::class, RoutineExercise::class, Workout::class, WorkoutSet::class],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

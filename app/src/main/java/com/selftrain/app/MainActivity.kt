@@ -49,6 +49,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.selftrain.app.ui.AppThemePrefs
 import com.selftrain.app.ui.MainViewModel
 import com.selftrain.app.ui.SelfTrainTheme
 import com.selftrain.app.ui.UpdateState
@@ -58,6 +59,7 @@ import com.selftrain.app.ui.routines.ProgramDaysScreen
 import com.selftrain.app.ui.routines.RoutineEditScreen
 import com.selftrain.app.ui.routines.RoutinesScreen
 import com.selftrain.app.ui.settings.SettingsScreen
+import com.selftrain.app.ui.stats.StatsScreen
 import com.selftrain.app.ui.train.TrainScreen
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -73,8 +75,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // ponytail: tema claro/oscuro según Ajustes (AppThemePrefs es estado Compose → toggle reactivo)
+        AppThemePrefs.load(this)
         setContent {
-            SelfTrainTheme {
+            SelfTrainTheme(lightMode = AppThemePrefs.lightMode) {
                 SelfTrainMain()
             }
         }
@@ -246,7 +250,13 @@ fun SelfTrainMain() {
                 )
             }
             composable("history") {
-                HistoryScreen(onSettings = { navController.navigate("settings") })
+                HistoryScreen(
+                    onSettings = { navController.navigate("settings") },
+                    onStats = { navController.navigate("stats") }
+                )
+            }
+            composable("stats") {
+                StatsScreen(onBack = { navController.popBackStack() })
             }
             composable("exercises") {
                 ExerciseLibraryScreen(onSettings = { navController.navigate("settings") })

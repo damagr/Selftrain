@@ -18,7 +18,8 @@ data class ExerciseWithSets(
     val sets: List<WorkoutSet> = emptyList(),
     val previousHistory: List<SetWithExercise> = emptyList(),
     val lastSessionSets: List<SetWithExercise> = emptyList(),
-    val isBilbo: Boolean = false   // es la Serie Bilbo de esta sesión
+    val isBilbo: Boolean = false,   // es la Serie Bilbo de esta sesión
+    val restSeconds: Int = 0        // ponytail: descanso configurado en la rutina (0 = por categoría)
 )
 
 data class PerExerciseSuggestion(
@@ -64,7 +65,8 @@ data class WorkoutSummary(
     val durationMinutes: Int,
     val volumeByMuscle: List<MuscleGroupVolume>,
     val personalRecords: List<PersonalRecord>,
-    val weeklyComparison: List<WeeklyComparison>
+    val weeklyComparison: List<WeeklyComparison>,
+    val bodyWeight: Float = 0f
 )
 
 @HiltViewModel
@@ -76,6 +78,11 @@ class TrainViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(TrainState())
     val state: StateFlow<TrainState> = _state.asStateFlow()
+
+    // ponytail: descanso automático — contador de eventos que dispara el arranque del
+    // temporizador en la UI (el ViewModel decide cuándo, la UI ejecuta el servicio)
+    private val _restTrigger = MutableStateFlow(0)
+    val restTrigger: StateFlow<Int> = _restTrigger.asStateFlow()
 
     fun startWorkout(routineId: Long, existingWorkoutId: Long? = null) {
         if (_state.value.routine != null && _state.value.workoutId != 0L) return
@@ -92,7 +99,8 @@ class TrainViewModel @Inject constructor(
                     exercise = ex,
                     previousHistory = allHistory,
                     lastSessionSets = lastSession,
-                    isBilbo = re.isBilbo
+                    isBilbo = re.isBilbo,
+                    restSeconds = re.restSeconds
                 )
             }
             // Backfill: rutina Bilbo sin marca → primera elegible (mínimo 1 Serie Bilbo por sesión)
@@ -199,7 +207,7 @@ class TrainViewModel @Inject constructor(
         }
     }
 
-    fun logSet(exerciseId: Long, setType: String, reps: Int, weightKg: Float, rir: Int, explosive: Boolean) {
+    fun logSet(exerciseId: Long, setType: String, reps: Int, weightKg: Float, rir: Int, explosive: Boolean, notes: String = "") {
         viewModelScope.launch {
             val set = WorkoutSet(
                 workoutId = _state.value.workoutId,
@@ -208,7 +216,8 @@ class TrainViewModel @Inject constructor(
                 reps = reps,
                 weightKg = weightKg,
                 rir = rir,
-                explosive = explosive
+                explosive = explosive,
+                notes = notes
             )
             workoutRepo.insertSet(set)
             // ponytail: persistir índice también al registrar serie — un crash tras loguear sin navegar
@@ -217,6 +226,8 @@ class TrainViewModel @Inject constructor(
                 .takeIf { it >= 0 }
                 ?.let { saveExerciseIndex(it) }
             reloadSets(exerciseId)
+            // ponytail: descanso automático al registrar cualquier serie (bilbo o trabajo)
+            _restTrigger.value++
         }
     }
 
@@ -312,6 +323,18 @@ class TrainViewModel @Inject constructor(
         }
     }
 
+    // ponytail: peso corporal opcional, editable en el resumen final (0 = sin registro)
+    fun updateBodyWeight(kg: Float) {
+        viewModelScope.launch {
+            val summary = _state.value.workoutSummary?.copy(bodyWeight = kg)
+            _state.value = _state.value.copy(workoutSummary = summary)
+            val workout = workoutRepo.getById(_state.value.workoutId)
+            if (workout != null) {
+                workoutRepo.update(workout.copy(bodyWeight = kg))
+            }
+        }
+    }
+
     fun dismissSummary() {
         _state.value = _state.value.copy(isFinishing = false, workoutSummary = null)
     }
@@ -379,7 +402,8 @@ class TrainViewModel @Inject constructor(
             durationMinutes = durationMinutes,
             volumeByMuscle = volumeByMuscle,
             personalRecords = personalRecords,
-            weeklyComparison = weeklyComparison
+            weeklyComparison = weeklyComparison,
+            bodyWeight = workoutRepo.getById(workoutId)?.bodyWeight ?: 0f
         )
     }
 }

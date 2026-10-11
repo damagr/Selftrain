@@ -12,6 +12,21 @@ data class SetWithExercise(
     val muscleGroup: String
 )
 
+// ponytail: stats — fila ligera (serie + fecha del entreno) para volumen/frecuencia semanal
+data class SetVolumeRow(
+    val date: Long,
+    val weightKg: Float,
+    val reps: Int
+)
+
+// ponytail: stats — PR global por ejercicio (SQLite devuelve las columnas bare de la fila del MAX)
+data class ExercisePrRow(
+    val exerciseId: Long,
+    val max1RM: Double,
+    val weightKg: Float,
+    val reps: Int
+)
+
 @Dao
 interface WorkoutDao {
     @Query("SELECT * FROM workouts ORDER BY date DESC")
@@ -111,6 +126,30 @@ interface WorkoutDao {
     // ponytail: auto-recovery — unfinished workout of a specific routine (process death on TrainScreen)
     @Query("SELECT * FROM workouts WHERE completed = 0 AND routineId = :routineId ORDER BY date DESC LIMIT 1")
     suspend fun getUnfinishedForRoutine(routineId: Long): Workout?
+
+    // ponytail: stats — volumen y frecuencia semanal (series de entrenos completados)
+    @Query("""
+        SELECT w.date AS date, ws.weightKg AS weightKg, ws.reps AS reps
+        FROM workouts w
+        JOIN workout_sets ws ON ws.workoutId = w.id
+        WHERE w.completed = 1
+        ORDER BY w.date ASC
+    """)
+    fun getCompletedSetVolume(): Flow<List<SetVolumeRow>>
+
+    // ponytail: stats — PR global de todos los ejercicios (1RM Epley, mismo criterio que getMaxEstimated1RM)
+    @Query("""
+        SELECT ws.exerciseId AS exerciseId,
+               MAX(ws.weightKg * (1.0 + ws.reps / 30.0)) AS max1RM,
+               ws.weightKg AS weightKg,
+               ws.reps AS reps
+        FROM workout_sets ws
+        JOIN workouts w ON ws.workoutId = w.id
+        WHERE w.completed = 1
+        GROUP BY ws.exerciseId
+        ORDER BY max1RM DESC
+    """)
+    fun getMax1RMPerExercise(): Flow<List<ExercisePrRow>>
 
     @Query("DELETE FROM workouts WHERE id = :id")
     suspend fun deleteById(id: Long)
