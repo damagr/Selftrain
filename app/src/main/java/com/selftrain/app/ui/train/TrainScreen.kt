@@ -48,6 +48,8 @@ fun TrainScreen(
     val state by viewModel.state.collectAsState()
     val restTrigger by viewModel.restTrigger.collectAsState()
     val hapticFeedback = LocalHapticFeedback.current
+    // ponytail: scope de composición para discard — el DELETE se completa ANTES de onFinish()
+    val discardScope = rememberCoroutineScope()
 
     LaunchedEffect(routineId, resumeWorkoutId) { viewModel.startWorkout(routineId, resumeWorkoutId) }
 
@@ -112,7 +114,7 @@ fun TrainScreen(
             modifier = Modifier.padding(padding).fillMaxSize().imeNestedScroll().imePadding()
         ) {
             // Navigation header
-            item {
+            item(key = "nav") {
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                     shape = MaterialTheme.shapes.large,
@@ -195,7 +197,7 @@ fun TrainScreen(
             // Last session for this exercise — collapsible
             currentEx?.let { ex ->
                 if (ex.lastSessionSets.isNotEmpty()) {
-                    item {
+                    item(key = "last-session") {
                         var prExpanded by remember { mutableStateOf(true) }
                         Card(
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
@@ -244,7 +246,7 @@ fun TrainScreen(
             }
 
             // Rest timer (shared across exercises) — default: configurado en la rutina o por categoría
-            item {
+            item(key = "rest") {
                 val restDefault = currentEx?.restSeconds?.takeIf { it > 0 }
                     ?: defaultRestSeconds(currentEx?.exercise?.category)
                 RestTimer(
@@ -370,9 +372,11 @@ fun TrainScreen(
             text = { Text("No has registrado ninguna serie. El entreno no se guardará.") },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.discardEmptyWorkout()
-                    stopRestTimer(context)
-                    onFinish()
+                    discardScope.launch {
+                        viewModel.discardEmptyWorkout()
+                        stopRestTimer(context)
+                        onFinish()
+                    }
                 }) {
                     Text("Salir sin guardar")
                 }
@@ -394,9 +398,11 @@ fun TrainScreen(
             text = { Text("Se perderán los datos no guardados.") },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.discardWorkout()
-                    stopRestTimer(context)
-                    onFinish()
+                    discardScope.launch {
+                        viewModel.discardWorkout()
+                        stopRestTimer(context)
+                        onFinish()
+                    }
                 }) {
                     Text("Cancelar entreno", color = MaterialTheme.colorScheme.error)
                 }
@@ -462,7 +468,7 @@ fun TrainScreen(
     state.workoutSummary?.let { summary ->
         var editDuration by remember { mutableStateOf(summary.durationMinutes.toString()) }
         var editBodyWeight by remember {
-            mutableStateOf(if (summary.bodyWeight > 0) String.format("%.1f", summary.bodyWeight) else "")
+            mutableStateOf(if (summary.bodyWeight > 0) String.format(java.util.Locale.US, "%.1f", summary.bodyWeight) else "")
         }
 
         AlertDialog(
@@ -493,8 +499,8 @@ fun TrainScreen(
                         OutlinedTextField(
                             value = editBodyWeight,
                             onValueChange = { v ->
-                                editBodyWeight = v.filter { ch -> ch.isDigit() || ch == '.' }
-                                v.toFloatOrNull()?.let { viewModel.updateBodyWeight(it) }
+                                editBodyWeight = v.filter { ch -> ch.isDigit() || ch == '.' || ch == ',' }
+                                v.replace(",", ".").toFloatOrNull()?.let { viewModel.updateBodyWeight(it) }
                                 if (v.isEmpty()) viewModel.updateBodyWeight(0f)
                             },
                             label = { Text("kg (opcional)") },
@@ -609,7 +615,7 @@ private fun LazyListScope.exerciseSetItems(
     val bilboDone = sets.any { it.setType == "bilbo" }
 
     // Exercise info
-    item {
+    item(key = "$exerciseKey-info") {
         if (appliesBilbo) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Whatshot, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -623,7 +629,7 @@ private fun LazyListScope.exerciseSetItems(
 
     // Logged sets
     if (sets.isNotEmpty()) {
-        item {
+        item(key = "$exerciseKey-sets") {
             ElevatedCard(
                 shape = MaterialTheme.shapes.medium,
                 colors = CardDefaults.cardColors(
@@ -664,7 +670,7 @@ private fun LazyListScope.exerciseSetItems(
     // Bilbo 50+ progression hint
     val lastSet = sets.lastOrNull()
     if (lastSet?.setType == "bilbo" && lastSet.reps >= 50) {
-        item {
+        item(key = "$exerciseKey-hint50") {
             ElevatedCard(
                 shape = MaterialTheme.shapes.medium,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -682,7 +688,7 @@ private fun LazyListScope.exerciseSetItems(
 
     // Intra-session advice
     intraAdjustment?.let { (progression, suggestedWeight) ->
-        item {
+        item(key = "$exerciseKey-intra") {
             val isIncrease = progression == BilboProgression.WorkProgression.INCREASE
             val lastEffective = BilboProgression.effectiveReps(lastWorkSet?.reps ?: 0, lastWorkSet?.rir ?: 0)
             ElevatedCard(
@@ -710,7 +716,7 @@ private fun LazyListScope.exerciseSetItems(
     }
 
     // Input section with animated transition
-    item {
+    item(key = "$exerciseKey-input") {
         ElevatedCard(
             shape = MaterialTheme.shapes.medium,
             colors = CardDefaults.cardColors(
@@ -760,7 +766,7 @@ private fun LazyListScope.exerciseSetItems(
     }
 
     // Bottom spacer
-    item { Spacer(Modifier.height(16.dp)) }
+    item(key = "$exerciseKey-spacer") { Spacer(Modifier.height(16.dp)) }
 }
 
 @Composable
@@ -1019,9 +1025,11 @@ fun RestTimer(category: String? = null, restTrigger: Int = 0, defaultSeconds: In
     var savedTotal by rememberSaveable { mutableIntStateOf(0) }
     var savedPaused by rememberSaveable { mutableIntStateOf(0) }
 
-    // Restore-once: controller vacío (proceso nuevo) pero había timer activo al morir.
+    // Restore-once: SOLO si el controller no ha tenido sesión en este proceso (proceso fresco
+    // tras muerte) y el payload guardado dice que había timer activo. Si el controller ya
+    // vivió una sesión, su estado es la verdad y un restore stale re-disparaba el flash.
     LaunchedEffect(Unit) {
-        if (!RestTimerController.isActive && savedActive) {
+        if (!RestTimerController.sessionStarted && savedActive) {
             if (savedRunning) {
                 val rem = ((savedDeadline - System.currentTimeMillis()) / 1000L).toInt()
                 if (rem > 0) {
@@ -1070,11 +1078,12 @@ fun RestTimer(category: String? = null, restTrigger: Int = 0, defaultSeconds: In
     }
 
     // ponytail: descanso automático — al registrar una serie (trigger del ViewModel) arranca
-    // el descanso con los customSeconds del usuario (respeta sus ±30s ajustados)
-    var lastHandledTrigger by remember { mutableIntStateOf(0) }
+    // el descanso con los customSeconds del usuario (respeta sus ±30s ajustados).
+    // El último trigger atendido vive en RestTimerController (nivel proceso): el remember local
+    // se perdía al desecharse el item (scroll) o rotar y se REINICIABA el descanso en marcha.
     LaunchedEffect(restTrigger) {
-        if (restTrigger != lastHandledTrigger) {
-            lastHandledTrigger = restTrigger
+        if (restTrigger > RestTimerController.lastHandledTrigger) {
+            RestTimerController.lastHandledTrigger = restTrigger
             if (restTrigger > 0) {
                 RestTimerController.start(customSeconds)
                 context.startForegroundService(

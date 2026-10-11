@@ -90,8 +90,10 @@ class TrainViewModel @Inject constructor(
             val routine = routineRepo.getById(routineId) ?: return@launch
             val reList = routineRepo.getWithExercises(routineId)
 
-            var exercises = reList.map { re ->
-                val ex = exerciseRepo.getById(re.exerciseId) ?: return@launch
+            // ponytail: skip ejercicios borrados (soft-delete) — antes un `return@launch` aquí
+            // abortaba TODO el arranque y dejaba spinner infinito
+            var exercises = reList.mapNotNull { re ->
+                val ex = exerciseRepo.getById(re.exerciseId) ?: return@mapNotNull null
                 val allHistory = workoutRepo.getSetHistory(ex.id)
                 val lastSession = workoutRepo.getLastExerciseSession(ex.id)
 
@@ -286,26 +288,23 @@ class TrainViewModel @Inject constructor(
         }
     }
 
-    fun discardEmptyWorkout() {
-        viewModelScope.launch {
-            val workoutId = _state.value.workoutId
-            val workout = workoutRepo.getById(workoutId)
-            if (workout != null) {
-                workoutRepo.delete(workout)
-            }
-            _state.value = _state.value.copy(confirmEmpty = false)
+    // ponytail: suspend + await — antes se lanzaba en viewModelScope y onFinish() (popBackStack)
+    // cancelaba el scope antes de que el DELETE llegara → workout huérfano "resucitado"
+    suspend fun discardWorkout() {
+        val workoutId = _state.value.workoutId
+        val workout = workoutRepo.getById(workoutId)
+        if (workout != null) {
+            workoutRepo.delete(workout)
         }
     }
 
-    // ponytail: discard without confirmEmpty flag, used by back-handler
-    fun discardWorkout() {
-        viewModelScope.launch {
-            val workoutId = _state.value.workoutId
-            val workout = workoutRepo.getById(workoutId)
-            if (workout != null) {
-                workoutRepo.delete(workout)
-            }
+    suspend fun discardEmptyWorkout() {
+        val workoutId = _state.value.workoutId
+        val workout = workoutRepo.getById(workoutId)
+        if (workout != null) {
+            workoutRepo.delete(workout)
         }
+        _state.value = _state.value.copy(confirmEmpty = false)
     }
 
     fun cancelEmptyFinish() {

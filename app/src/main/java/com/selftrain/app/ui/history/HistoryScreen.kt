@@ -40,7 +40,6 @@ import java.text.SimpleDateFormat
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
-import java.time.Month
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.TextStyle
@@ -54,7 +53,6 @@ fun HistoryScreen(
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
     val view by viewModel.view.collectAsState()
-    val workouts by viewModel.workouts.collectAsState()
     val exercises by viewModel.exercisesWithHistory.collectAsState()
     val selectedExercise by viewModel.selectedExercise.collectAsState()
     val history by viewModel.history.collectAsState()
@@ -146,6 +144,22 @@ fun HistoryScreen(
                     )
                 } else {
                     Column(Modifier.padding(padding)) {
+                        // ponytail: indicador de filtro también visible en Resumen
+                        if (filterActive) {
+                            AssistChip(
+                                onClick = { viewModel.setFilter(HistoryFilter()) },
+                                label = {
+                                    val routineName = historyFilter.routineId?.let { rid ->
+                                        routineOptions.find { it.id == rid }?.name
+                                    }
+                                    val exerciseName = historyFilter.exerciseId?.let { eid ->
+                                        exercises.find { it.id == eid }?.name
+                                    }
+                                    Text("Filtro: ${listOfNotNull(routineName, exerciseName).joinToString(" + ")} ✕")
+                                },
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                        }
                         ElevatedCard(
                             modifier = Modifier.fillMaxWidth().padding(16.dp).clickable { viewModel.showWorkoutList() },
                             shape = MaterialTheme.shapes.large,
@@ -380,8 +394,8 @@ fun HistoryScreen(
                                     Modifier.fillMaxWidth().padding(32.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(
-                                        "No hay entrenos completados aun",
+                                Text(
+                                    "No hay entrenos completados aún",
                                         style = MaterialTheme.typography.bodyLarge
                                     )
                                 }
@@ -435,6 +449,7 @@ fun HistoryScreen(
 
                         items(sets, key = { "set-${it.set.id}" }) { s ->
                             var showEditDialog by rememberSaveable { mutableStateOf(false) }
+                            var showDeleteSetConfirm by remember { mutableStateOf(false) }
 
                             ElevatedCard(
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp)
@@ -461,9 +476,8 @@ fun HistoryScreen(
                                             )
                                         }
                                     }
-                                    IconButton(onClick = {
-                                        viewModel.deleteSetFromHistory(s.set)
-                                    }) {
+                                    // ponytail: confirmación — antes un toque borraba la serie al instante
+                                    IconButton(onClick = { showDeleteSetConfirm = true }) {
                                         Icon(Icons.Default.Delete, "Borrar",
                                             Modifier.size(20.dp),
                                             tint = MaterialTheme.colorScheme.error)
@@ -471,13 +485,31 @@ fun HistoryScreen(
                                 }
                             }
 
+                            if (showDeleteSetConfirm) {
+                                AlertDialog(
+                                    onDismissRequest = { showDeleteSetConfirm = false },
+                                    shape = MaterialTheme.shapes.large,
+                                    title = { Text("¿Borrar serie?") },
+                                    text = { Text("Se eliminará esta serie del entrenamiento.") },
+                                    confirmButton = {
+                                        TextButton(onClick = {
+                                            showDeleteSetConfirm = false
+                                            viewModel.deleteSetFromHistory(s.set)
+                                        }) { Text("Borrar", color = MaterialTheme.colorScheme.error) }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { showDeleteSetConfirm = false }) { Text("Cancelar") }
+                                    }
+                                )
+                            }
+
                             // Edit dialog
                             if (showEditDialog) {
                                 EditSetDialog(
                                     set = s.set,
                                     onDismiss = { showEditDialog = false },
-                                    onSave = { reps, weight, rir, notes ->
-                                        viewModel.updateSet(s.set, reps, weight, rir, notes)
+                                    onSave = { setType, reps, weight, rir, notes ->
+                                        viewModel.updateSet(s.set, setType, reps, weight, rir, notes)
                                         showEditDialog = false
                                     }
                                 )
@@ -699,7 +731,8 @@ fun ExerciseProgressionView(
             ) {
                 Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.EmojiEvents, null, tint = Color(0xFFFFC107))
+                        // ponytail: color del tema (antes ámbar hardcodeado — rompía el modo claro)
+                        Icon(Icons.Default.EmojiEvents, null, tint = MaterialTheme.colorScheme.tertiary)
                         Spacer(Modifier.width(8.dp))
                         Text("1RM estimado max: ${String.format("%.1f", max1RM)} kg",
                             style = MaterialTheme.typography.titleMedium)
@@ -711,7 +744,7 @@ fun ExerciseProgressionView(
 
         if (history.isEmpty()) {
             item {
-                Text("Sin datos aun. Haz tu primer entreno!",
+                Text("Sin datos aún. Haz tu primer entreno!",
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.padding(16.dp))
             }
@@ -747,10 +780,11 @@ fun ExerciseProgressionView(
 fun EditSetDialog(
     set: WorkoutSet,
     onDismiss: () -> Unit,
-    onSave: (reps: Int, weight: Float, rir: Int, notes: String) -> Unit
+    onSave: (setType: String, reps: Int, weight: Float, rir: Int, notes: String) -> Unit
 ) {
     var reps by remember { mutableStateOf(set.reps.toString()) }
-    var weight by remember { mutableStateOf(String.format("%.1f", set.weightKg)) }
+    // ponytail: Locale.US — con locale ES, "%.1f" produce "12,5" y toFloatOrNull() falla (guardado mudo)
+    var weight by remember { mutableStateOf(String.format(java.util.Locale.US, "%.1f", set.weightKg)) }
     var rir by remember { mutableStateOf(if (set.rir > 0) set.rir.toString() else "") }
     var setType by remember { mutableStateOf(set.setType) }
     var notes by remember { mutableStateOf(set.notes) }
@@ -809,9 +843,9 @@ fun EditSetDialog(
         confirmButton = {
             TextButton(onClick = {
                 val r = reps.toIntOrNull() ?: return@TextButton
-                val w = weight.toFloatOrNull() ?: return@TextButton
+                val w = weight.replace(",", ".").toFloatOrNull() ?: return@TextButton
                 val ri = rir.toIntOrNull() ?: 0
-                onSave(r, w, ri, notes.trim())
+                onSave(setType, r, w, ri, notes.trim())
             }) { Text("Guardar") }
         },
         dismissButton = {

@@ -125,6 +125,7 @@ class RestTimerService : Service() {
                 RestTimerController.restoreRunning(total, end)
                 persistState(this)
                 goForeground()
+                releaseLock()
                 acquireLock()
                 startTicking()
             }

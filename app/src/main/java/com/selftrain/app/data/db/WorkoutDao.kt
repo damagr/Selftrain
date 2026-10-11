@@ -12,8 +12,9 @@ data class SetWithExercise(
     val muscleGroup: String
 )
 
-// ponytail: stats — fila ligera (serie + fecha del entreno) para volumen/frecuencia semanal
+// ponytail: stats — fila ligera (serie + fecha + entreno) para volumen/frecuencia semanal
 data class SetVolumeRow(
+    val workoutId: Long,
     val date: Long,
     val weightKg: Float,
     val reps: Int
@@ -129,7 +130,7 @@ interface WorkoutDao {
 
     // ponytail: stats — volumen y frecuencia semanal (series de entrenos completados)
     @Query("""
-        SELECT w.date AS date, ws.weightKg AS weightKg, ws.reps AS reps
+        SELECT w.id AS workoutId, w.date AS date, ws.weightKg AS weightKg, ws.reps AS reps
         FROM workouts w
         JOIN workout_sets ws ON ws.workoutId = w.id
         WHERE w.completed = 1

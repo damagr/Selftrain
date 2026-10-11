@@ -1,6 +1,7 @@
 package com.selftrain.app.data.repository
 
 import com.selftrain.app.data.db.RoutineDao
+import androidx.room.withTransaction
 import com.selftrain.app.data.model.Routine
 import com.selftrain.app.data.model.RoutineExercise
 import kotlinx.coroutines.flow.Flow
@@ -9,7 +10,8 @@ import javax.inject.Singleton
 
 @Singleton
 class RoutineRepository @Inject constructor(
-    private val dao: RoutineDao
+    private val dao: RoutineDao,
+    private val db: com.selftrain.app.data.db.AppDatabase
 ) {
     val routines: Flow<List<Routine>> = dao.getAll()
 
@@ -25,6 +27,16 @@ class RoutineRepository @Inject constructor(
 
     suspend fun setBilbo(id: Long, isBilbo: Boolean) = dao.setBilbo(id, isBilbo)
     suspend fun setRest(id: Long, restSeconds: Int) = dao.setRest(id, restSeconds)
+
+    // ponytail: guardado atómico de la lista de ejercicios — antes update + clear + N inserts
+    // sin transacción: un crash a mitad dejaba la rutina SIN ejercicios
+    suspend fun saveRoutineExercises(routine: Routine, items: List<RoutineExercise>) {
+        db.withTransaction {
+            dao.update(routine)
+            dao.clearExercises(routine.id)
+            items.forEach { dao.addExercise(it) }
+        }
+    }
 
     suspend fun clearExercises(routineId: Long) = dao.clearExercises(routineId)
     suspend fun removeExercise(id: Long) = dao.removeExercise(id)

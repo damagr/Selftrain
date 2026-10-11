@@ -3,6 +3,7 @@ package com.selftrain.app.util
 import android.content.Context
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
+import androidx.room.withTransaction
 import com.selftrain.app.data.db.AppDatabase
 import com.selftrain.app.data.model.*
 import com.google.gson.Gson
@@ -84,21 +85,35 @@ class BackupManager @Inject constructor(
     suspend fun importFrom(uri: Uri) {
         val json = context.contentResolver.openInputStream(uri)?.bufferedReader()?.readText()
             ?: throw IllegalStateException("No se pudo leer el archivo")
-        val data = gson.fromJson(json, BackupData::class.java)
+        val raw = gson.fromJson(json, BackupData::class.java)
 
-        // Clear existing and re-insert
-        db.workoutDao().getAllSets().forEach { db.workoutDao().deleteSet(it) }
-        db.workoutDao().getAllList().forEach { db.workoutDao().delete(it) }
-        db.routineDao().getAllRoutineExercises().forEach { db.routineDao().removeExercise(it.id) }
-        db.routineDao().getAllList().forEach { db.routineDao().delete(it) }
-        db.exerciseDao().getAllListRaw().forEach { db.exerciseDao().softDelete(it.id) }
+        // ponytail: sanitización — Gson (Unsafe) deja null en campos ausentes de backups
+        // antiguos aunque el tipo Kotlin sea no-nulo → violaría los NOT NULL tras el wipe
+        val data = BackupData(
+            exercises = raw.exercises?.map { it.copy(equipment = it.equipment ?: "") } ?: emptyList(),
+            routines = raw.routines ?: emptyList(),
+            routineExercises = raw.routineExercises ?: emptyList(),
+            workouts = raw.workouts?.map { it.copy(notes = it.notes ?: "") } ?: emptyList(),
+            workoutSets = raw.workoutSets?.map { it.copy(notes = it.notes ?: "") } ?: emptyList()
+        )
 
-        // Re-insert from backup
-        db.exerciseDao().insertAll(data.exercises)
-        data.routines.forEach { db.routineDao().insert(it) }
-        data.routineExercises.forEach { db.routineDao().addExercise(it) }
-        data.workouts.forEach { db.workoutDao().insert(it) }
-        data.workoutSets.forEach { db.workoutDao().insertSet(it) }
+        // ponytail: transacción — si algo falla a mitad, la BD queda como estaba
+        // (antes: wipe sin transacción → BD vacía/parcial + toast de éxito falso)
+        db.withTransaction {
+            // Clear existing and re-insert
+            db.workoutDao().getAllSets().forEach { db.workoutDao().deleteSet(it) }
+            db.workoutDao().getAllList().forEach { db.workoutDao().delete(it) }
+            db.routineDao().getAllRoutineExercises().forEach { db.routineDao().removeExercise(it.id) }
+            db.routineDao().getAllList().forEach { db.routineDao().delete(it) }
+            db.exerciseDao().getAllListRaw().forEach { db.exerciseDao().softDelete(it.id) }
+
+            // Re-insert from backup
+            db.exerciseDao().insertAll(data.exercises)
+            data.routines.forEach { db.routineDao().insert(it) }
+            data.routineExercises.forEach { db.routineDao().addExercise(it) }
+            data.workouts.forEach { db.workoutDao().insert(it) }
+            data.workoutSets.forEach { db.workoutDao().insertSet(it) }
+        }
     }
 
     suspend fun createAutomaticBackup(versionName: String) {

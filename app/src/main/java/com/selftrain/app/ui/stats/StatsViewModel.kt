@@ -71,7 +71,7 @@ class StatsViewModel @Inject constructor(
             WeekVolume(
                 weekStart = weekStart,
                 volumeKg = weekRows.sumOf { (it.weightKg * it.reps).toDouble() }.toFloat(),
-                workoutCount = weekRows.map { it.date }.distinct().size
+                workoutCount = weekRows.map { it.workoutId }.distinct().size
             )
         }.sortedBy { it.weekStart }
     }
@@ -79,10 +79,12 @@ class StatsViewModel @Inject constructor(
     private fun computeStreak(completed: List<Workout>): Int {
         if (completed.isEmpty()) return 0
         val zone = ZoneId.systemDefault()
+        val thisWeek = LocalDate.now().with(DayOfWeek.MONDAY)
+        // ponytail: ignora semanas futuras (posibles vía edición de fecha) — antes rompían la racha
         val weeks = completed.map {
             Instant.ofEpochMilli(it.date).atZone(zone).toLocalDate().with(DayOfWeek.MONDAY)
-        }.distinct().sortedDescending()
-        val thisWeek = LocalDate.now().with(DayOfWeek.MONDAY)
+        }.filter { !it.isAfter(thisWeek) }.distinct().sortedDescending()
+        if (weeks.isEmpty()) return 0
         var cursor = if (weeks.first() == thisWeek) weeks.first() else thisWeek.minusWeeks(1)
         var streak = 0
         for (week in weeks) {

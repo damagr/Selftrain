@@ -87,25 +87,29 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun exportTo(uri: Uri, onDone: () -> Unit) {
+    fun exportTo(uri: Uri, onDone: (Boolean) -> Unit) {
         viewModelScope.launch {
             isExporting = true
+            var ok = false
             try {
                 backupManager.exportTo(uri)
+                ok = true
             } catch (_: Exception) { }
             isExporting = false
-            onDone()
+            onDone(ok)
         }
     }
 
-    fun importFrom(uri: Uri, onDone: () -> Unit) {
+    fun importFrom(uri: Uri, onDone: (Boolean) -> Unit) {
         viewModelScope.launch {
             isImporting = true
+            var ok = false
             try {
                 backupManager.importFrom(uri)
+                ok = true
             } catch (_: Exception) { }
             isImporting = false
-            onDone()
+            onDone(ok)
         }
     }
 
@@ -181,7 +185,9 @@ fun SettingsScreen(
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
-        uri?.let { viewModel.exportTo(it) { context.toast("Datos exportados correctamente") } }
+        uri?.let { viewModel.exportTo(it) { ok ->
+            context.toast(if (ok) "Datos exportados correctamente" else "Error al exportar los datos")
+        } }
     }
 
     // ponytail: exportar CSV (una fila por serie) para Excel / Sheets
@@ -423,8 +429,8 @@ fun SettingsScreen(
             text = { Text("Esto reemplazará todos tus datos actuales con los del archivo de backup. ¿Continuar?") },
             confirmButton = {
                 TextButton(onClick = {
-                    viewModel.importFrom(uri) {
-                        context.toast("Datos importados correctamente")
+                    viewModel.importFrom(uri) { ok ->
+                        context.toast(if (ok) "Datos importados correctamente" else "Error al importar el backup")
                     }
                     showImportConfirm = null
                 }) {

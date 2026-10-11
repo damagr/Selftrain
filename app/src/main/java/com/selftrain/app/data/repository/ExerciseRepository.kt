@@ -60,7 +60,8 @@ class ExerciseRepository @Inject constructor(
     )
 
     suspend fun getById(id: Long) = dao.getById(id)
-    suspend fun getByIds(ids: List<Long>) = dao.getByIds(ids)
+    // ponytail: guarda lista vacía — Room genera `IN ()` y SQLite falla
+    suspend fun getByIds(ids: List<Long>) = if (ids.isEmpty()) emptyList() else dao.getByIds(ids)
     suspend fun addExercise(exercise: Exercise) = dao.insert(exercise)
     suspend fun deleteExercise(exercise: Exercise) {
         if (dao.countUsageInRoutines(exercise.id) > 0 || dao.countUsageInSets(exercise.id) > 0) {

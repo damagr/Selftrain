@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.selftrain.app.data.model.Exercise
 import com.selftrain.app.data.model.Routine
+import com.selftrain.app.data.model.RoutineExercise
 import com.selftrain.app.data.repository.ExerciseRepository
 import com.selftrain.app.data.repository.RoutineRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -89,7 +90,8 @@ class RoutineEditViewModel @Inject constructor(
             list.none {
                 it.isBilbo && it.exercise.muscleGroup == newExercise.muscleGroup && it.exercise.id != newExercise.id
             }
-        list[index] = RoutineExerciseItem(newExercise, keepBilbo)
+        // ponytail: conserva el descanso configurado del slot (antes se perdía silenciosamente)
+        list[index] = RoutineExerciseItem(newExercise, keepBilbo, previous.routineExerciseId, previous.restSeconds)
         _exercises.value = list
     }
 
@@ -101,15 +103,13 @@ class RoutineEditViewModel @Inject constructor(
         _exercises.value = list
     }
 
-    // ponytail: descanso configurable por ejercicio (0 = default por categoría)
+    // ponytail: solo estado local — persiste en Guardar (save lleva restSeconds).
+    // Antes escribía en BD al instante: salir sin Guardar perdía los demás cambios
+    // pero el descanso quedaba guardado (inconsistente con el modelo save/cancel).
     fun setRest(item: RoutineExerciseItem, seconds: Int) {
-        viewModelScope.launch {
-            if (item.routineExerciseId != 0L) {
-                routineRepo.setRest(item.routineExerciseId, seconds)
-            }
-            _exercises.value = _exercises.value.map {
-                if (it.exercise.id == item.exercise.id) it.copy(restSeconds = seconds) else it
-            }
+        val clamped = seconds.coerceIn(0, 300)   // 0 = auto; máx 5 min
+        _exercises.value = _exercises.value.map {
+            if (it.exercise.id == item.exercise.id) it.copy(restSeconds = clamped) else it
         }
     }
 
@@ -141,11 +141,19 @@ class RoutineEditViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
-            routineRepo.update(r)
-            routineRepo.clearExercises(r.id)
-            items.forEachIndexed { index, item ->
-                routineRepo.addExercise(r.id, item.exercise.id, index, item.isBilbo, item.restSeconds)
-            }
+            // ponytail: transaccional en el repo (antes update+clear+N inserts sin transacción)
+            routineRepo.saveRoutineExercises(
+                r,
+                items.mapIndexed { index, item ->
+                    RoutineExercise(
+                        routineId = r.id,
+                        exerciseId = item.exercise.id,
+                        order = index,
+                        isBilbo = item.isBilbo,
+                        restSeconds = item.restSeconds
+                    )
+                }
+            )
             onSaved()
         }
     }

@@ -236,9 +236,6 @@ class RoutinesViewModel @Inject constructor(
 
     fun clearImportMessage() { importMessage = null }
 
-    // ponytail: crash recovery — check for unfinished workout on app launch
-    suspend fun getUnfinishedWorkout() = workoutRepo.getUnfinishedWorkout()
-
     fun discardUnfinishedWorkout(workoutId: Long) {
         viewModelScope.launch {
             workoutRepo.deleteWorkoutById(workoutId)

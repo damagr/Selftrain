@@ -38,16 +38,8 @@ class HistoryViewModel @Inject constructor(
     private val _filter = MutableStateFlow(HistoryFilter())
     val filter: StateFlow<HistoryFilter> = _filter.asStateFlow()
 
-    // ids de entrenos que contienen el ejercicio filtrado (se resuelve al cambiar el filtro)
-    private val _exerciseWorkoutIds = MutableStateFlow<Set<Long>>(emptySet())
-
     fun setFilter(newFilter: HistoryFilter) {
         _filter.value = newFilter
-        viewModelScope.launch {
-            _exerciseWorkoutIds.value = if (newFilter.exerciseId != null)
-                workoutRepo.getSetHistory(newFilter.exerciseId).map { it.set.workoutId }.toSet()
-            else emptySet()
-        }
     }
 
     private val _exerciseIdsWithHistory = MutableStateFlow<List<Long>>(emptyList())
@@ -66,7 +58,12 @@ class HistoryViewModel @Inject constructor(
     private val _workoutDetailSets = MutableStateFlow<List<SetWithExercise>>(emptyList())
     val workoutDetailSets: StateFlow<List<SetWithExercise>> = _workoutDetailSets
 
-    val completedWorkouts: StateFlow<List<Workout>> = combine(workouts, _filter, _exerciseWorkoutIds) { list, f, exIds ->
+    val completedWorkouts: StateFlow<List<Workout>> = combine(workouts, _filter) { list, f ->
+        // ponytail: los ids del ejercicio se resuelven DENTRO del combine (transform suspend) —
+        // antes el filtro se aplicaba síncrono y los ids llegaban async → la lista parpadeaba vacía
+        val exIds = f.exerciseId?.let { exId ->
+            workoutRepo.getSetHistory(exId).map { it.set.workoutId }.toSet()
+        } ?: emptySet()
         list.filter { it.completed }
             .filter { w ->
                 (f.routineId == null || w.routineId == f.routineId) &&
@@ -144,9 +141,9 @@ class HistoryViewModel @Inject constructor(
     }
 
     // ponytail: edit history — update/delete/add sets from workout detail
-    fun updateSet(set: WorkoutSet, reps: Int, weightKg: Float, rir: Int, notes: String) {
+    fun updateSet(set: WorkoutSet, setType: String, reps: Int, weightKg: Float, rir: Int, notes: String) {
         viewModelScope.launch {
-            workoutRepo.updateSet(set.copy(reps = reps, weightKg = weightKg, rir = rir, notes = notes))
+            workoutRepo.updateSet(set.copy(setType = setType, reps = reps, weightKg = weightKg, rir = rir, notes = notes))
             val workout = _selectedWorkout.value ?: return@launch
             _workoutDetailSets.value = workoutRepo.getSetsWithExercise(workout.id)
         }

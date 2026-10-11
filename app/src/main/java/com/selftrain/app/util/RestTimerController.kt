@@ -38,6 +38,7 @@ object RestTimerController {
         isActive = true
         pausedRemaining = 0
         finishedFlash = false
+        sessionStarted = true
     }
 
     // ponytail: restaurar tras muerte de proceso, desde el deadline guardado (no desde ticks)
@@ -49,6 +50,7 @@ object RestTimerController {
         isActive = true
         pausedRemaining = 0
         finishedFlash = false
+        sessionStarted = true
     }
 
     fun restorePaused(totalSecs: Int, paused: Int) {
@@ -59,6 +61,7 @@ object RestTimerController {
         isRunning = false
         isActive = true
         finishedFlash = false
+        sessionStarted = true
     }
 
     fun pause() {
@@ -103,4 +106,16 @@ object RestTimerController {
     fun clearFlash() {
         finishedFlash = false
     }
+
+    // ponytail: último trigger de descanso automático ya atendido — vive aquí (nivel proceso)
+    // y no en la UI, porque el item del LazyColumn se desecha al scrollear y `remember` se
+    // pierde: al volver, el trigger antiguo se re-atendía y REINICIABA el descanso en marcha.
+    // También cubre la rotación (la UI se recrea, el objeto sobrevive).
+    var lastHandledTrigger: Int = 0
+
+    // ponytail: true si el timer ha tenido sesión en ESTE proceso — el restore-once de la UI
+    // (desde rememberSaveable tras muerte de proceso) solo debe ejecutarse cuando esto es
+    // false; si no, un estado stale re-disparaba el flash "¡Descanso terminado!" + háptico
+    var sessionStarted: Boolean = false
+        private set
 }

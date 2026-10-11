@@ -205,22 +205,39 @@ fun RoutinesScreen(
             shape = MaterialTheme.shapes.large,
             title = { Text("Entreno sin finalizar") },
             text = {
-                Text("Tienes un entreno sin finalizar de \"${routine?.name ?: "rutina"}\". ¿Quieres reanudarlo donde lo dejaste?")
+                if (routine == null) {
+                    // ponytail: la rutina del entreno huérfano ya no existe — reanudar llevaría
+                    // a un spinner infinito, así que solo se ofrece descartar
+                    Text("Tienes un entreno sin finalizar de una rutina que ya no existe. ¿Quieres descartarlo?")
+                } else {
+                    Text("Tienes un entreno sin finalizar de \"${routine.name}\". ¿Quieres reanudarlo donde lo dejaste?")
+                }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.showRecoveryDialog = false
-                    onResumeWorkout(uw.routineId, uw.id)
-                }) {
-                    Text("Reanudar")
+                if (routine != null) {
+                    TextButton(onClick = {
+                        viewModel.showRecoveryDialog = false
+                        onResumeWorkout(uw.routineId, uw.id)
+                    }) {
+                        Text("Reanudar")
+                    }
+                } else {
+                    TextButton(onClick = {
+                        viewModel.showRecoveryDialog = false
+                        viewModel.discardUnfinishedWorkout(uw.id)
+                    }) {
+                        Text("Descartar", color = MaterialTheme.colorScheme.error)
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    viewModel.showRecoveryDialog = false
-                    viewModel.discardUnfinishedWorkout(uw.id)
-                }) {
-                    Text("Descartar", color = MaterialTheme.colorScheme.error)
+                if (routine != null) {
+                    TextButton(onClick = {
+                        viewModel.showRecoveryDialog = false
+                        viewModel.discardUnfinishedWorkout(uw.id)
+                    }) {
+                        Text("Descartar", color = MaterialTheme.colorScheme.error)
+                    }
                 }
             }
         )
