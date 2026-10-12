@@ -15,6 +15,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.DayOfWeek
@@ -163,6 +164,46 @@ class StatsViewModelTest {
         val vm = StatsViewModel(workoutRepo, exerciseRepo)
 
         assertEquals(0, vm.weeklyReps.first().size)
+    }
+
+    @Test
+    fun `weeklyReps no recorta el historico`() = runTest {
+        val monday = mondayOfThisWeek()
+        val week = 7L * 24 * 60 * 60 * 1000
+        // 10 semanas de datos: antes el ViewModel recortaba a 12 pero si hubiera 13+ se perderían
+        val rows = (0L until 10).map { i ->
+            SetVolumeRow(workoutId = i, date = monday - i * week, weightKg = 50f, reps = 10, setType = "work", rir = 2)
+        }
+        every { workoutRepo.getCompletedSetVolume() } returns MutableStateFlow(rows)
+        val vm = StatsViewModel(workoutRepo, exerciseRepo)
+
+        assertEquals(10, vm.weeklyReps.first { it.isNotEmpty() }.size)
+    }
+
+    @Test
+    fun `pageOfWeeks pagina desde la semana mas reciente`() {
+        val weeks = (1..10).map { i ->
+            WeekReps(
+                weekStart = LocalDate.of(2026, 1, 1).plusWeeks(i.toLong() - 1),
+                achievedReps = i * 10, targetMinReps = 8, targetMaxReps = 12, workoutCount = 1
+            )
+        } // semanas ordenadas ascendente: índice 9 = la más reciente
+
+        // página 0 = las 8 más recientes (índices 2..9)
+        val p0 = pageOfWeeks(weeks, page = 0, pageSize = 8)
+        assertEquals(8, p0.size)
+        assertEquals(weeks[2].weekStart, p0.first().weekStart)
+        assertEquals(weeks[9].weekStart, p0.last().weekStart)
+
+        // página 1 = las 2 restantes (más antiguas), recortadas
+        val p1 = pageOfWeeks(weeks, page = 1, pageSize = 8)
+        assertEquals(2, p1.size)
+        assertEquals(weeks[0].weekStart, p1.first().weekStart)
+        assertEquals(weeks[1].weekStart, p1.last().weekStart)
+
+        // página fuera de rango → vacía; página negativa → coerce a la 0 (la más reciente)
+        assertTrue(pageOfWeeks(weeks, page = 2, pageSize = 8).isEmpty())
+        assertEquals(p0, pageOfWeeks(weeks, page = -1, pageSize = 8))
     }
 
     @Test

@@ -7,9 +7,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -29,6 +32,9 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
+// ponytail: semanas por página del gráfico de reps (navegación con flechas)
+private const val WEEKS_PER_PAGE = 8
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun StatsScreen(
@@ -42,6 +48,9 @@ fun StatsScreen(
     val personalRecords by viewModel.personalRecords.collectAsState()
     val exercises by viewModel.exercises.collectAsState()
     val latestBodyWeight by viewModel.latestBodyWeight.collectAsState()
+
+    // ponytail: paginación del gráfico de reps (F: navegación por flechas, 8 semanas/página)
+    var repsPage by rememberSaveable { mutableIntStateOf(0) }
 
     val exerciseById = remember(exercises) { exercises.associateBy { it.id } }
 
@@ -114,7 +123,37 @@ fun StatsScreen(
                                 textAlign = TextAlign.Center
                             )
                         } else {
-                            WeeklyRepsChart(weeklyReps)
+                            val pageCount = (weeklyReps.size + WEEKS_PER_PAGE - 1) / WEEKS_PER_PAGE
+                            val safePage = repsPage.coerceIn(0, pageCount - 1)
+                            val visible = pageOfWeeks(weeklyReps, safePage, WEEKS_PER_PAGE)
+                            if (pageCount > 1) {
+                                // navegación estilo calendario del Historial: < = semanas anteriores
+                                val rangeFormatter = remember { DateTimeFormatter.ofPattern("d/M") }
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    IconButton(
+                                        onClick = { repsPage = safePage + 1 },
+                                        enabled = safePage < pageCount - 1
+                                    ) {
+                                        Icon(Icons.Default.ChevronLeft, "Semanas anteriores")
+                                    }
+                                    Text(
+                                        "${rangeFormatter.format(visible.first().weekStart)} – ${rangeFormatter.format(visible.last().weekStart)}",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    IconButton(
+                                        onClick = { repsPage = safePage - 1 },
+                                        enabled = safePage > 0
+                                    ) {
+                                        Icon(Icons.Default.ChevronRight, "Semanas más recientes")
+                                    }
+                                }
+                            }
+                            WeeklyRepsChart(visible)
                         }
                     }
                 }

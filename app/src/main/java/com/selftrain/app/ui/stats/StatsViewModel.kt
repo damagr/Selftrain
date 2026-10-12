@@ -27,6 +27,15 @@ data class WeekReps(
     val workoutCount: Int
 )
 
+// ponytail: ventana de la página p sobre el histórico (página 0 = las más recientes).
+// pageOfWeeks(all, 0, 8) → las últimas 8; pageOfWeeks(all, 1, 8) → las 8 anteriores...
+internal fun pageOfWeeks(all: List<WeekReps>, page: Int, pageSize: Int): List<WeekReps> {
+    val p = page.coerceAtLeast(0)
+    val end = (all.size - p * pageSize).coerceAtLeast(0)
+    val start = (end - pageSize).coerceAtLeast(0)
+    return if (end <= 0) emptyList() else all.subList(start, end)
+}
+
 @HiltViewModel
 class StatsViewModel @Inject constructor(
     private val workoutRepo: WorkoutRepository,
@@ -44,9 +53,10 @@ class StatsViewModel @Inject constructor(
     val personalRecords: StateFlow<List<ExercisePrRow>> = workoutRepo.getMax1RMPerExercise()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Reps de trabajo semanales (últimas 12 semanas con datos): conseguidas vs objetivo
+    // Reps de trabajo semanales (histórico completo, sin recorte): conseguidas vs objetivo.
+    // La paginación por páginas de 8 semanas se hace en la UI con pageOfWeeks().
     val weeklyReps: StateFlow<List<WeekReps>> = workoutRepo.getCompletedSetVolume().map { rows ->
-        groupRepsByWeek(rows).takeLast(12)
+        groupRepsByWeek(rows)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Volumen total acumulado (todas las series de entrenos completados)
