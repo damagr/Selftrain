@@ -78,8 +78,13 @@ fun StatsScreen(
         ) {
             // --- Summary cards ---
             item {
+                // ponytail: altura intrínseca mínima — las 3 tarjetas igualan la altura de la
+                // más alta aunque una etiqueta salte de línea ("Semanas de racha")
                 Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .height(IntrinsicSize.Min),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     StatCard(
@@ -237,7 +242,8 @@ fun StatsScreen(
 
 @Composable
 private fun StatCard(modifier: Modifier = Modifier, value: String, label: String) {
-    ElevatedCard(modifier = modifier, shape = MaterialTheme.shapes.medium) {
+    // ponytail: fillMaxHeight — dentro de la fila con IntrinsicSize.Min iguala la altura
+    ElevatedCard(modifier = modifier.fillMaxHeight(), shape = MaterialTheme.shapes.medium) {
         Column(
             Modifier.padding(12.dp).fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
