@@ -110,4 +110,8 @@ dependencies {
 
     // Unit tests (JVM, no emulator)
     testImplementation("junit:junit:4.13.2")
+    // ponytail: tests de comportamiento de ViewModels (F5)
+    testImplementation("io.mockk:mockk:1.13.13")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.1")
+    testImplementation("app.cash.turbine:turbine:1.2.0")
 }
