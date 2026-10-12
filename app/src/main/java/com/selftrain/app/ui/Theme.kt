@@ -219,6 +219,11 @@ private val FitnessDarkColorScheme = darkColorScheme(
     onSecondary = Color(0xFF0B0B0F),
     secondaryContainer = Color(0xFF1A2A00),
     onSecondaryContainer = Color(0xFFD4FF3D),
+    // ponytail: familia dorada para récords/logros (tertiary) — antes default M3 (morado)
+    tertiary = Color(0xFFFFD54F),
+    onTertiary = Color(0xFF2E2000),
+    tertiaryContainer = Color(0xFF4A3A00),
+    onTertiaryContainer = Color(0xFFFFD54F),
     background = Color(0xFF0B0B0F),
     onBackground = Color(0xFFF5F5F5),
     surface = Color(0xFF17171D),
@@ -250,6 +255,11 @@ private val FitnessLightColorScheme = lightColorScheme(
     onSecondary = Color(0xFFF8FDF2),
     secondaryContainer = Color(0xFFE2F2B8),
     onSecondaryContainer = Color(0xFF1A2A00),
+    // ponytail: familia dorada para récords/logros (tertiary) — antes default M3 (morado)
+    tertiary = Color(0xFF6B5E00),
+    onTertiary = Color(0xFFFDFDF6),
+    tertiaryContainer = Color(0xFFFFE082),
+    onTertiaryContainer = Color(0xFF231B00),
     background = Color(0xFFFAFAF2),
     onBackground = Color(0xFF1A1C16),
     surface = Color(0xFFFDFDF6),
