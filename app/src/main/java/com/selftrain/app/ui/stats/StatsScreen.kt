@@ -220,11 +220,11 @@ private fun StatCard(modifier: Modifier = Modifier, value: String, label: String
     }
 }
 
-/** Gráfico de reps semanales: conseguidas vs objetivo, con tap para inspeccionar */
+/** Gráfico de reps semanales (bullet): zonas objetivo ancladas a 0 + barra de conseguidas */
 @Composable
 private fun WeeklyRepsChart(weeks: List<WeekReps>) {
     val achievedColor = MaterialTheme.colorScheme.primary
-    val targetColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val zoneColor = MaterialTheme.colorScheme.onSurfaceVariant
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val weekFormatter = remember { DateTimeFormatter.ofPattern("d/M") }
 
@@ -236,14 +236,19 @@ private fun WeeklyRepsChart(weeks: List<WeekReps>) {
     val chartHeight = 140.dp
 
     Column(Modifier.fillMaxWidth()) {
-        // Caption de la semana seleccionada (tap en una barra para cambiarla)
+        // Caption de la semana seleccionada (tap en una columna para cambiarla)
         Text(
             buildAnnotatedString {
-                append("Semana del ${weekFormatter.format(sel.weekStart)}: ")
+                append("${weekFormatter.format(sel.weekStart)}: ")
                 withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)) {
                     append("${sel.achievedReps} reps")
                 }
                 append(" · objetivo ${sel.targetMinReps}-${sel.targetMaxReps}")
+                append(" · " + when {
+                    sel.achievedReps > sel.targetMaxReps -> "sobre el objetivo"
+                    sel.achievedReps < sel.targetMinReps -> "por debajo"
+                    else -> "en objetivo"
+                })
                 if (sel.workoutCount > 0) append(" · ${sel.workoutCount} entreno${if (sel.workoutCount == 1) "" else "s"}")
             },
             style = MaterialTheme.typography.bodyMedium,
@@ -265,32 +270,37 @@ private fun WeeklyRepsChart(weeks: List<WeekReps>) {
             val n = weeks.size
             val slotWidth = size.width / n
             val gap = 4.dp.toPx()
-            val pairGap = 2.dp.toPx()
-            // cada slot: [banda objetivo (rango 8-12) | barra conseguida] del ancho del slot
-            val barWidth = ((slotWidth - gap - pairGap) / 2f).coerceAtLeast(2f)
+            // zonas a lo ancho del slot (menos el gap); barra de conseguidas estrecha y centrada
+            val zoneWidth = slotWidth - gap
+            val barWidth = (zoneWidth * 0.5f).coerceAtLeast(2f)
             weeks.forEachIndexed { i, week ->
                 val isSelected = i == selected
                 val slotStart = i * slotWidth
+                val zoneX = slotStart + gap / 2f
                 val targetMaxH = (week.targetMaxReps.toFloat() / maxReps) * size.height
                 val targetMinH = (week.targetMinReps.toFloat() / maxReps) * size.height
                 val achievedH = (week.achievedReps.toFloat() / maxReps) * size.height
-                val bandAlpha = if (isSelected) 0.45f else 0.25f
-                val achievedAlpha = if (isSelected) 1f else 0.70f
-                // banda objetivo: flotante entre el mínimo (×8) y el máximo (×12) del rango
-                val bandHeight = targetMaxH - targetMinH
-                if (bandHeight > 1f) {
-                    drawRoundRect(
-                        color = targetColor.copy(alpha = bandAlpha),
-                        topLeft = Offset(slotStart, size.height - targetMaxH),
-                        size = Size(barWidth, bandHeight),
-                        cornerRadius = CornerRadius(3f, 3f)
-                    )
-                }
-                // barra conseguida (a la derecha del slot)
+                val shortZoneAlpha = if (isSelected) 0.35f else 0.18f
+                val targetZoneAlpha = if (isSelected) 0.55f else 0.35f
+                // zona "corto": de 0 al mínimo objetivo (series × 8)
+                drawRoundRect(
+                    color = zoneColor.copy(alpha = shortZoneAlpha),
+                    topLeft = Offset(zoneX, size.height - targetMinH),
+                    size = Size(zoneWidth, targetMinH),
+                    cornerRadius = CornerRadius(3f, 3f)
+                )
+                // zona "objetivo": del mínimo al máximo (series × 8 a series × 12)
+                drawRoundRect(
+                    color = zoneColor.copy(alpha = targetZoneAlpha),
+                    topLeft = Offset(zoneX, size.height - targetMaxH),
+                    size = Size(zoneWidth, targetMaxH - targetMinH),
+                    cornerRadius = CornerRadius(3f, 3f)
+                )
+                // barra conseguida: estrecha, centrada sobre las zonas — su punta cuenta la historia
                 if (achievedH > 1f) {
                     drawRoundRect(
-                        color = achievedColor.copy(alpha = achievedAlpha),
-                        topLeft = Offset(slotStart + barWidth + pairGap, size.height - achievedH),
+                        color = achievedColor.copy(alpha = if (isSelected) 1f else 0.75f),
+                        topLeft = Offset(zoneX + (zoneWidth - barWidth) / 2f, size.height - achievedH),
                         size = Size(barWidth, achievedH),
                         cornerRadius = CornerRadius(3f, 3f)
                     )
