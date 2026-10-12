@@ -17,10 +17,12 @@ import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 
-// ponytail: stats — volumen semanal (suma de reps×kg de los entrenos completados de esa semana)
-data class WeekVolume(
+// ponytail: stats — reps de trabajo por semana: conseguidas vs objetivo (12 por serie).
+// Las series Bilbo se excluyen: su objetivo es la progresión a 50 reps, no el rango 8-12.
+data class WeekReps(
     val weekStart: LocalDate,   // lunes de esa semana
-    val volumeKg: Float,
+    val achievedReps: Int,
+    val targetReps: Int,
     val workoutCount: Int
 )
 
@@ -41,9 +43,9 @@ class StatsViewModel @Inject constructor(
     val personalRecords: StateFlow<List<ExercisePrRow>> = workoutRepo.getMax1RMPerExercise()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Volumen y frecuencia semanal (últimas 12 semanas con datos)
-    val weeklyVolume: StateFlow<List<WeekVolume>> = workoutRepo.getCompletedSetVolume().map { rows ->
-        groupByWeek(rows).takeLast(12)
+    // Reps de trabajo semanales (últimas 12 semanas con datos): conseguidas vs objetivo
+    val weeklyReps: StateFlow<List<WeekReps>> = workoutRepo.getCompletedSetVolume().map { rows ->
+        groupRepsByWeek(rows).takeLast(12)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Volumen total acumulado (todas las series de entrenos completados)
@@ -62,18 +64,23 @@ class StatsViewModel @Inject constructor(
         computeStreak(list)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
-    private fun groupByWeek(rows: List<SetVolumeRow>): List<WeekVolume> {
+    private fun groupRepsByWeek(rows: List<SetVolumeRow>): List<WeekReps> {
         val zone = ZoneId.systemDefault()
-        return rows.groupBy { row ->
-            Instant.ofEpochMilli(row.date).atZone(zone).toLocalDate()
-                .with(DayOfWeek.MONDAY)
-        }.map { (weekStart, weekRows) ->
-            WeekVolume(
-                weekStart = weekStart,
-                volumeKg = weekRows.sumOf { (it.weightKg * it.reps).toDouble() }.toFloat(),
-                workoutCount = weekRows.map { it.workoutId }.distinct().size
-            )
-        }.sortedBy { it.weekStart }
+        val targetRepsPerSet = 12
+        return rows.filter { it.setType == "work" }
+            .groupBy { row ->
+                Instant.ofEpochMilli(row.date).atZone(zone).toLocalDate()
+                    .with(DayOfWeek.MONDAY)
+            }
+            .map { (weekStart, weekRows) ->
+                WeekReps(
+                    weekStart = weekStart,
+                    achievedReps = weekRows.sumOf { it.reps },
+                    targetReps = weekRows.size * targetRepsPerSet,
+                    workoutCount = weekRows.map { it.workoutId }.distinct().size
+                )
+            }
+            .sortedBy { it.weekStart }
     }
 
     private fun computeStreak(completed: List<Workout>): Int {

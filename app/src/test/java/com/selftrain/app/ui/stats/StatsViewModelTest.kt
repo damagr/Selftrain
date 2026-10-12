@@ -120,23 +120,47 @@ class StatsViewModelTest {
     }
 
     @Test
-    fun `volumen semanal agrupa y cuenta entrenos reales no series`() = runTest {
+    fun `reps semanales conseguidas vs objetivo excluyendo bilbo`() = runTest {
         val monday = mondayOfThisWeek()
         every { workoutRepo.getCompletedSetVolume() } returns MutableStateFlow(
             listOf(
-                SetVolumeRow(workoutId = 1, date = monday, weightKg = 50f, reps = 10),
-                SetVolumeRow(workoutId = 1, date = monday, weightKg = 50f, reps = 10),
-                SetVolumeRow(workoutId = 2, date = monday + 1000, weightKg = 60f, reps = 8)
+                // entreno 1 (misma semana): 2 series de trabajo + 1 Bilbo (excluida)
+                SetVolumeRow(workoutId = 1, date = monday, weightKg = 50f, reps = 10, setType = "work", rir = 2),
+                SetVolumeRow(workoutId = 1, date = monday, weightKg = 50f, reps = 8, setType = "work", rir = 0),
+                SetVolumeRow(workoutId = 1, date = monday, weightKg = 25f, reps = 30, setType = "bilbo", rir = 5),
+                // entreno 2 (misma semana): 1 serie de trabajo
+                SetVolumeRow(workoutId = 2, date = monday + 1000, weightKg = 60f, reps = 12, setType = "work", rir = 1),
+                // semana anterior: 1 serie
+                SetVolumeRow(workoutId = 3, date = monday - 7L * 24 * 60 * 60 * 1000, weightKg = 55f, reps = 9, setType = "work", rir = 2)
             )
         )
         val vm = StatsViewModel(workoutRepo, exerciseRepo)
 
-        val weeks = vm.weeklyVolume.first { it.isNotEmpty() }
+        val weeks = vm.weeklyReps.first { it.isNotEmpty() }
 
-        assertEquals(1, weeks.size)
-        // 50*10 + 50*10 + 60*8 = 1480
-        assertEquals(1480f, weeks[0].volumeKg, 0.01f)
-        assertEquals(2, weeks[0].workoutCount)
+        assertEquals(2, weeks.size)
+        val thisWeek = weeks.last()
+        // conseguidas: 10 + 8 + 12 = 30 (la Bilbo de 30 reps NO cuenta)
+        assertEquals(30, thisWeek.achievedReps)
+        // objetivo: 3 series de trabajo × 12 = 36
+        assertEquals(36, thisWeek.targetReps)
+        assertEquals(2, thisWeek.workoutCount)
+        // semana anterior: 9/12
+        assertEquals(9, weeks[0].achievedReps)
+        assertEquals(12, weeks[0].targetReps)
+    }
+
+    @Test
+    fun `reps semanales sin series de trabajo no genera semana`() = runTest {
+        val monday = mondayOfThisWeek()
+        every { workoutRepo.getCompletedSetVolume() } returns MutableStateFlow(
+            listOf(
+                SetVolumeRow(workoutId = 1, date = monday, weightKg = 25f, reps = 30, setType = "bilbo", rir = 5)
+            )
+        )
+        val vm = StatsViewModel(workoutRepo, exerciseRepo)
+
+        assertEquals(0, vm.weeklyReps.first().size)
     }
 
     @Test

@@ -12,12 +12,15 @@ data class SetWithExercise(
     val muscleGroup: String
 )
 
-// ponytail: stats — fila ligera (serie + fecha + entreno) para volumen/frecuencia semanal
+// ponytail: stats — fila ligera (serie + fecha + entreno + tipo/RIR) para volumen/frecuencia/
+// reps-vs-objetivo semanales
 data class SetVolumeRow(
     val workoutId: Long,
     val date: Long,
     val weightKg: Float,
-    val reps: Int
+    val reps: Int,
+    val setType: String,
+    val rir: Int
 )
 
 // ponytail: stats — PR global por ejercicio (SQLite devuelve las columnas bare de la fila del MAX)
@@ -128,9 +131,10 @@ interface WorkoutDao {
     @Query("SELECT * FROM workouts WHERE completed = 0 AND routineId = :routineId ORDER BY date DESC LIMIT 1")
     suspend fun getUnfinishedForRoutine(routineId: Long): Workout?
 
-    // ponytail: stats — volumen y frecuencia semanal (series de entrenos completados)
+    // ponytail: stats — volumen, frecuencia y reps-vs-objetivo semanales (series de entrenos completados)
     @Query("""
-        SELECT w.id AS workoutId, w.date AS date, ws.weightKg AS weightKg, ws.reps AS reps
+        SELECT w.id AS workoutId, w.date AS date, ws.weightKg AS weightKg, ws.reps AS reps,
+               ws.setType AS setType, ws.rir AS rir
         FROM workouts w
         JOIN workout_sets ws ON ws.workoutId = w.id
         WHERE w.completed = 1

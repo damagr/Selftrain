@@ -1,6 +1,7 @@
 package com.selftrain.app.ui.stats
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,7 +15,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.selftrain.app.data.db.ExercisePrRow
@@ -30,7 +36,7 @@ fun StatsScreen(
     viewModel: StatsViewModel = hiltViewModel()
 ) {
     val completedWorkouts by viewModel.completedWorkouts.collectAsState()
-    val weeklyVolume by viewModel.weeklyVolume.collectAsState()
+    val weeklyReps by viewModel.weeklyReps.collectAsState()
     val weeklyStreak by viewModel.weeklyStreak.collectAsState()
     val totalVolume by viewModel.totalVolume.collectAsState()
     val personalRecords by viewModel.personalRecords.collectAsState()
@@ -85,21 +91,21 @@ fun StatsScreen(
                 }
             }
 
-            // --- Weekly volume chart ---
+            // --- Weekly work reps chart: conseguidas vs objetivo ---
             item {
                 ElevatedCard(
                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                     shape = MaterialTheme.shapes.large
                 ) {
                     Column(Modifier.padding(16.dp)) {
-                        Text("Volumen semanal", style = MaterialTheme.typography.titleSmall)
+                        Text("Reps de trabajo", style = MaterialTheme.typography.titleSmall)
                         Text(
-                            "suma de reps × kg por semana",
+                            "conseguidas vs objetivo (12 por serie, sin contar Bilbo)",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(12.dp))
-                        if (weeklyVolume.isEmpty()) {
+                        if (weeklyReps.isEmpty()) {
                             Text(
                                 "Aún no hay datos suficientes",
                                 style = MaterialTheme.typography.bodyMedium,
@@ -108,7 +114,7 @@ fun StatsScreen(
                                 textAlign = TextAlign.Center
                             )
                         } else {
-                            WeeklyVolumeChart(weeklyVolume)
+                            WeeklyRepsChart(weeklyReps)
                         }
                     }
                 }
@@ -214,49 +220,93 @@ private fun StatCard(modifier: Modifier = Modifier, value: String, label: String
     }
 }
 
-/** Gráfico de barras simple: volumen por semana (últimas 12) */
+/** Gráfico de reps semanales: conseguidas vs objetivo, con tap para inspeccionar */
 @Composable
-private fun WeeklyVolumeChart(weeks: List<WeekVolume>) {
-    val barColor = MaterialTheme.colorScheme.primary
+private fun WeeklyRepsChart(weeks: List<WeekReps>) {
+    val achievedColor = MaterialTheme.colorScheme.primary
+    val targetColor = MaterialTheme.colorScheme.onSurfaceVariant
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val weekFormatter = remember { DateTimeFormatter.ofPattern("d/M") }
 
-    val maxVolume = weeks.maxOf { it.volumeKg }.coerceAtLeast(1f)
+    // semana seleccionada para el caption — por defecto la más reciente (siempre hay cifra visible)
+    var selected by remember(weeks) { mutableIntStateOf(weeks.lastIndex) }
+    val sel = weeks.getOrNull(selected) ?: weeks.last()
+
+    val maxReps = weeks.maxOf { it.targetReps }.coerceAtLeast(1)
     val chartHeight = 140.dp
-    val labelHeight = 16.dp
 
     Column(Modifier.fillMaxWidth()) {
+        // Caption de la semana seleccionada (tap en una barra para cambiarla)
+        Text(
+            buildAnnotatedString {
+                append("Semana del ${weekFormatter.format(sel.weekStart)}: ")
+                withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)) {
+                    append("${sel.achievedReps}/${sel.targetReps} reps")
+                }
+                if (sel.workoutCount > 0) append(" · ${sel.workoutCount} entreno${if (sel.workoutCount == 1) "" else "s"}")
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1
+        )
+        Spacer(Modifier.height(8.dp))
         Canvas(
-            Modifier.fillMaxWidth().height(chartHeight)
+            Modifier
+                .fillMaxWidth()
+                .height(chartHeight)
+                .pointerInput(weeks) {
+                    detectTapGestures { offset ->
+                        val n = weeks.size
+                        val slot = size.width / n
+                        selected = (offset.x / slot).toInt().coerceIn(0, n - 1)
+                    }
+                }
         ) {
             val n = weeks.size
-            val gap = 6.dp.toPx()
-            val barWidth = ((size.width - gap * (n - 1)) / n).coerceAtLeast(2f)
+            val slotWidth = size.width / n
+            val gap = 4.dp.toPx()
+            val pairGap = 2.dp.toPx()
+            // cada slot: [barra objetivo | barra conseguida] del ancho del slot
+            val barWidth = ((slotWidth - gap - pairGap) / 2f).coerceAtLeast(2f)
             weeks.forEachIndexed { i, week ->
-                val barHeightPx = (week.volumeKg / maxVolume) * size.height
-                if (barHeightPx > 1f) {
+                val isSelected = i == selected
+                val slotStart = i * slotWidth
+                val targetH = (week.targetReps.toFloat() / maxReps) * size.height
+                val achievedH = (week.achievedReps.toFloat() / maxReps) * size.height
+                val targetAlpha = if (isSelected) 0.55f else 0.30f
+                val achievedAlpha = if (isSelected) 1f else 0.70f
+                // barra objetivo (atenuada, a la izquierda del slot)
+                if (targetH > 1f) {
                     drawRoundRect(
-                        color = barColor,
-                        topLeft = Offset(i * (barWidth + gap), size.height - barHeightPx),
-                        size = Size(barWidth, barHeightPx),
-                        cornerRadius = CornerRadius(4f, 4f)
+                        color = targetColor.copy(alpha = targetAlpha),
+                        topLeft = Offset(slotStart, size.height - targetH),
+                        size = Size(barWidth, targetH),
+                        cornerRadius = CornerRadius(3f, 3f)
+                    )
+                }
+                // barra conseguida (a la derecha del slot)
+                if (achievedH > 1f) {
+                    drawRoundRect(
+                        color = achievedColor.copy(alpha = achievedAlpha),
+                        topLeft = Offset(slotStart + barWidth + pairGap, size.height - achievedH),
+                        size = Size(barWidth, achievedH),
+                        cornerRadius = CornerRadius(3f, 3f)
                     )
                 }
             }
         }
         // Week labels under the bars
         Row(Modifier.fillMaxWidth()) {
-            weeks.forEach { week ->
+            weeks.forEachIndexed { i, week ->
                 Text(
                     weekFormatter.format(week.weekStart),
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.labelSmall,
-                    color = labelColor,
+                    color = if (i == selected) MaterialTheme.colorScheme.primary else labelColor,
+                    fontWeight = if (i == selected) FontWeight.Bold else null,
                     textAlign = TextAlign.Center,
                     maxLines = 1
                 )
             }
         }
-        Spacer(Modifier.height(labelHeight / 4))
     }
 }
