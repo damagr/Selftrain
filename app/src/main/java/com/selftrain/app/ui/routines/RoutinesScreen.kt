@@ -118,6 +118,28 @@ fun RoutinesScreen(
             }
         }
 
+        // ponytail: tarjeta "Continuar" (F4) — el día que toca del programa con el entreno
+        // más reciente (misma lógica que "Te toca" en ProgramDaysScreen, a nivel global)
+        val lastWorkoutByRoutine by viewModel.lastWorkoutByRoutine.collectAsState()
+        val suggested = remember(groups, lastWorkoutByRoutine) {
+            var best: Pair<Routine, Routine>? = null   // (child, parent)
+            var bestRecency = -1L
+            groups.forEach { (parent, children) ->
+                if (children.isNotEmpty()) {
+                    val lastDone = children.withIndex()
+                        .map { (idx, r) -> idx to (lastWorkoutByRoutine[r.id] ?: 0L) }
+                        .maxByOrNull { it.second }
+                    val idx = if (lastDone == null || lastDone.second == 0L) 0 else (lastDone.first + 1) % children.size
+                    val recency = lastDone?.second ?: 0L
+                    if (recency > bestRecency) {
+                        bestRecency = recency
+                        best = children[idx] to parent
+                    }
+                }
+            }
+            best
+        }
+
         if (groups.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -143,6 +165,47 @@ fun RoutinesScreen(
                 Modifier.padding(padding),
                 contentPadding = PaddingValues(top = 8.dp)
             ) {
+                // ponytail: tarjeta "Continuar: {día que toca}" (F4)
+                if (suggested != null) {
+                    item(key = "continue") {
+                        val (child, parent) = suggested
+                        ElevatedCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                                .clickable { onStartWorkout(child.id) },
+                            shape = MaterialTheme.shapes.large,
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer
+                            )
+                        ) {
+                            Row(
+                                Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        "Continuar: ${child.name}",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    Text(
+                                        "${parent.name} · te toca",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                                IconButton(onClick = { onStartWorkout(child.id) }) {
+                                    Icon(
+                                        Icons.Default.PlayArrow,
+                                        "Empezar entreno",
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
                 items(groups.size) { index ->
                     val (routine, children) = groups[index]
                     if (children.isNotEmpty()) {

@@ -52,6 +52,7 @@ import androidx.navigation.navArgument
 import com.selftrain.app.ui.AppThemePrefs
 import com.selftrain.app.ui.MainViewModel
 import com.selftrain.app.util.AppPrefs
+import com.selftrain.app.util.Shortcuts
 import com.selftrain.app.ui.SelfTrainTheme
 import com.selftrain.app.ui.UpdateState
 import com.selftrain.app.ui.exercises.ExerciseLibraryScreen
@@ -73,26 +74,58 @@ data class BottomNavItem(
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    // ponytail: ruta pendiente desde atajos (long-press del icono) — se consume en SelfTrainMain
+    private val pendingRoute = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         // ponytail: tema claro/oscuro según Ajustes (AppThemePrefs es estado Compose → toggle reactivo)
         AppThemePrefs.load(this)
         AppPrefs.load(this)
+        Shortcuts.setup(this)
+        handleIntentRoute(intent)
         setContent {
             SelfTrainTheme(lightMode = AppThemePrefs.lightMode) {
-                SelfTrainMain()
+                val route by pendingRoute.collectAsState()
+                SelfTrainMain(
+                    pendingRoute = route,
+                    onRouteConsumed = { pendingRoute.value = null }
+                )
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntentRoute(intent)
+    }
+
+    private fun handleIntentRoute(intent: Intent?) {
+        intent?.getStringExtra(Shortcuts.EXTRA_ROUTE)?.let { pendingRoute.value = it }
     }
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun SelfTrainMain() {
+fun SelfTrainMain(
+    pendingRoute: String? = null,
+    onRouteConsumed: () -> Unit = {}
+) {
     val navController = rememberNavController()
     val viewModel: MainViewModel = hiltViewModel()
     val context = LocalContext.current
+
+    // ponytail: consumir la ruta del atajo (long-press) — navegar una vez y limpiar
+    LaunchedEffect(pendingRoute) {
+        if (pendingRoute != null) {
+            try {
+                navController.navigate(pendingRoute)
+            } catch (_: Exception) { }
+            onRouteConsumed()
+        }
+    }
     // ponytail: expressive-style spring without MotionScheme type-inference headache
     val navAnimSpec = spring<IntOffset>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
     val fadeAnimSpec = spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)

@@ -33,6 +33,7 @@ import com.selftrain.app.util.BilboProgression
 import com.selftrain.app.util.Labels
 import com.selftrain.app.util.PlateCalculator
 import com.selftrain.app.util.RestTimerController
+import com.selftrain.app.util.Shortcuts
 import com.selftrain.app.util.RestTimerService
 import com.selftrain.app.util.getExerciseGifUrl
 
@@ -493,12 +494,19 @@ fun TrainScreen(
 
     // Workout summary dialog
     state.workoutSummary?.let { summary ->
+        val finishAndClose = {
+            // ponytail: atajo "Repetir" (F4) — se actualiza al cerrar el resumen
+            state.routine?.let { r -> Shortcuts.updateLastRoutine(context, r.id, r.name) }
+            viewModel.dismissSummary()
+            stopRestTimer(context)
+            onFinish()
+        }
         WorkoutSummaryDialog(
             summary = summary,
             onUpdateDuration = { viewModel.updateDuration(it) },
             onUpdateBodyWeight = { viewModel.updateBodyWeight(it) },
-            onDismiss = { viewModel.dismissSummary(); stopRestTimer(context); onFinish() },
-            onFinish = { viewModel.dismissSummary(); stopRestTimer(context); onFinish() }
+            onDismiss = finishAndClose,
+            onFinish = finishAndClose
         )
     }
 }
