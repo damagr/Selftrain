@@ -51,6 +51,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.selftrain.app.ui.AppThemePrefs
 import com.selftrain.app.ui.MainViewModel
+import com.selftrain.app.util.AppPrefs
 import com.selftrain.app.ui.SelfTrainTheme
 import com.selftrain.app.ui.UpdateState
 import com.selftrain.app.ui.exercises.ExerciseLibraryScreen
@@ -77,6 +78,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         // ponytail: tema claro/oscuro según Ajustes (AppThemePrefs es estado Compose → toggle reactivo)
         AppThemePrefs.load(this)
+        AppPrefs.load(this)
         setContent {
             SelfTrainTheme(lightMode = AppThemePrefs.lightMode) {
                 SelfTrainMain()

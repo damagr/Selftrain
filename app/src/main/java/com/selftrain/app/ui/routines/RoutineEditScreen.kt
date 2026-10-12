@@ -163,6 +163,12 @@ fun RoutineEditScreen(
                                             else MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
+                                    // ponytail: explica la regla — onboarding in-context (F3)
+                                    Text(
+                                        "Activación explosiva 15-50 reps al ~50% 1RM. Máximo una por grupo muscular.",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                                 // ponytail: descanso configurable por ejercicio (0 = default por categoría)
                                 Text(

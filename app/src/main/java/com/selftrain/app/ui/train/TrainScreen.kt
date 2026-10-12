@@ -89,6 +89,7 @@ fun TrainScreen(
     var showGifDialog by rememberSaveable { mutableStateOf(false) }
     var showBackConfirm by rememberSaveable { mutableStateOf(false) }
     var showUndoConfirm by rememberSaveable { mutableStateOf(false) }
+    var showMethodHelp by rememberSaveable { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val scrollScope = rememberCoroutineScope()
 
@@ -100,6 +101,10 @@ fun TrainScreen(
                 windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
                 title = { Text(state.routine?.name ?: "Entrenando...") },
                 actions = {
+                    // ponytail: ayuda del método — onboarding in-context (F3)
+                    IconButton(onClick = { showMethodHelp = true }) {
+                        Icon(Icons.Default.HelpOutline, "Cómo funciona")
+                    }
                     TextButton(onClick = { viewModel.showConfirmFinish() }) {
                         Icon(Icons.Default.Done, null)
                         Spacer(Modifier.width(4.dp))
@@ -460,6 +465,28 @@ fun TrainScreen(
                 TextButton(onClick = { viewModel.cancelConfirmFinish() }) {
                     Text("Seguir entrenando")
                 }
+            }
+        )
+    }
+
+    // ponytail: ayuda del método — cómo funciona la pantalla de entreno (F3 onboarding)
+    if (showMethodHelp) {
+        AlertDialog(
+            onDismissRequest = { showMethodHelp = false },
+            shape = MaterialTheme.shapes.large,
+            title = { Text("Cómo funciona el entreno") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("• Serie Bilbo (si tu rutina la marca): activación explosiva de 15-50 reps al ~50% del 1RM, sin llegar al fallo (RIR 1-3).", style = MaterialTheme.typography.bodySmall)
+                    Text("• Series de trabajo: 8-12 reps con ~40% más peso que la Bilbo. La app te sugiere el peso según tu última sesión.", style = MaterialTheme.typography.bodySmall)
+                    Text("• RIR: repeticiones que te quedaban en el tanque al terminar la serie. 2 = podrías haber hecho 2 más.", style = MaterialTheme.typography.bodySmall)
+                    Text("• Descanso: al registrar una serie, el temporizador arranca solo con el tiempo del ejercicio (ajustable ±30s) y sigue en la notificación aunque cierres la app.", style = MaterialTheme.typography.bodySmall)
+                    Text("• Progresión: si rindes bien (≥12 reps efectivas), la app te sugiere subir peso en la siguiente serie; si te quedaste corto, bajar.", style = MaterialTheme.typography.bodySmall)
+                    Text("• Navega entre ejercicios con las flechas de arriba: tu avance se guarda automáticamente.", style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showMethodHelp = false }) { Text("Entendido") }
             }
         )
     }

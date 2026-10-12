@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.selftrain.app.data.model.Routine
+import com.selftrain.app.util.AppPrefs
 import com.selftrain.app.util.Labels
 import kotlinx.coroutines.launch
 
@@ -41,6 +42,33 @@ fun RoutinesScreen(
     var showScanDialog by rememberSaveable { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    // ponytail: bienvenida la primera vez — explica la app y ofrece cargar rutinas de ejemplo
+    if (!AppPrefs.onboardingDone) {
+        AlertDialog(
+            onDismissRequest = { AppPrefs.setOnboardingDone(context) },
+            shape = MaterialTheme.shapes.large,
+            title = { Text("¡Bienvenido a SelfTrain!") },
+            text = {
+                Text(
+                    "Registra tus entrenamientos ejercicio a ejercicio: cada serie se guarda al instante, " +
+                        "el temporizador de descanso sigue contando fuera de la app y tu progreso queda en el historial.\n\n" +
+                        "Si entrenas con el Método Bilbo, la app te guía con la serie de activación y las series de trabajo " +
+                        "(puedes ver cómo funciona con el botón ? durante el entreno).\n\n" +
+                        "¿Quieres empezar con rutinas de ejemplo (PPL, Full Body, Bilbo)?"
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    AppPrefs.setOnboardingDone(context)
+                    showPredefinedDialog = true
+                }) { Text("Cargar rutinas de ejemplo") }
+            },
+            dismissButton = {
+                TextButton(onClick = { AppPrefs.setOnboardingDone(context) }) { Text("Explorar por mi cuenta") }
+            }
+        )
+    }
 
     // Toast para resultados de import/escaneo (lectura directa: snapshot rastrea el State del VM)
     val importMessage = viewModel.importMessage
@@ -92,7 +120,23 @@ fun RoutinesScreen(
 
         if (groups.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("No hay rutinas aún.\nToca + para crear una.", style = MaterialTheme.typography.bodyLarge)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        "No hay rutinas aún",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    // ponytail: CTA directo — antes solo texto, la carga estaba escondida en la top bar
+                    Button(onClick = { showPredefinedDialog = true }) {
+                        Text("Cargar rutinas de ejemplo")
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "o toca + para crear la tuya",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         } else {
             LazyColumn(
