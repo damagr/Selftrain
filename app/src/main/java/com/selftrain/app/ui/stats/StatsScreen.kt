@@ -100,7 +100,7 @@ fun StatsScreen(
                     Column(Modifier.padding(16.dp)) {
                         Text("Reps de trabajo", style = MaterialTheme.typography.titleSmall)
                         Text(
-                            "conseguidas vs objetivo (12 por serie, sin contar Bilbo)",
+                            "conseguidas vs objetivo (8-12 por serie, sin contar Bilbo)",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -232,7 +232,7 @@ private fun WeeklyRepsChart(weeks: List<WeekReps>) {
     var selected by remember(weeks) { mutableIntStateOf(weeks.lastIndex) }
     val sel = weeks.getOrNull(selected) ?: weeks.last()
 
-    val maxReps = weeks.maxOf { it.targetReps }.coerceAtLeast(1)
+    val maxReps = weeks.maxOf { it.targetMaxReps }.coerceAtLeast(1)
     val chartHeight = 140.dp
 
     Column(Modifier.fillMaxWidth()) {
@@ -241,8 +241,9 @@ private fun WeeklyRepsChart(weeks: List<WeekReps>) {
             buildAnnotatedString {
                 append("Semana del ${weekFormatter.format(sel.weekStart)}: ")
                 withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)) {
-                    append("${sel.achievedReps}/${sel.targetReps} reps")
+                    append("${sel.achievedReps} reps")
                 }
+                append(" · objetivo ${sel.targetMinReps}-${sel.targetMaxReps}")
                 if (sel.workoutCount > 0) append(" · ${sel.workoutCount} entreno${if (sel.workoutCount == 1) "" else "s"}")
             },
             style = MaterialTheme.typography.bodyMedium,
@@ -265,21 +266,23 @@ private fun WeeklyRepsChart(weeks: List<WeekReps>) {
             val slotWidth = size.width / n
             val gap = 4.dp.toPx()
             val pairGap = 2.dp.toPx()
-            // cada slot: [barra objetivo | barra conseguida] del ancho del slot
+            // cada slot: [banda objetivo (rango 8-12) | barra conseguida] del ancho del slot
             val barWidth = ((slotWidth - gap - pairGap) / 2f).coerceAtLeast(2f)
             weeks.forEachIndexed { i, week ->
                 val isSelected = i == selected
                 val slotStart = i * slotWidth
-                val targetH = (week.targetReps.toFloat() / maxReps) * size.height
+                val targetMaxH = (week.targetMaxReps.toFloat() / maxReps) * size.height
+                val targetMinH = (week.targetMinReps.toFloat() / maxReps) * size.height
                 val achievedH = (week.achievedReps.toFloat() / maxReps) * size.height
-                val targetAlpha = if (isSelected) 0.55f else 0.30f
+                val bandAlpha = if (isSelected) 0.45f else 0.25f
                 val achievedAlpha = if (isSelected) 1f else 0.70f
-                // barra objetivo (atenuada, a la izquierda del slot)
-                if (targetH > 1f) {
+                // banda objetivo: flotante entre el mínimo (×8) y el máximo (×12) del rango
+                val bandHeight = targetMaxH - targetMinH
+                if (bandHeight > 1f) {
                     drawRoundRect(
-                        color = targetColor.copy(alpha = targetAlpha),
-                        topLeft = Offset(slotStart, size.height - targetH),
-                        size = Size(barWidth, targetH),
+                        color = targetColor.copy(alpha = bandAlpha),
+                        topLeft = Offset(slotStart, size.height - targetMaxH),
+                        size = Size(barWidth, bandHeight),
                         cornerRadius = CornerRadius(3f, 3f)
                     )
                 }

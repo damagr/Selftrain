@@ -142,12 +142,14 @@ class StatsViewModelTest {
         val thisWeek = weeks.last()
         // conseguidas: 10 + 8 + 12 = 30 (la Bilbo de 30 reps NO cuenta)
         assertEquals(30, thisWeek.achievedReps)
-        // objetivo: 3 series de trabajo × 12 = 36
-        assertEquals(36, thisWeek.targetReps)
+        // objetivo rango: 3 series de trabajo × 8-12 = 24-36
+        assertEquals(24, thisWeek.targetMinReps)
+        assertEquals(36, thisWeek.targetMaxReps)
         assertEquals(2, thisWeek.workoutCount)
-        // semana anterior: 9/12
+        // semana anterior: 9 conseguidas, objetivo 8-12
         assertEquals(9, weeks[0].achievedReps)
-        assertEquals(12, weeks[0].targetReps)
+        assertEquals(8, weeks[0].targetMinReps)
+        assertEquals(12, weeks[0].targetMaxReps)
     }
 
     @Test

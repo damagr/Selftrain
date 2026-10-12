@@ -44,7 +44,7 @@ SelfTrain te guía durante el entreno ejercicio a ejercicio, registra cada serie
 
 ### Estadísticas
 - **Racha semanal**: semanas consecutivas entrenando
-- **Gráfico de reps de trabajo**: lo que conseguiste vs el objetivo (12 por serie) cada semana — toca una barra para ver la cifra exacta
+- **Gráfico de reps de trabajo**: lo que conseguiste vs el objetivo (8-12 por serie) cada semana — toca una barra para ver la cifra exacta
 - **Volumen total acumulado** y entrenos completados
 - **Todos tus récords personales** en una lista: 1RM estimado de cada ejercicio y su **fuerza relativa** (1RM por kg de peso corporal)
 - Acceso desde la pantalla de Historial

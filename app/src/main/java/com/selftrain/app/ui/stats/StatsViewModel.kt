@@ -17,12 +17,13 @@ import java.time.LocalDate
 import java.time.ZoneId
 import javax.inject.Inject
 
-// ponytail: stats — reps de trabajo por semana: conseguidas vs objetivo (12 por serie).
+// ponytail: stats — reps de trabajo por semana: conseguidas vs objetivo (rango 8-12 por serie).
 // Las series Bilbo se excluyen: su objetivo es la progresión a 50 reps, no el rango 8-12.
 data class WeekReps(
     val weekStart: LocalDate,   // lunes de esa semana
     val achievedReps: Int,
-    val targetReps: Int,
+    val targetMinReps: Int,     // series × 8
+    val targetMaxReps: Int,     // series × 12
     val workoutCount: Int
 )
 
@@ -66,7 +67,8 @@ class StatsViewModel @Inject constructor(
 
     private fun groupRepsByWeek(rows: List<SetVolumeRow>): List<WeekReps> {
         val zone = ZoneId.systemDefault()
-        val targetRepsPerSet = 12
+        val targetMinPerSet = 8
+        val targetMaxPerSet = 12
         return rows.filter { it.setType == "work" }
             .groupBy { row ->
                 Instant.ofEpochMilli(row.date).atZone(zone).toLocalDate()
@@ -76,7 +78,8 @@ class StatsViewModel @Inject constructor(
                 WeekReps(
                     weekStart = weekStart,
                     achievedReps = weekRows.sumOf { it.reps },
-                    targetReps = weekRows.size * targetRepsPerSet,
+                    targetMinReps = weekRows.size * targetMinPerSet,
+                    targetMaxReps = weekRows.size * targetMaxPerSet,
                     workoutCount = weekRows.map { it.workoutId }.distinct().size
                 )
             }
