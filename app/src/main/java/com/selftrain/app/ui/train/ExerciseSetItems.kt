@@ -40,7 +40,10 @@ internal fun LazyListScope.exerciseSetItems(
     // Exercise info
     item(key = "$exerciseKey-info") {
         if (appliesBilbo) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Icon(Icons.Default.Whatshot, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.width(4.dp))
                 Text("Serie Bilbo + series de trabajo",
@@ -54,6 +57,7 @@ internal fun LazyListScope.exerciseSetItems(
     if (sets.isNotEmpty()) {
         item(key = "$exerciseKey-sets") {
             ElevatedCard(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 shape = MaterialTheme.shapes.medium,
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -95,6 +99,7 @@ internal fun LazyListScope.exerciseSetItems(
     if (lastSet?.setType == "bilbo" && lastSet.reps >= 50) {
         item(key = "$exerciseKey-hint50") {
             ElevatedCard(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 shape = MaterialTheme.shapes.medium,
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
@@ -111,11 +116,12 @@ internal fun LazyListScope.exerciseSetItems(
 
     // Intra-session advice
     intraAdjustment?.let { (progression, suggestedWeight) ->
-        item(key = "$exerciseKey-intra") {
-            val isIncrease = progression == BilboProgression.WorkProgression.INCREASE
-            val lastEffective = BilboProgression.effectiveReps(lastWorkSet?.reps ?: 0, lastWorkSet?.rir ?: 0)
-            ElevatedCard(
-                shape = MaterialTheme.shapes.medium,
+            item(key = "$exerciseKey-intra") {
+                val isIncrease = progression == BilboProgression.WorkProgression.INCREASE
+                val lastEffective = BilboProgression.effectiveReps(lastWorkSet?.reps ?: 0, lastWorkSet?.rir ?: 0)
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    shape = MaterialTheme.shapes.medium,
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
@@ -141,6 +147,7 @@ internal fun LazyListScope.exerciseSetItems(
     // Input section with animated transition
     item(key = "$exerciseKey-input") {
         ElevatedCard(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
             shape = MaterialTheme.shapes.medium,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant

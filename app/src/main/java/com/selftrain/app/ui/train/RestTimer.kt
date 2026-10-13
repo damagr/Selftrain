@@ -108,7 +108,7 @@ fun RestTimer(category: String? = null, restTrigger: Int = 0, defaultSeconds: In
 
     if (!isActive) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -140,7 +140,7 @@ fun RestTimer(category: String? = null, restTrigger: Int = 0, defaultSeconds: In
         }
     } else {
         Card(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
             shape = MaterialTheme.shapes.medium,
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
         ) {
@@ -174,7 +174,7 @@ fun RestTimer(category: String? = null, restTrigger: Int = 0, defaultSeconds: In
     // Flash "finished" message
     if (RestTimerController.finishedFlash) {
         Card(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
             shape = MaterialTheme.shapes.medium,
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
