@@ -116,7 +116,14 @@ fun TrainScreen(
     ) { padding ->
         LazyColumn(
             state = listState,
-            modifier = Modifier.padding(padding).fillMaxSize().imeNestedScroll().imePadding()
+            modifier = Modifier
+                .padding(padding)
+                // ponytail: consume los insets ya aplicados por el Scaffold (navbar) — sin esto
+                // imePadding sumaba navbar + teclado → franja del color del fondo sobre el teclado
+                .consumeWindowInsets(padding)
+                .fillMaxSize()
+                .imeNestedScroll()
+                .imePadding()
         ) {
             // Navigation header
             item(key = "nav") {
