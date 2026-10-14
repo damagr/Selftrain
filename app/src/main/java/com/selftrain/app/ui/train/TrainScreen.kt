@@ -5,7 +5,6 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.focus.onFocusChanged
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -267,9 +266,11 @@ fun TrainScreen(
                 val appliesBilbo = ex.isBilbo
                 exerciseSetItems(
                     scrollToInput = { scrollScope.launch {
-                        delay(400)
+                        // ponytail: scroll instantáneo — el animado con delay(400) competía con
+                        // la animación del teclado y daba tirones (con adjustResize el contenido
+                        // se coloca una vez y imePadding anima solo el hueco del teclado)
                         val last = listState.layoutInfo.totalItemsCount - 1
-                        if (last >= 0) listState.animateScrollToItem(last)
+                        if (last >= 0) listState.scrollToItem(last)
                     }},
                     appliesBilbo = appliesBilbo,
                     isDumbbell = ex.exercise.equipment == "dumbbell",
