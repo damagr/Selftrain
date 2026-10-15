@@ -78,11 +78,6 @@ fun RoutineEditScreen(
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }) {
-                Icon(Icons.Default.Add, "Añadir ejercicio")
-            }
         }
     ) { padding ->
         Column(Modifier.padding(padding)) {
@@ -103,7 +98,9 @@ fun RoutineEditScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            LazyColumn {
+            // ponytail: weight(1f) — antes sin weight la lista ocupaba todo y el botón
+            // "Eliminar rutina" quedaba fuera de pantalla
+            LazyColumn(Modifier.weight(1f)) {
                 itemsIndexed(exercises, key = { _, item -> item.exercise.id }) { index, item ->
                     val ex = item.exercise
                     val isFirst = index == 0
@@ -193,6 +190,19 @@ fun RoutineEditScreen(
                         }
                     }
                 }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // ponytail: añadir como botón anclado — el FAB colisionaba con las X de la
+            // última tarjeta y tapaba acciones en listas cortas
+            FilledTonalButton(
+                onClick = { showAddDialog = true },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            ) {
+                Icon(Icons.Default.Add, null)
+                Spacer(Modifier.width(8.dp))
+                Text("Añadir ejercicio")
             }
 
             Spacer(Modifier.height(16.dp))
