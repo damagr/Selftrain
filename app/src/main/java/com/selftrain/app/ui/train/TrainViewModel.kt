@@ -101,7 +101,9 @@ class TrainViewModel @Inject constructor(
                     exercise = ex,
                     previousHistory = allHistory,
                     lastSessionSets = lastSession,
-                    isBilbo = re.isBilbo,
+                    // ponytail: gating por método — una marca Bilbo vieja en un día full_body/ppl
+                    // no debe mostrar el input Bilbo al entrenar
+                    isBilbo = re.isBilbo && routine.method.equals("bilbo", true),
                     restSeconds = re.restSeconds
                 )
             }

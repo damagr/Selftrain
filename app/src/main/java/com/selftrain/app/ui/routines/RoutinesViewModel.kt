@@ -81,7 +81,12 @@ class RoutinesViewModel @Inject constructor(
         viewModelScope.launch {
             val children = routineRepo.getAllList().filter { it.parentId == parentId }
             val nextOrder = children.size
-            val id = routineRepo.insert(Routine(name = name, method = children.firstOrNull()?.method ?: "bilbo", parentId = parentId, order = nextOrder))
+            // ponytail: hereda el método del PROGRAMA padre — antes caía a "bilbo" si era el
+            // primer día y contaminaba el programa entero (días full_body/ppl con método bilbo)
+            val parentMethod = routineRepo.getById(parentId)?.method
+                ?: children.firstOrNull()?.method
+                ?: "bilbo"
+            val id = routineRepo.insert(Routine(name = name, method = parentMethod, parentId = parentId, order = nextOrder))
             onCreated(id)
         }
     }

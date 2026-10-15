@@ -42,12 +42,26 @@ class RoutineEditViewModel @Inject constructor(
 
     fun loadRoutine(routineId: Long) {
         viewModelScope.launch {
-            val r = routineRepo.getById(routineId) ?: return@launch
-            _routine.value = r
+            var r = routineRepo.getById(routineId) ?: return@launch
             val reList = routineRepo.getWithExercises(routineId)
-            val ids = reList.map { it.exerciseId }
+            // ponytail: reparación — días creados por createChildRoutine heredaban "bilbo" aunque
+            // su programa fuera full_body/ppl. Alinear al método del padre y limpiar marcas
+            // Bilbo viejas (idempotente; programas Bilbo quedan intactos — el método coincide).
+            var marksCleared = false
+            if (r.parentId != null) {
+                val parent = routineRepo.getById(r.parentId!!)
+                if (parent != null && !parent.method.equals(r.method, true)) {
+                    r = r.copy(method = parent.method)
+                    routineRepo.update(r)
+                    reList.filter { it.isBilbo }.forEach { routineRepo.setBilbo(it.id, false) }
+                    marksCleared = true
+                }
+            }
+            val effectiveReList = if (marksCleared) reList.map { it.copy(isBilbo = false) } else reList
+            _routine.value = r
+            val ids = effectiveReList.map { it.exerciseId }
             val byId = if (ids.isNotEmpty()) exerciseRepo.getByIds(ids).associateBy { it.id } else emptyMap()
-            val items = reList.mapNotNull { re ->
+            val items = effectiveReList.mapNotNull { re ->
                 byId[re.exerciseId]?.let { RoutineExerciseItem(it, re.isBilbo, re.id, re.restSeconds) }
             }.toMutableList()
             // Backfill: rutinas Bilbo antiguas sin marca → primera elegible (mínimo 1 Serie Bilbo)
@@ -56,7 +70,7 @@ class RoutineEditViewModel @Inject constructor(
                 if (first != null) {
                     val idx = items.indexOfFirst { it.exercise.id == first.exercise.id }
                     items[idx] = items[idx].copy(isBilbo = true)
-                    reList.firstOrNull { it.exerciseId == first.exercise.id }?.let {
+                    effectiveReList.firstOrNull { it.exerciseId == first.exercise.id }?.let {
                         routineRepo.setBilbo(it.id, true)
                     }
                 }

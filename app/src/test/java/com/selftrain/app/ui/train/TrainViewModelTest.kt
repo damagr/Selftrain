@@ -252,6 +252,24 @@ class TrainViewModelTest {
     }
 
     @Test
+    fun `dia full_body con marca bilbo vieja no muestra input bilbo`() = runTest {
+        coEvery { routineRepo.getById(1) } returns routine(1)
+        coEvery { routineRepo.getWithExercises(1) } returns listOf(re(10, isBilbo = true))
+        coEvery { exerciseRepo.getById(10) } returns exercise(10, bilboEligible = true)
+        coEvery { workoutRepo.getSetHistory(10) } returns emptyList()
+        coEvery { workoutRepo.getLastExerciseSession(10) } returns emptyList()
+        coEvery { workoutRepo.getUnfinishedForRoutine(1) } returns null
+        coEvery { workoutRepo.insert(any()) } returns 42L
+        val vm = TrainViewModel(routineRepo, workoutRepo, exerciseRepo)
+
+        vm.startWorkout(1)
+        advanceUntilIdle()
+
+        assertEquals(1, vm.state.value.exercises.size)
+        assertEquals(false, vm.state.value.exercises[0].isBilbo)
+    }
+
+    @Test
     fun `setCurrentExercise persiste el indice`() = runTest {
         stubSimpleRoutine()
         coEvery { routineRepo.getWithExercises(1) } returns listOf(re(10), re(20))

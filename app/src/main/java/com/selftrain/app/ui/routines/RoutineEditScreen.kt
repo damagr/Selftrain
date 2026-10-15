@@ -149,7 +149,8 @@ fun RoutineEditScreen(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                                if (ex.isBilboEligible) {
+                                // ponytail: el switch Bilbo solo existe en rutinas con método Bilbo
+                                if (ex.isBilboEligible && routine?.method.equals("bilbo", true)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Switch(
                                             checked = item.isBilbo,

@@ -134,4 +134,42 @@ class RoutineEditViewModelTest {
         assertEquals(false, saved)
         coVerify(exactly = 0) { routineRepo.saveRoutineExercises(any(), any()) }
     }
+
+    @Test
+    fun `loadRoutine repara dia contaminado con metodo distinto al padre`() = runTest {
+        // día guardado como "bilbo" bajo un programa full_body (contaminación del fallback)
+        coEvery { routineRepo.getById(1) } returns Routine(id = 1, name = "Día", method = "bilbo", parentId = 9)
+        coEvery { routineRepo.getById(9) } returns Routine(id = 9, name = "Programa", method = "full_body")
+        coEvery { routineRepo.getWithExercises(1) } returns listOf(
+            RoutineExercise(id = 5, routineId = 1, exerciseId = 10, order = 0, isBilbo = true, restSeconds = 120)
+        )
+        coEvery { exerciseRepo.getByIds(listOf(10)) } returns listOf(exercise(10))
+        val vm = RoutineEditViewModel(routineRepo, exerciseRepo)
+        vm.loadRoutine(1)
+        advanceUntilIdle()
+
+        // alineado al método del padre y marca vieja limpiada
+        assertEquals("full_body", vm.routine.value?.method)
+        assertEquals(false, vm.routineExercises.value[0].isBilbo)
+        coVerify { routineRepo.update(match { it.method == "full_body" && it.id == 1L }) }
+        coVerify { routineRepo.setBilbo(5, false) }
+    }
+
+    @Test
+    fun `loadRoutine no toca dias de programas bilbo`() = runTest {
+        coEvery { routineRepo.getById(1) } returns Routine(id = 1, name = "Día", method = "bilbo", parentId = 9)
+        coEvery { routineRepo.getById(9) } returns Routine(id = 9, name = "Programa", method = "bilbo")
+        coEvery { routineRepo.getWithExercises(1) } returns listOf(
+            RoutineExercise(id = 5, routineId = 1, exerciseId = 10, order = 0, isBilbo = true, restSeconds = 0)
+        )
+        coEvery { exerciseRepo.getByIds(listOf(10)) } returns listOf(exercise(10))
+        val vm = RoutineEditViewModel(routineRepo, exerciseRepo)
+        vm.loadRoutine(1)
+        advanceUntilIdle()
+
+        assertEquals("bilbo", vm.routine.value?.method)
+        assertEquals(true, vm.routineExercises.value[0].isBilbo)
+        coVerify(exactly = 0) { routineRepo.update(any()) }
+        coVerify(exactly = 0) { routineRepo.setBilbo(any(), false) }
+    }
 }
