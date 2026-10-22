@@ -18,6 +18,8 @@ import com.selftrain.app.MainActivity
 // el tiempo mostrado es correcto aunque Doze retrase un tick. Wake lock parcial para que el
 // tick corra con pantalla apagada. START_STICKY + prefs: si el sistema mata el proceso,
 // el servicio se recrea y la cuenta continúa desde el deadline persistido.
+// El swipe de la notificación detiene el servicio (comportamiento del sistema, no evitable):
+// la alarma de fin + la notificación estática de sustitución garantizan que el aviso suene.
 class RestTimerService : Service() {
 
     private var tickJob: Job? = null
@@ -32,12 +34,18 @@ class RestTimerService : Service() {
         const val EXTRA_END_TIMESTAMP = "end_timestamp"
         const val EXTRA_TOTAL = "total_seconds"
         const val EXTRA_ACTION = "action" // "start", "pause", "stop"
+        const val ACTION_FINISH_ALARM = "com.selftrain.app.util.ACTION_FINISH_ALARM"
 
-        private const val PREFS = "rest_timer_prefs"
-        private const val KEY_END = "end_timestamp"
+        internal const val PREFS = "rest_timer_prefs"
+        internal const val KEY_END = "end_timestamp"
         private const val KEY_TOTAL = "total_seconds"
         private const val KEY_PAUSED = "paused_remaining"
-        private const val KEY_RUNNING = "is_running"
+        internal const val KEY_RUNNING = "is_running"
+
+        // ponytail: fin idempotente — el tick del servicio y la alarma de fin pueden llegar
+        // a la vez; solo uno publica el aviso (receiver y servicio comparten proceso)
+        @Volatile
+        internal var finishPosted = false
 
         fun createStartIntent(ctx: Context, endTimestamp: Long, totalSecs: Int): Intent {
             return Intent(ctx, RestTimerService::class.java).apply {
@@ -102,6 +110,62 @@ class RestTimerService : Service() {
         private fun clearState(ctx: Context) {
             prefs(ctx).edit().clear().apply()
         }
+
+        private fun alarmIntent(ctx: Context): PendingIntent =
+            PendingIntent.getBroadcast(
+                ctx, 0,
+                Intent(ctx, RestTimerReceiver::class.java).apply { action = ACTION_FINISH_ALARM },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+        // ponytail: red de seguridad — si el sistema mata el servicio (swipe de la notificación),
+        // la alarma dispara el aviso de fin a la hora correcta. Exacta si hay permiso; si no,
+        // inexacta (en doze profundo podría retrasarse; en uso normal de gym es puntual)
+        internal fun scheduleFinishAlarm(ctx: Context, endTimestamp: Long) {
+            val am = ctx.getSystemService(AlarmManager::class.java)
+            val pi = alarmIntent(ctx)
+            try {
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, endTimestamp, pi)
+            } catch (_: SecurityException) {
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, endTimestamp, pi)
+            }
+        }
+
+        internal fun cancelFinishAlarm(ctx: Context) {
+            alarmIntent(ctx).cancel()
+        }
+
+        // ponytail: fin desde la alarma (servicio posiblemente muerto por swipe del usuario)
+        internal fun finishFromReceiver(context: Context) {
+            if (finishPosted) return
+            finishPosted = true
+            RestTimerController.finish()
+            clearState(context)
+            val nm = context.getSystemService(NotificationManager::class.java)
+            nm.cancel(NOTIFICATION_ID) // quita la estática de sustitución si existe
+            nm.notify(NOTIFICATION_ID_DONE, buildDoneNotification(context))
+            // el servicio, si sigue vivo, verá isRunning=false y su bucle terminará — por si acaso:
+            context.stopService(Intent(context, RestTimerService::class.java))
+        }
+
+        internal fun buildDoneNotification(context: Context): Notification {
+            val openIntent = PendingIntent.getActivity(
+                context, 2,
+                Intent(context, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            return NotificationCompat.Builder(context, CHANNEL_ID_DONE)
+                .setContentTitle("Descanso terminado")
+                .setContentText("Ya puedes continuar")
+                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                .setAutoCancel(true)
+                .setContentIntent(openIntent)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setDefaults(NotificationCompat.DEFAULT_SOUND or NotificationCompat.DEFAULT_VIBRATE)
+                .build()
+        }
     }
 
     override fun onCreate() {
@@ -119,14 +183,17 @@ class RestTimerService : Service() {
                     // deadline ya pasado → nada que contar
                     RestTimerController.stop()
                     clearState(this)
+                    cancelFinishAlarm(this)
                     stopSelf()
                     return START_NOT_STICKY
                 }
                 RestTimerController.restoreRunning(total, end)
                 persistState(this)
+                finishPosted = false
                 goForeground()
                 releaseLock()
                 acquireLock()
+                scheduleFinishAlarm(this, end)
                 startTicking()
             }
             "pause" -> {
@@ -135,6 +202,7 @@ class RestTimerService : Service() {
                     RestTimerController.pause()
                     stopTicking()
                     releaseLock()
+                    cancelFinishAlarm(this)
                 } else {
                     RestTimerController.resume()
                     if (RestTimerController.endTimestamp <= System.currentTimeMillis()) {
@@ -142,8 +210,10 @@ class RestTimerService : Service() {
                         finishAndNotify()
                         return START_NOT_STICKY
                     }
+                    finishPosted = false
                     goForeground()
                     acquireLock()
+                    scheduleFinishAlarm(this, RestTimerController.endTimestamp)
                     startTicking()
                 }
                 persistState(this)
@@ -162,8 +232,10 @@ class RestTimerService : Service() {
                 val wasRunning = p.getBoolean(KEY_RUNNING, false)
                 if (wasRunning && end > System.currentTimeMillis()) {
                     RestTimerController.restoreRunning(total, end)
+                    finishPosted = false
                     goForeground()
                     acquireLock()
+                    scheduleFinishAlarm(this, end)
                     startTicking()
                 } else if (wasRunning && end > 0L) {
                     // agotado mientras el proceso estuvo muerto → aviso de fin
@@ -236,12 +308,16 @@ class RestTimerService : Service() {
     }
 
     private fun finishAndNotify() {
-        releaseLock()
-        RestTimerController.finish()
-        clearState(this)
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        val nm = getSystemService(NotificationManager::class.java)
-        nm.notify(NOTIFICATION_ID_DONE, buildDoneNotification())
+        if (!finishPosted) {
+            finishPosted = true
+            releaseLock()
+            RestTimerController.finish()
+            clearState(this)
+            cancelFinishAlarm(this)
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            val nm = getSystemService(NotificationManager::class.java)
+            nm.notify(NOTIFICATION_ID_DONE, buildDoneNotification(this))
+        }
         stopSelf()
     }
 
@@ -250,6 +326,7 @@ class RestTimerService : Service() {
         releaseLock()
         RestTimerController.stop()
         clearState(this)
+        cancelFinishAlarm(this)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -296,11 +373,29 @@ class RestTimerService : Service() {
             .build()
     }
 
-    private fun buildDoneNotification(): Notification {
-        val stopIntent = PendingIntent.getService(
-            this, 1, createStopIntent(this),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onDestroy() {
+        // NO limpiar prefs aquí: el sticky restart las necesita tras muerte del proceso.
+        // ponytail: si el sistema mata el servicio con el timer corriendo (swipe de la
+        // notificación por el usuario), publicar una estática de sustitución — el usuario
+        // sigue viendo cuándo acaba; la alarma de fin garantiza el aviso sonoro
+        if (RestTimerController.isRunning &&
+            RestTimerController.endTimestamp > System.currentTimeMillis() &&
+            !finishPosted
+        ) {
+            postStaticNotification()
+        }
+        stopTicking()
+        releaseLock()
+        serviceScope?.cancel()
+        serviceScope = null
+        super.onDestroy()
+    }
+
+    private fun postStaticNotification() {
+        val endStr = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+            .format(java.util.Date(RestTimerController.endTimestamp))
         val openIntent = PendingIntent.getActivity(
             this, 2,
             Intent(this, MainActivity::class.java).apply {
@@ -308,26 +403,13 @@ class RestTimerService : Service() {
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        return NotificationCompat.Builder(this, CHANNEL_ID_DONE)
-            .setContentTitle("Descanso terminado")
-            .setContentText("Ya puedes continuar")
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Descanso en curso")
+            .setContentText("Termina a las $endStr")
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setAutoCancel(true)
+            .setOngoing(true)
             .setContentIntent(openIntent)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setDefaults(NotificationCompat.DEFAULT_SOUND or NotificationCompat.DEFAULT_VIBRATE)
-            .setDeleteIntent(stopIntent)
             .build()
-    }
-
-    override fun onBind(intent: Intent?): IBinder? = null
-
-    override fun onDestroy() {
-        // NO limpiar prefs aquí: el sticky restart las necesita tras muerte del proceso.
-        stopTicking()
-        releaseLock()
-        serviceScope?.cancel()
-        serviceScope = null
-        super.onDestroy()
+        getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification)
     }
 }

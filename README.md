@@ -31,6 +31,7 @@ SelfTrain te guía durante el entreno ejercicio a ejercicio, registra cada serie
 ### Temporizador de descanso
 - Arranca solo al registrar serie (o inícialo con un toque)
 - La cuenta **sigue en una notificación aunque uses otra app, apagues la pantalla o el sistema cierre la app**
+- **Descartar la notificación no para el descanso**: sonará al terminar igualmente y verás una notificación con la hora de fin
 - Pausa/reanudar desde la notificación o desde la app — siempre sincronizados
 - **Aviso sonoro** cuando termina
 - El tiempo de descanso se ajusta por defecto por tipo de ejercicio, y puedes fijarlo **por ejercicio concreto** al editar la rutina

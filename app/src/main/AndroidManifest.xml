@@ -61,5 +61,9 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="rest_timer_for_workout_rest_periods" />
         </service>
+
+        <receiver
+            android:name=".util.RestTimerReceiver"
+            android:exported="false" />
     </application>
 </manifest>

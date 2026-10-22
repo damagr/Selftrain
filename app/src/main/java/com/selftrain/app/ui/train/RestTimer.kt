@@ -90,6 +90,16 @@ fun RestTimer(category: String? = null, restTrigger: Int = 0, defaultSeconds: In
         if (!RestTimerController.isActive) customSeconds = defaultSeconds
     }
 
+    // ponytail: latido local — la cuenta en pantalla sigue viva aunque el servicio haya muerto
+    // (swipe de la notificación por el usuario); tick() recalcula desde el deadline, así que
+    // latir aquí y en el servicio a la vez es idempotente
+    LaunchedEffect(isRunning) {
+        while (isRunning) {
+            delay(1000)
+            RestTimerController.tick()
+        }
+    }
+
     // ponytail: descanso automático — al registrar una serie (trigger del ViewModel) arranca
     // el descanso con los customSeconds del usuario (respeta sus ±30s ajustados).
     // El último trigger atendido vive en RestTimerController (nivel proceso): el remember local
